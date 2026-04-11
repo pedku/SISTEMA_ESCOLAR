@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if grade else 'Nuevo' }} Grado - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-journal"></i> {{ 'Editar' if grade else 'Nuevo' }} Grado
+    </h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre del Grado *</label>
+                        <input type="text" name="name" class="form-control"
+                               value="{{ grade.name if grade else '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sede *</label>
+                        <select name="campus_id" class="form-select" required>
+                            <option value="">Seleccione una sede</option>
+                            {% for campus in campuses %}
+                            <option value="{{ campus.id }}" {% if grade and grade.campus_id == campus.id %}selected{% endif %}>
+                                {{ campus.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Director de Grupo</label>
+                        <select name="director_id" class="form-select">
+                            <option value="">Sin director asignado</option>
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}" {% if grade and grade.director_id == teacher.id %}selected{% endif %}>
+                                {{ teacher.get_full_name() }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Año Académico *</label>
+                        <input type="text" name="academic_year" class="form-control"
+                               value="{{ grade.academic_year if grade else '2026' }}" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Máximo de Estudiantes</label>
+                    <input type="number" name="max_students" class="form-control" min="1"
+                           value="{{ grade.max_students if grade else 40 }}">
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> {{ 'Actualizar' if grade else 'Crear' }} Grado
+                </button>
+                <a href="{{ url_for('institution.grades') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

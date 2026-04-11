@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if criterion else 'Nuevo' }} Criterio de Evaluación - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-list-check"></i> {{ 'Editar' if criterion else 'Nuevo' }} Criterio de Evaluación
+    </h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre del Criterio *</label>
+                        <input type="text" name="name" class="form-control"
+                               value="{{ criterion.name if criterion else '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Peso (%) *</label>
+                        <input type="number" name="weight" class="form-control" step="0.01" min="0" max="100"
+                               value="{{ criterion.weight if criterion else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="4">{{ criterion.description if criterion else '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Orden *</label>
+                    <input type="number" name="order" class="form-control" min="1"
+                           value="{{ criterion.order if criterion else 1 }}" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> {{ 'Actualizar' if criterion else 'Crear' }} Criterio
+                </button>
+                <a href="{{ url_for('institution.criteria') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

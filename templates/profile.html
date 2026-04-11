@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-person-circle"></i> Mi Perfil
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Información Personal</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('auth.update_profile') }}" enctype="multipart/form-data">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre *</label>
+                                <input type="text" name="first_name" class="form-control" 
+                                       value="{{ current_user.first_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Apellido *</label>
+                                <input type="text" name="last_name" class="form-control" 
+                                       value="{{ current_user.last_name }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Correo Electrónico *</label>
+                            <input type="email" name="email" class="form-control" 
+                                   value="{{ current_user.email }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="phone" class="form-control" 
+                                   value="{{ current_user.phone or '' }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" name="address" class="form-control" 
+                                   value="{{ current_user.address or '' }}">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Actualizar Información
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información de Cuenta</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Usuario:</strong></td>
+                            <td>{{ current_user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Rol:</strong></td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if current_user.role == 'root' else 'success' if current_user.role == 'admin' else 'info' if current_user.role == 'coordinator' else 'warning' if current_user.role == 'teacher' else 'secondary' }}">
+                                    {{ current_user.role|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Documento:</strong></td>
+                            <td>{{ current_user.document_type }} {{ current_user.document_number }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Último Acceso:</strong></td>
+                            <td>{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'Nunca' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lock"></i> Cambiar Contraseña</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('auth.change_password') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña Actual *</label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nueva Contraseña *</label>
+                            <input type="password" name="new_password" class="form-control" required minlength="6">
+                            <small class="text-muted">Mínimo 6 caracteres</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar Contraseña *</label>
+                            <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-key"></i> Cambiar Contraseña
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

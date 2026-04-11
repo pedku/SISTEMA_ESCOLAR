@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Profesor - SIGE{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+        <i class="bi bi-person-workspace"></i> Dashboard Profesor
+    </h1>
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-book"></i> Mis Asignaturas y Grados Asignados</h5>
+                </div>
+                <div class="card-body">
+                    {% if subject_grades %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Asignatura</th>
+                                    <th>Grado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sg in subject_grades %}
+                                <tr>
+                                    <td>{{ sg.subject.name }}</td>
+                                    <td>{{ sg.grade.name }}</td>
+                                    <td>
+                                        <a href="{{ url_for('grades.grade_input_form', sg_id=sg.id, period_id=1) }}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-pencil-square"></i> Ingresar Notas
+                                        </a>
+                                        <a href="{{ url_for('attendance.attendance') }}" class="btn btn-sm btn-success">
+                                            <i class="bi bi-calendar-check"></i> Tomar Asistencia
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No tienes asignaturas asignadas aún. Contacta al administrador.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Instituciones - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-buildings"></i> Gestión de Instituciones</h2>
+        <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva Institución
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover datatable" id="institutionsTable">
+                    <thead>
+                        <tr>
+                            <th>Logo</th>
+                            <th>Nombre</th>
+                            <th>NIT</th>
+                            <th>Departamento</th>
+                            <th>Municipio</th>
+                            <th>Año Lectivo</th>
+                            <th>Sedes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inst in institutions %}
+                        <tr>
+                            <td class="text-center">
+                                {% if inst.logo %}
+                                <img src="{{ url_for('static', filename='uploads/' + inst.logo) }}"
+                                     alt="Logo" class="rounded" style="max-width: 50px; max-height: 50px;"
+                                     onerror="this.style.display='none'">
+                                {% else %}
+                                <span class="text-muted"><i class="bi bi-building" style="font-size: 1.5rem;"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ inst.name }}</strong>
+                                {% if inst.email %}
+                                <br><small class="text-muted"><i class="bi bi-envelope"></i> {{ inst.email }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ inst.nit if inst.nit else '-' }}</td>
+                            <td>{{ inst.department if inst.department else '-' }}</td>
+                            <td>{{ inst.municipality if inst.municipality else '-' }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ inst.academic_year }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ inst.campuses.count() }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('institution.institution_edit', id=inst.id) }}"
+                                       class="btn btn-warning" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button onclick="confirmDelete('¿Eliminar institución {{ inst.name }}?', () => window.location.href='{{ url_for('institution.institution_delete', id=inst.id) }}')"
+                                            class="btn btn-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#institutionsTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        pageLength: 10,
+        order: [[1, 'asc']],
+        columnDefs: [
+            { orderable: false, targets: [0, 7] }
+        ]
+    });
+});
+</script>
+{% endblock %}

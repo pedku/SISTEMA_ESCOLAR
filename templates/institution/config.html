@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración de Institución - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-building"></i> Configuración de Institución
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pencil"></i> Datos de la Institución</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre de la Institución *</label>
+                                <input type="text" name="name" class="form-control" 
+                                       value="{{ institution.name if institution else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">NIT *</label>
+                                <input type="text" name="nit" class="form-control" 
+                                       value="{{ institution.nit if institution else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="text" name="phone" class="form-control" 
+                                       value="{{ institution.phone if institution else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Correo Electrónico</label>
+                                <input type="email" name="email" class="form-control" 
+                                       value="{{ institution.email if institution else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" name="address" class="form-control" 
+                                   value="{{ institution.address if institution else '' }}">
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Municipio</label>
+                                <input type="text" name="municipality" class="form-control" 
+                                       value="{{ institution.municipality if institution else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Departamento</label>
+                                <input type="text" name="department" class="form-control" 
+                                       value="{{ institution.department if institution else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Año Lectivo</label>
+                                <input type="text" name="academic_year" class="form-control" 
+                                       value="{{ institution.academic_year if institution else '2026' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Resolución de Aprobación</label>
+                            <input type="text" name="resolution" class="form-control" 
+                                   value="{{ institution.resolution if institution else '' }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Logo de la Institución</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+                            {% if institution and institution.logo %}
+                            <small class="text-muted">Logo actual: {{ institution.logo }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Guardar Configuración
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Configure aquí los datos principales de la institución educativa.
+                        Esta información aparecerá en los boletines y reportes.
+                    </p>
+                    
+                    <hr>
+                    
+                    <h6>Enlaces Rápidos:</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('institution.campuses') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-geo-alt"></i> Gestionar Sedes
+                        </a>
+                        <a href="{{ url_for('institution.grades') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-journal"></i> Gestionar Grados
+                        </a>
+                        <a href="{{ url_for('institution.subjects') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-book"></i> Gestionar Asignaturas
+                        </a>
+                        <a href="{{ url_for('institution.periods') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-calendar3"></i> Gestionar Periodos
+                        </a>
+                        <a href="{{ url_for('institution.criteria') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-list-check"></i> Criterios de Evaluación
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

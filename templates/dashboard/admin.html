@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Administrador - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-speedometer2"></i> Dashboard Administrador
+    </h2>
+    
+    {% if institution %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-building"></i> <strong>{{ institution.name }}</strong>
+        {% if institution.municipality %} - {{ institution.municipality }}, {{ institution.department }}{% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Estudiantes Activos</h6>
+                            <h2 class="mb-0">{{ total_students }}</h2>
+                        </div>
+                        <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Profesores</h6>
+                            <h2 class="mb-0">{{ total_teachers }}</h2>
+                        </div>
+                        <i class="bi bi-person-workspace" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Grados</h6>
+                            <h2 class="mb-0">{{ total_grades }}</h2>
+                        </div>
+                        <i class="bi bi-journal-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Asignaturas</h6>
+                            <h2 class="mb-0">{{ total_subjects }}</h2>
+                        </div>
+                        <i class="bi bi-book" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('students.list') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-person-plus"></i> Gestionar Estudiantes
+                        </a>
+                        <a href="{{ url_for('grades.grade_input') }}" class="btn btn-outline-success">
+                            <i class="bi bi-pencil-square"></i> Ingresar Notas
+                        </a>
+                        <a href="{{ url_for('report_cards.report_cards') }}" class="btn btn-outline-info">
+                            <i class="bi bi-file-earmark-pdf"></i> Generar Boletines
+                        </a>
+                        <a href="{{ url_for('metrics.institution_metrics') }}" class="btn btn-outline-warning">
+                            <i class="bi bi-graph-up"></i> Ver Métricas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Configuración del Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <a href="{{ url_for('institution.config') }}" class="text-decoration-none">
+                                <i class="bi bi-building"></i> Datos de la Institución
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('institution.campuses') }}" class="text-decoration-none">
+                                <i class="bi bi-geo-alt"></i> Gestión de Sedes
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('institution.grades') }}" class="text-decoration-none">
+                                <i class="bi bi-journal"></i> Gestión de Grados
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('institution.subjects') }}" class="text-decoration-none">
+                                <i class="bi bi-book"></i> Gestión de Asignaturas
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('institution.periods') }}" class="text-decoration-none">
+                                <i class="bi bi-calendar3"></i> Periodos Académicos
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

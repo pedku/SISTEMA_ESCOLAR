@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Carga Masiva de Notas - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-file-earmark-excel"></i> Carga Masiva de Notas desde Excel</h2>
+        <a href="{{ url_for('grades.grade_input') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Seleccion
+        </a>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Instrucciones</h5>
+        </div>
+        <div class="card-body">
+            <ol class="mb-0">
+                <li>Seleccione el <strong>grado y la asignatura</strong> para la cual desea cargar notas.</li>
+                <li>Seleccione el <strong>periodo academico</strong>.</li>
+                <li>Prepare un archivo <strong>Excel (.xlsx, .xls)</strong> con las siguientes columnas:
+                    <ul>
+                        <li><strong>documento</strong>: Numero de documento del estudiante (requerido)</li>
+                        {% for criterion in criteria %}
+                        <li><strong>{{ criterion.name }}</strong>: Nota para {{ criterion.name }} (escala {{ 1.0 }} a {{ 5.0 }})</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <li>El sistema buscara al estudiante por numero de documento en el grado seleccionado.</li>
+                <li>Las notas fuera de rango (1.0-5.0) seran rechazadas.</li>
+                <li>Si el estudiante ya tiene notas, se actualizaran (si no estan bloqueadas).</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Example format -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Formato del Archivo Excel</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>documento</th>
+                            {% for criterion in criteria %}
+                            <th>{{ criterion.name|lower }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>12345678</td>
+                            {% for criterion in criteria %}
+                            <td>{{ "%.1f"|format(3.5 + loop.index * 0.3) }}</td>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <td>87654321</td>
+                            {% for criterion in criteria %}
+                            <td>{{ "%.1f"|format(4.0 - loop.index * 0.2) }}</td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadTemplate()">
+                    <i class="bi bi-download"></i> Descargar Plantilla Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-upload"></i> Cargar Archivo</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="row g-3">
+                    {% if grades and subject_grades is defined %}
+                    <!-- If coming from direct selection, show grade/subject selectors -->
+                    {% endif %}
+
+                    <div class="col-md-6">
+                        <label class="form-label"><strong>Grado y Asignatura:</strong></label>
+                        <select name="subject_grade_id" class="form-select" required>
+                            <option value="">-- Seleccione una asignatura-grado --</option>
+                            {% for grade_obj in grades %}
+                            <optgroup label="Grado: {{ grade_obj.name }}">
+                                {% for sg in subject_grades if sg.grade_id == grade_obj.id %}
+                                <option value="{{ sg.id }}" {% if selected_sg == sg.id %}selected{% endif %}>
+                                    {{ sg.subject.name }} - {{ sg.teacher_user.get_full_name() if sg.teacher_user else 'Sin docente' }}
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label"><strong>Periodo Academico:</strong></label>
+                        <select name="period_id" class="form-select" required>
+                            <option value="">-- Seleccione periodo --</option>
+                            {% for period in periods %}
+                            <option value="{{ period.id }}" {% if selected_period == period.id %}selected{% endif %}>
+                                {{ period.name }}
+                                {% if period.is_active %}(Activo){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label"><strong>Archivo Excel:</strong></label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-upload"></i> Cargar Notas
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Grading Scale Reference -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-rulers"></i> Escala de Calificacion</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col">
+                    <div class="p-3 border rounded" style="background-color: #d1e7dd;">
+                        <h4>4.6 - 5.0</h4>
+                        <span class="badge bg-success">Superior</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded" style="background-color: #d1f2eb;">
+                        <h4>4.0 - 4.5</h4>
+                        <span class="badge bg-info">Alto</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded" style="background-color: #fff3cd;">
+                        <h4>3.0 - 3.9</h4>
+                        <span class="badge bg-warning">Basico</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded" style="background-color: #f8d7da;">
+                        <h4>1.0 - 2.9</h4>
+                        <span class="badge bg-danger">Bajo</span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted mt-3 text-center">
+                <i class="bi bi-check-circle"></i> Nota minima de aprobacion: <strong>3.0</strong>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadTemplate() {
+    // Create a simple Excel template using CSV (can be opened in Excel)
+    const criteria = [{% for c in criteria %}'{{ c.name }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+    let csv = 'documento,' + criteria.join(',') + '\n';
+    csv += '12345678,';
+    csv += criteria.map(() => '3.5').join(',') + '\n';
+    csv += '87654321,';
+    csv += criteria.map(() => '4.0').join(',') + '\n';
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'plantilla_notas.csv';
+    link.click();
+}
+
+// Validate file type on select
+document.querySelector('input[name="file"]').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls'].includes(ext)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo no valido',
+                text: 'Solo se permiten archivos Excel (.xlsx, .xls)',
+                confirmButtonText: 'Entendido'
+            });
+            e.target.value = '';
+        }
+    }
+});
+
+// Confirm before upload
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const sgSelect = document.querySelector('select[name="subject_grade_id"]');
+    const periodSelect = document.querySelector('select[name="period_id"]');
+    const fileInput = document.querySelector('input[name="file"]');
+
+    if (!sgSelect.value || !periodSelect.value || !fileInput.files.length) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos incompletos',
+            text: 'Por favor complete todos los campos requeridos.',
+            confirmButtonText: 'Entendido'
+        });
+        return;
+    }
+
+    const sgName = sgSelect.options[sgSelect.selectedIndex].text;
+    const periodName = periodSelect.options[periodSelect.selectedIndex].text;
+
+    Swal.fire({
+        title: 'Confirmar carga masiva',
+        html: `Se cargaran las notas para:<br><strong>${sgName}</strong><br>Periodo: <strong>${periodName}</strong><br><br>Las notas existentes seran actualizadas.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Si, cargar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#27ae60',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.submit();
+        }
+    });
+});
+</script>
+{% endblock %}

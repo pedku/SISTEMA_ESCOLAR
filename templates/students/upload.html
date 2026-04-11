@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Cargar Estudiantes desde Excel - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-file-earmark-excel"></i> Cargar Estudiantes desde Excel
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-upload"></i> Subir Archivo</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">Archivo Excel (.xlsx, .xls) *</label>
+                            <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                            <small class="text-muted">Tamaño máximo: 10MB</small>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Importante:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Los estudiantes que ya existen (mismo documento) serán omitidos</li>
+                                <li>Contraseña por defecto para todos: <code>estudiante123</code></li>
+                                <li>Se generará usuario automáticamente</li>
+                            </ul>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-upload"></i> Cargar Estudiantes
+                        </button>
+                        <a href="{{ url_for('students.list') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Formato Requerido</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">El archivo Excel debe tener las siguientes columnas:</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Columna</th>
+                                    <th>Obligatorio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>nombre</code></td><td>✅ Sí</td></tr>
+                                <tr><td><code>apellido</code></td><td>✅ Sí</td></tr>
+                                <tr><td><code>documento</code></td><td>✅ Sí</td></tr>
+                                <tr><td><code>tipo_documento</code></td><td>❌ No (TI)</td></tr>
+                                <tr><td><code>fecha_nacimiento</code></td><td>❌ No</td></tr>
+                                <tr><td><code>genero</code></td><td>❌ No</td></tr>
+                                <tr><td><code>grado</code></td><td>❌ No</td></tr>
+                                <tr><td><code>sede</code></td><td>❌ No</td></tr>
+                                <tr><td><code>acudiente</code></td><td>❌ No</td></tr>
+                                <tr><td><code>telefono_acudiente</code></td><td>❌ No</td></tr>
+                                <tr><td><code>email_acudiente</code></td><td>❌ No</td></tr>
+                                <tr><td><code>direccion</code></td><td>❌ No</td></tr>
+                                <tr><td><code>barrio</code></td><td>❌ No</td></tr>
+                                <tr><td><code>estrato</code></td><td>❌ No</td></tr>
+                                <tr><td><code>tipo_sangre</code></td><td>❌ No</td></tr>
+                                <tr><td><code>eps</code></td><td>❌ No</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <hr>
+                    
+                    <a href="#" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-download"></i> Descargar Plantilla
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil del Estudiante - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-badge"></i> Perfil del Estudiante</h2>
+        <div>
+            {% if user_has_any_role('root', 'admin') %}
+            <a href="{{ url_for('students.edit', id=student.id) }}" class="btn btn-warning me-2">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            {% endif %}
+            <a href="{{ url_for('students.list') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Student Photo & Basic Info -->
+        <div class="col-md-4 mb-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="bi bi-person-circle text-primary" style="font-size: 6rem;"></i>
+                    </div>
+                    <h3 class="card-title">{{ student.user.get_full_name() }}</h3>
+                    <p class="text-muted mb-1">
+                        <i class="bi bi-hash"></i> {{ student.document_number }}
+                    </p>
+                    <p class="mb-3">
+                        {% if student.status == 'activo' %}
+                        <span class="badge bg-success">Estudiante Activo</span>
+                        {% elif student.status == 'retirado' %}
+                        <span class="badge bg-warning">Estudiante Retirado</span>
+                        {% else %}
+                        <span class="badge bg-info">Estudiante Graduado</span>
+                        {% endif %}
+                    </p>
+                    
+                    <hr>
+                    
+                    <div class="text-start">
+                        <p class="mb-2"><strong>Usuario:</strong> {{ student.user.username }}</p>
+                        <p class="mb-2"><strong>Email:</strong> {{ student.user.email }}</p>
+                        <p class="mb-2"><strong>Teléfono:</strong> {{ student.user.phone or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Academic Information -->
+        <div class="col-md-8 mb-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-mortarboard"></i> Información Académica</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Sede:</strong><br>
+                            {{ student.campus.name if student.campus else 'N/A' }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Grado:</strong><br>
+                            {% if student.grade %}
+                            <span class="badge bg-primary">{{ student.grade.name }}</span>
+                            {% else %}
+                            <span class="text-muted">Sin asignar</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Fecha de Nacimiento:</strong><br>
+                            {{ student.birth_date.strftime('%d/%m/%Y') if student.birth_date else 'N/A' }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Género:</strong><br>
+                            {{ student.gender or 'N/A' }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Tipo de Sangre:</strong><br>
+                            {{ student.blood_type or 'N/A' }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Dirección:</strong><br>
+                            {{ student.address or 'N/A' }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <strong>Barrio:</strong><br>
+                            {{ student.neighborhood or 'N/A' }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <strong>Estrato:</strong><br>
+                            {{ student.stratum or 'N/A' }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>EPS:</strong><br>
+                            {{ student.eps or 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Guardian Information -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Información del Acudiente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <strong>Nombre:</strong><br>
+                            {{ student.guardian_name or 'N/A' }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Teléfono:</strong><br>
+                            {{ student.guardian_phone or 'N/A' }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Email:</strong><br>
+                            {{ student.guardian_email or 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="#" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-pencil-square"></i> Ver Notas
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="#" class="btn btn-outline-success w-100">
+                                <i class="bi bi-calendar-check"></i> Ver Asistencia
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="#" class="btn btn-outline-info w-100">
+                                <i class="bi bi-chat-left-text"></i> Observaciones
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="#" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-file-earmark-text"></i> Boletines
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

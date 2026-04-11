@@ -1,0 +1,733 @@
+"""
+Institution management routes.
+Full CRUD for institution, campuses, grades, subjects, periods, and evaluation criteria.
+Includes multi-institution management for root users.
+"""
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask_login import login_required, current_user
+from extensions import db
+from models.institution import Institution, Campus
+from models.academic import Grade, Subject, SubjectGrade
+from models.grading import AcademicPeriod, GradeCriteria
+from models.user import User
+from utils.decorators import role_required
+from datetime import datetime
+import os
+
+institution_bp = Blueprint('institution', __name__)
+
+
+# ============================================
+# Multi-Institution Management (Root Only)
+# ============================================
+
+@institution_bp.route('/list')
+@login_required
+@role_required('root')
+def institutions_list():
+    """List all institutions - root only."""
+    all_institutions = Institution.query.order_by(Institution.name).all()
+    return render_template('institution/institutions_list.html', institutions=all_institutions)
+
+
+@institution_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root')
+def institution_new():
+    """Create a new institution - root only."""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        nit = request.form.get('nit', '').strip()
+
+        if not name:
+            flash('El nombre de la institución es obligatorio.', 'error')
+            return render_template('institution/institution_form.html', institution=None)
+
+        # Check for duplicate NIT if provided
+        if nit:
+            existing = Institution.query.filter_by(nit=nit).first()
+            if existing:
+                flash('Ya existe una institución con ese NIT.', 'error')
+                return render_template('institution/institution_form.html', institution=None)
+
+        institution = Institution(
+            name=name,
+            nit=nit if nit else None,
+            address=request.form.get('address', '').strip(),
+            phone=request.form.get('phone', '').strip(),
+            email=request.form.get('email', '').strip(),
+            municipality=request.form.get('municipality', '').strip(),
+            department=request.form.get('department', '').strip(),
+            resolution=request.form.get('resolution', '').strip(),
+            academic_year=request.form.get('academic_year', '2026').strip()
+        )
+
+        # Handle logo upload
+        if 'logo' in request.files:
+            logo_file = request.files['logo']
+            if logo_file and logo_file.filename != '':
+                # Validate file extension
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+                file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
+                if file_ext in allowed_extensions:
+                    # Create unique filename
+                    import uuid
+                    logo_filename = f"logo_{uuid.uuid4().hex}.{file_ext}"
+                    upload_dir = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                    logo_path = os.path.join(upload_dir, 'logos', logo_filename)
+                    os.makedirs(os.path.dirname(logo_path), exist_ok=True)
+                    logo_file.save(logo_path)
+                    institution.logo = os.path.join('logos', logo_filename)
+
+        try:
+            db.session.add(institution)
+            db.session.commit()
+            flash('Institución creada exitosamente.', 'success')
+            return redirect(url_for('institution.institutions_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la institución: {str(e)}', 'error')
+
+    return render_template('institution/institution_form.html', institution=None)
+
+
+@institution_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root')
+def institution_edit(id):
+    """Edit an existing institution - root only."""
+    institution = db.session.get(Institution, id)
+
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        return redirect(url_for('institution.institutions_list'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        nit = request.form.get('nit', '').strip()
+
+        if not name:
+            flash('El nombre de la institución es obligatorio.', 'error')
+            return render_template('institution/institution_form.html', institution=institution)
+
+        # Check for duplicate NIT if changed
+        if nit and nit != institution.nit:
+            existing = Institution.query.filter_by(nit=nit).first()
+            if existing:
+                flash('Ya existe otra institución con ese NIT.', 'error')
+                return render_template('institution/institution_form.html', institution=institution)
+
+        institution.name = name
+        institution.nit = nit if nit else None
+        institution.address = request.form.get('address', '').strip()
+        institution.phone = request.form.get('phone', '').strip()
+        institution.email = request.form.get('email', '').strip()
+        institution.municipality = request.form.get('municipality', '').strip()
+        institution.department = request.form.get('department', '').strip()
+        institution.resolution = request.form.get('resolution', '').strip()
+        institution.academic_year = request.form.get('academic_year', '2026').strip()
+
+        # Handle logo upload
+        if 'logo' in request.files:
+            logo_file = request.files['logo']
+            if logo_file and logo_file.filename != '':
+                # Validate file extension
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+                file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
+                if file_ext in allowed_extensions:
+                    # Delete old logo if exists
+                    if institution.logo:
+                        old_logo_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), institution.logo)
+                        if os.path.exists(old_logo_path):
+                            os.remove(old_logo_path)
+
+                    # Save new logo
+                    import uuid
+                    logo_filename = f"logo_{uuid.uuid4().hex}.{file_ext}"
+                    upload_dir = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                    logo_path = os.path.join(upload_dir, 'logos', logo_filename)
+                    os.makedirs(os.path.dirname(logo_path), exist_ok=True)
+                    logo_file.save(logo_path)
+                    institution.logo = os.path.join('logos', logo_filename)
+
+        try:
+            db.session.commit()
+            flash('Institución actualizada exitosamente.', 'success')
+            return redirect(url_for('institution.institutions_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la institución: {str(e)}', 'error')
+
+    return render_template('institution/institution_form.html', institution=institution)
+
+
+@institution_bp.route('/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root')
+def institution_delete(id):
+    """Delete an institution - root only."""
+    institution = db.session.get(Institution, id)
+
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        return redirect(url_for('institution.institutions_list'))
+
+    # Check for related data
+    has_campuses = institution.campuses.count() > 0
+    has_periods = institution.academic_periods.count() > 0
+    has_criteria = institution.grade_criteria.count() > 0
+    has_students = institution.academic_students.count() > 0
+
+    if has_campuses or has_periods or has_criteria or has_students:
+        flash(
+            'No se puede eliminar la institución porque tiene datos asociados '
+            '(sedes, periodos, criterios de evaluación o estudiantes).',
+            'warning'
+        )
+        return redirect(url_for('institution.institutions_list'))
+
+    # Delete logo file if exists
+    if institution.logo:
+        logo_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), institution.logo)
+        if os.path.exists(logo_path):
+            os.remove(logo_path)
+
+    try:
+        db.session.delete(institution)
+        db.session.commit()
+        flash('Institución eliminada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la institución: {str(e)}', 'error')
+
+    return redirect(url_for('institution.institutions_list'))
+
+
+# ============================================
+# Institution Configuration
+# ============================================
+
+@institution_bp.route('/config', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def config():
+    """View and edit institution configuration."""
+    institution = Institution.query.first()
+    
+    if request.method == 'POST':
+        if not institution:
+            institution = Institution()
+            db.session.add(institution)
+        
+        institution.name = request.form.get('name', '').strip()
+        institution.nit = request.form.get('nit', '').strip()
+        institution.address = request.form.get('address', '').strip()
+        institution.phone = request.form.get('phone', '').strip()
+        institution.email = request.form.get('email', '').strip()
+        institution.municipality = request.form.get('municipality', '').strip()
+        institution.department = request.form.get('department', '').strip()
+        institution.resolution = request.form.get('resolution', '').strip()
+        institution.academic_year = request.form.get('academic_year', '').strip()
+        
+        # Handle logo upload
+        if 'logo' in request.files:
+            logo = request.files['logo']
+            if logo and logo.filename != '':
+                # TODO: Implement logo upload logic
+                pass
+        
+        try:
+            db.session.commit()
+            flash('Configuración de institución actualizada exitosamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+        
+        return redirect(url_for('institution.config'))
+    
+    return render_template('institution/config.html', institution=institution)
+
+
+# ============================================
+# Campuses CRUD
+# ============================================
+
+@institution_bp.route('/campuses')
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def campuses():
+    """List all campuses."""
+    campus_list = Campus.query.order_by(Campus.name).all()
+    return render_template('institution/campuses.html', campuses=campus_list)
+
+
+@institution_bp.route('/campuses/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def campus_new():
+    """Create a new campus."""
+    if request.method == 'POST':
+        institution = Institution.query.first()
+        
+        campus = Campus(
+            institution_id=institution.id,
+            name=request.form.get('name', '').strip(),
+            code=request.form.get('code', '').strip(),
+            address=request.form.get('address', '').strip(),
+            jornada=request.form.get('jornada', 'completa'),
+            active=request.form.get('active') == 'on'
+        )
+        
+        try:
+            db.session.add(campus)
+            db.session.commit()
+            flash('Sede creada exitosamente.', 'success')
+            return redirect(url_for('institution.campuses'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la sede: {str(e)}', 'error')
+    
+    return render_template('institution/campus_form.html', campus=None)
+
+
+@institution_bp.route('/campuses/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def campus_edit(id):
+    """Edit an existing campus."""
+    campus = db.session.get(Campus, id)
+    
+    if not campus:
+        flash('Sede no encontrada.', 'error')
+        return redirect(url_for('institution.campuses'))
+    
+    if request.method == 'POST':
+        campus.name = request.form.get('name', '').strip()
+        campus.code = request.form.get('code', '').strip()
+        campus.address = request.form.get('address', '').strip()
+        campus.jornada = request.form.get('jornada', 'completa')
+        campus.active = request.form.get('active') == 'on'
+        
+        try:
+            db.session.commit()
+            flash('Sede actualizada exitosamente.', 'success')
+            return redirect(url_for('institution.campuses'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    return render_template('institution/campus_form.html', campus=campus)
+
+
+@institution_bp.route('/campuses/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def campus_delete(id):
+    """Delete a campus."""
+    campus = db.session.get(Campus, id)
+    
+    if not campus:
+        flash('Sede no encontrada.', 'error')
+        return redirect(url_for('institution.campuses'))
+    
+    if campus.grades.count() > 0:
+        flash('No se puede eliminar la sede porque tiene grados asignados.', 'warning')
+        return redirect(url_for('institution.campuses'))
+    
+    try:
+        db.session.delete(campus)
+        db.session.commit()
+        flash('Sede eliminada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('institution.campuses'))
+
+
+# ============================================
+# Grades CRUD
+# ============================================
+
+@institution_bp.route('/grades')
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def grades():
+    """List all grades."""
+    grade_list = Grade.query.order_by(Grade.name).all()
+    return render_template('institution/grades.html', grades=grade_list)
+
+
+@institution_bp.route('/grades/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_new():
+    """Create a new grade."""
+    if request.method == 'POST':
+        campus = db.session.get(Campus, int(request.form.get('campus_id')))
+        director_id = request.form.get('director_id')
+        
+        grade = Grade(
+            campus_id=campus.id,
+            director_id=int(director_id) if director_id else None,
+            name=request.form.get('name', '').strip(),
+            academic_year=request.form.get('academic_year', '2026').strip(),
+            max_students=int(request.form.get('max_students', 40))
+        )
+        
+        try:
+            db.session.add(grade)
+            db.session.commit()
+            flash('Grado creado exitosamente.', 'success')
+            return redirect(url_for('institution.grades'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el grado: {str(e)}', 'error')
+    
+    campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+    teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+    
+    return render_template('institution/grade_form.html', grade=None, campuses=campuses, teachers=teachers)
+
+
+@institution_bp.route('/grades/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_edit(id):
+    """Edit an existing grade."""
+    grade = db.session.get(Grade, id)
+    
+    if not grade:
+        flash('Grado no encontrado.', 'error')
+        return redirect(url_for('institution.grades'))
+    
+    if request.method == 'POST':
+        grade.campus_id = int(request.form.get('campus_id'))
+        grade.director_id = int(request.form.get('director_id')) if request.form.get('director_id') else None
+        grade.name = request.form.get('name', '').strip()
+        grade.academic_year = request.form.get('academic_year', '2026').strip()
+        grade.max_students = int(request.form.get('max_students', 40))
+        
+        try:
+            db.session.commit()
+            flash('Grado actualizado exitosamente.', 'success')
+            return redirect(url_for('institution.grades'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+    teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+    
+    return render_template('institution/grade_form.html', grade=grade, campuses=campuses, teachers=teachers)
+
+
+@institution_bp.route('/grades/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_delete(id):
+    """Delete a grade."""
+    grade = db.session.get(Grade, id)
+    
+    if not grade:
+        flash('Grado no encontrado.', 'error')
+        return redirect(url_for('institution.grades'))
+    
+    if grade.academic_students.count() > 0:
+        flash('No se puede eliminar el grado porque tiene estudiantes asignados.', 'warning')
+        return redirect(url_for('institution.grades'))
+    
+    try:
+        db.session.delete(grade)
+        db.session.commit()
+        flash('Grado eliminado exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('institution.grades'))
+
+
+# ============================================
+# Subjects CRUD
+# ============================================
+
+@institution_bp.route('/subjects')
+@login_required
+@role_required('root', 'admin', 'coordinator', 'teacher')
+def subjects():
+    """List all subjects."""
+    subject_list = Subject.query.order_by(Subject.name).all()
+    return render_template('institution/subjects.html', subjects=subject_list)
+
+
+@institution_bp.route('/subjects/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def subject_new():
+    """Create a new subject."""
+    if request.method == 'POST':
+        subject = Subject(
+            name=request.form.get('name', '').strip(),
+            code=request.form.get('code', '').strip()
+        )
+        
+        try:
+            db.session.add(subject)
+            db.session.commit()
+            flash('Asignatura creada exitosamente.', 'success')
+            return redirect(url_for('institution.subjects'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la asignatura: {str(e)}', 'error')
+    
+    return render_template('institution/subject_form.html', subject=None)
+
+
+@institution_bp.route('/subjects/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def subject_edit(id):
+    """Edit an existing subject."""
+    subject = db.session.get(Subject, id)
+    
+    if not subject:
+        flash('Asignatura no encontrada.', 'error')
+        return redirect(url_for('institution.subjects'))
+    
+    if request.method == 'POST':
+        subject.name = request.form.get('name', '').strip()
+        subject.code = request.form.get('code', '').strip()
+        
+        try:
+            db.session.commit()
+            flash('Asignatura actualizada exitosamente.', 'success')
+            return redirect(url_for('institution.subjects'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    return render_template('institution/subject_form.html', subject=subject)
+
+
+@institution_bp.route('/subjects/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def subject_delete(id):
+    """Delete a subject."""
+    subject = db.session.get(Subject, id)
+    
+    if not subject:
+        flash('Asignatura no encontrada.', 'error')
+        return redirect(url_for('institution.subjects'))
+    
+    if subject.subject_grades.count() > 0:
+        flash('No se puede eliminar la asignatura porque tiene grados asignados.', 'warning')
+        return redirect(url_for('institution.subjects'))
+    
+    try:
+        db.session.delete(subject)
+        db.session.commit()
+        flash('Asignatura eliminada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('institution.subjects'))
+
+
+# ============================================
+# Academic Periods CRUD
+# ============================================
+
+@institution_bp.route('/periods')
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def periods():
+    """List all academic periods."""
+    period_list = AcademicPeriod.query.order_by(AcademicPeriod.order).all()
+    return render_template('institution/periods.html', periods=period_list)
+
+
+@institution_bp.route('/periods/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def period_new():
+    """Create a new academic period."""
+    if request.method == 'POST':
+        institution = Institution.query.first()
+        
+        period = AcademicPeriod(
+            institution_id=institution.id,
+            name=request.form.get('name', '').strip(),
+            short_name=request.form.get('short_name', '').strip(),
+            start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date(),
+            end_date=datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date(),
+            is_active=request.form.get('is_active') == 'on',
+            academic_year=request.form.get('academic_year', '2026').strip(),
+            order=int(request.form.get('order'))
+        )
+        
+        try:
+            db.session.add(period)
+            db.session.commit()
+            flash('Periodo académico creado exitosamente.', 'success')
+            return redirect(url_for('institution.periods'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el periodo: {str(e)}', 'error')
+    
+    return render_template('institution/period_form.html', period=None)
+
+
+@institution_bp.route('/periods/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def period_edit(id):
+    """Edit an academic period."""
+    period = db.session.get(AcademicPeriod, id)
+    
+    if not period:
+        flash('Periodo no encontrado.', 'error')
+        return redirect(url_for('institution.periods'))
+    
+    if request.method == 'POST':
+        period.name = request.form.get('name', '').strip()
+        period.short_name = request.form.get('short_name', '').strip()
+        period.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
+        period.end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
+        period.is_active = request.form.get('is_active') == 'on'
+        period.academic_year = request.form.get('academic_year', '2026').strip()
+        period.order = int(request.form.get('order'))
+        
+        try:
+            db.session.commit()
+            flash('Periodo académico actualizado exitosamente.', 'success')
+            return redirect(url_for('institution.periods'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    return render_template('institution/period_form.html', period=period)
+
+
+@institution_bp.route('/periods/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def period_delete(id):
+    """Delete an academic period."""
+    period = db.session.get(AcademicPeriod, id)
+    
+    if not period:
+        flash('Periodo no encontrado.', 'error')
+        return redirect(url_for('institution.periods'))
+    
+    if period.grade_records.count() > 0:
+        flash('No se puede eliminar el periodo porque tiene registros de notas.', 'warning')
+        return redirect(url_for('institution.periods'))
+    
+    try:
+        db.session.delete(period)
+        db.session.commit()
+        flash('Periodo académico eliminado exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('institution.periods'))
+
+
+# ============================================
+# Evaluation Criteria CRUD
+# ============================================
+
+@institution_bp.route('/criteria')
+@login_required
+@role_required('root', 'admin', 'coordinator', 'teacher')
+def criteria():
+    """List all evaluation criteria."""
+    criteria_list = GradeCriteria.query.order_by(GradeCriteria.order).all()
+    return render_template('institution/criteria.html', criteria=criteria_list)
+
+
+@institution_bp.route('/criteria/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def criteria_new():
+    """Create a new evaluation criterion."""
+    if request.method == 'POST':
+        institution = Institution.query.first()
+        
+        criterion = GradeCriteria(
+            institution_id=institution.id,
+            name=request.form.get('name', '').strip(),
+            weight=float(request.form.get('weight')),
+            description=request.form.get('description', '').strip(),
+            order=int(request.form.get('order'))
+        )
+        
+        try:
+            db.session.add(criterion)
+            db.session.commit()
+            flash('Criterio de evaluación creado exitosamente.', 'success')
+            return redirect(url_for('institution.criteria'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el criterio: {str(e)}', 'error')
+    
+    return render_template('institution/criteria_form.html', criterion=None)
+
+
+@institution_bp.route('/criteria/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def criteria_edit(id):
+    """Edit an evaluation criterion."""
+    criterion = db.session.get(GradeCriteria, id)
+    
+    if not criterion:
+        flash('Criterio no encontrado.', 'error')
+        return redirect(url_for('institution.criteria'))
+    
+    if request.method == 'POST':
+        criterion.name = request.form.get('name', '').strip()
+        criterion.weight = float(request.form.get('weight'))
+        criterion.description = request.form.get('description', '').strip()
+        criterion.order = int(request.form.get('order'))
+        
+        try:
+            db.session.commit()
+            flash('Criterio de evaluación actualizado exitosamente.', 'success')
+            return redirect(url_for('institution.criteria'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    return render_template('institution/criteria_form.html', criterion=criterion)
+
+
+@institution_bp.route('/criteria/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def criteria_delete(id):
+    """Delete an evaluation criterion."""
+    criterion = db.session.get(GradeCriteria, id)
+    
+    if not criterion:
+        flash('Criterio no encontrado.', 'error')
+        return redirect(url_for('institution.criteria'))
+    
+    if criterion.grade_records.count() > 0:
+        flash('No se puede eliminar el criterio porque tiene registros de notas.', 'warning')
+        return redirect(url_for('institution.criteria'))
+    
+    try:
+        db.session.delete(criterion)
+        db.session.commit()
+        flash('Criterio de evaluación eliminado exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('institution.criteria'))

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if campus else 'Nueva' }} Sede - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="bi bi-geo-alt"></i> {{ 'Editar' if campus else 'Nueva' }} Sede
+    </h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre de la Sede *</label>
+                        <input type="text" name="name" class="form-control" 
+                               value="{{ campus.name if campus else '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Código</label>
+                        <input type="text" name="code" class="form-control" 
+                               value="{{ campus.code if campus else '' }}">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Dirección</label>
+                    <input type="text" name="address" class="form-control" 
+                           value="{{ campus.address if campus else '' }}">
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Jornada</label>
+                        <select name="jornada" class="form-select">
+                            <option value="mañana" {% if campus and campus.jornada == 'mañana' %}selected{% endif %}>Mañana</option>
+                            <option value="tarde" {% if campus and campus.jornada == 'tarde' %}selected{% endif %}>Tarde</option>
+                            <option value="completa" {% if not campus or campus.jornada == 'completa' %}selected{% endif %}>Completa</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mt-4">
+                            <input type="checkbox" name="active" class="form-check-input" id="active"
+                                   {% if not campus or campus.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Sede Activa</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> {{ 'Actualizar' if campus else 'Crear' }} Sede
+                </button>
+                <a href="{{ url_for('institution.campuses') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Ingreso de Notas - {{ subject.name }} - {{ grade.name }} - {{ period.name }} - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-input-cell {
+        width: 80px;
+        text-align: center;
+        font-weight: bold;
+    }
+    .grade-input-cell:focus {
+        background-color: #e8f4fd;
+        outline: 2px solid #0d6efd;
+    }
+    .final-grade-cell {
+        width: 80px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1em;
+        background-color: #f8f9fa;
+    }
+    .status-cell {
+        width: 90px;
+        text-align: center;
+    }
+    .grade-excellent { color: #198754; font-weight: bold; }
+    .grade-good { color: #0dcaf0; font-weight: bold; }
+    .grade-average { color: #ffc107; font-weight: bold; }
+    .grade-below { color: #fd7e14; font-weight: bold; }
+    .grade-fail { color: #dc3545; font-weight: bold; }
+
+    .observation-input {
+        width: 100px;
+        font-size: 0.85em;
+    }
+
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #343a40;
+        color: white;
+        z-index: 10;
+        vertical-align: middle;
+    }
+
+    .student-name-cell {
+        min-width: 200px;
+        white-space: nowrap;
+    }
+
+    .locked-overlay {
+        position: relative;
+    }
+    .locked-overlay::after {
+        content: '\F52D';
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        color: #6c757d;
+    }
+
+    .grade-header {
+        background-color: #e9ecef;
+        text-align: center;
+    }
+
+    .summary-row td {
+        font-weight: bold;
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>
+                <i class="bi bi-pencil-square"></i> Ingreso de Notas
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ url_for('grades.grade_input') }}">Notas</a></li>
+                    <li class="breadcrumb-item">{{ grade.name }}</li>
+                    <li class="breadcrumb-item">{{ subject.name }}</li>
+                    <li class="breadcrumb-item active">{{ period.name }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{{ url_for('grades.grade_input') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            {% if is_locked %}
+            <form method="POST" class="d-inline">
+                <input type="hidden" name="action" value="unlock">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Desbloquear notas para edicion?')">
+                    <i class="bi bi-unlock"></i> Desbloquear
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-0"><i class="bi bi-book"></i> Asignatura</h6>
+                    <h5 class="mb-0">{{ subject.name }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-0"><i class="bi bi-journal"></i> Grado</h6>
+                    <h5 class="mb-0">{{ grade.name }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-0"><i class="bi bi-calendar3"></i> Periodo</h6>
+                    <h5 class="mb-0">{{ period.name }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-0"><i class="bi bi-people"></i> Estudiantes</h6>
+                    <h5 class="mb-0">{{ students|length }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card {% if is_locked %}bg-secondary{% else %}bg-dark{% endif %} text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-0">
+                        {% if is_locked %}
+                        <i class="bi bi-lock"></i> Notas Bloqueadas
+                        {% else %}
+                        <i class="bi bi-unlock"></i> Notas Desbloqueadas
+                        {% endif %}
+                    </h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Criteria Weights Reference -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <strong>Pesos: </strong>
+            {% for criterion in criteria %}
+            <span class="badge bg-primary me-2">{{ criterion.name }}: {{ criterion.weight }}%</span>
+            {% endfor %}
+            <span class="text-muted ms-2">| Escala: {{ MIN_GRADE }} - {{ MAX_GRADE }} | Minimo aprobacion: {{ PASSING_GRADE }}</span>
+        </div>
+    </div>
+
+    <!-- Grade Input Form -->
+    <form method="POST" id="gradeForm">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-table"></i> Planilla de Calificaciones</h5>
+                <div>
+                    {% if not is_locked %}
+                    <button type="submit" class="btn btn-primary btn-sm" name="action" value="save">
+                        <i class="bi bi-save"></i> Guardar Todas
+                    </button>
+                    {% if grade_data|length > 0 %}
+                    <button type="submit" class="btn btn-secondary btn-sm" name="action" value="lock"
+                            onclick="return confirm('Bloquear notas? Esta accion impedira futuras ediciones.')">
+                        <i class="bi bi-lock"></i> Guardar y Bloquear
+                    </button>
+                    {% endif %}
+                    {% endif %}
+                    <a href="{{ url_for('grades.grade_upload') }}" class="btn btn-success btn-sm ms-2">
+                        <i class="bi bi-file-earmark-excel"></i> Carga Masiva
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0" id="gradeTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th rowspan="2" class="align-middle" style="min-width:50px">#</th>
+                                <th rowspan="2" class="align-middle student-name-cell">Estudiante</th>
+                                {% for criterion in criteria %}
+                                <th colspan="2" class="text-center grade-header">{{ criterion.name }} ({{ criterion.weight }}%)</th>
+                                {% endfor %}
+                                <th rowspan="2" class="align-middle" style="width:80px">Final</th>
+                                <th rowspan="2" class="align-middle" style="width:90px">Estado</th>
+                                {% if not is_locked %}
+                                <th rowspan="2" class="align-middle" style="width:50px">
+                                    <i class="bi bi-info-circle"></i>
+                                </th>
+                                {% endif %}
+                            </tr>
+                            <tr>
+                                {% for criterion in criteria %}
+                                <th class="text-center" style="width:80px">Nota</th>
+                                <th style="width:100px">Observ.</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr data-student-id="{{ student.id }}">
+                                <td class="text-center">{{ loop.index }}</td>
+                                <td class="student-name-cell">
+                                    {{ student.user.get_full_name() }}
+                                    <br><small class="text-muted">{{ student.document_number }}</small>
+                                </td>
+                                {% for criterion in criteria %}
+                                {% set record = grade_data.get(student.id, {}).get(criterion.id) %}
+                                {% set existing_score = record.score if record else '' %}
+                                <td class="text-center">
+                                    {% if is_locked or (record and record.locked) %}
+                                    <div class="locked-overlay">
+                                        <span class="final-grade-cell {% if existing_score %}{{ get_grade_class(existing_score, PASSING_GRADE) }}{% endif %}">
+                                            {{ existing_score if existing_score else '-' }}
+                                        </span>
+                                    </div>
+                                    {% else %}
+                                    <input type="number"
+                                           class="form-control form-control-sm grade-input-cell mx-auto"
+                                           name="grade_{{ student.id }}_{{ criterion.id }}"
+                                           value="{{ existing_score }}"
+                                           min="{{ MIN_GRADE }}"
+                                           max="{{ MAX_GRADE }}"
+                                           step="0.1"
+                                           data-student="{{ student.id }}"
+                                           data-criterion="{{ criterion.id }}"
+                                           data-weight="{{ criterion.weight }}"
+                                           {% if existing_score %}data-has-grade="true"{% endif %}
+                                           oninput="validateAndCalculate(this)">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if is_locked or (record and record.locked) %}
+                                    <small class="text-muted">{{ record.observation[:20] if record.observation else '' }}</small>
+                                    {% else %}
+                                    <input type="text"
+                                           class="form-control form-control-sm observation-input"
+                                           name="obs_{{ student.id }}_{{ criterion.id }}"
+                                           value="{{ record.observation if record.observation else '' }}"
+                                           placeholder="Observacion"
+                                           maxlength="500">
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    <span class="final-grade-cell" id="final_{{ student.id }}">
+                                        {% set final = grade_data.get(student.id, {}) %}
+                                        {% if final %}
+                                            {% set ns = namespace(weighted=0, total_weight=0) %}
+                                            {% for criterion in criteria %}
+                                                {% set rec = final.get(criterion.id) %}
+                                                {% if rec %}
+                                                    {% set ns.weighted = ns.weighted + rec.score * criterion.weight / 100 %}
+                                                    {% set ns.total_weight = ns.total_weight + criterion.weight %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if ns.total_weight > 0 %}
+                                                {% set calculated = (ns.weighted / ns.total_weight * 100) if ns.total_weight < 100 else ns.weighted %}
+                                                <span class="{{ get_grade_class(calculated, PASSING_GRADE) }}">{{ "%.1f"|format(calculated) }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-center status-cell" id="status_{{ student.id }}">
+                                    {% if final %}
+                                        {% set ns2 = namespace(weighted=0, total_weight=0) %}
+                                        {% for criterion in criteria %}
+                                            {% set rec = final.get(criterion.id) %}
+                                            {% if rec %}
+                                                {% set ns2.weighted = ns2.weighted + rec.score * criterion.weight / 100 %}
+                                                {% set ns2.total_weight = ns2.total_weight + criterion.weight %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if ns2.total_weight > 0 %}
+                                            {% set calc = (ns2.weighted / ns2.total_weight * 100) if ns2.total_weight < 100 else ns2.weighted %}
+                                            {% if calc >= PASSING_GRADE %}
+                                            <span class="badge bg-success">Ganada</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Perdida</span>
+                                            {% endif %}
+                                        {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                {% if not is_locked %}
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-info"
+                                            onclick="showStudentInfo('{{ student.user.get_full_name() }}', {{ student.id }})"
+                                            data-bs-toggle="tooltip" title="Ver notas del estudiante">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+
+                            {% if students %}
+                            <tr class="summary-row">
+                                <td colspan="2" class="text-end"><strong>Promedio del Grupo:</strong></td>
+                                {% for criterion in criteria %}
+                                <td class="text-center" id="avg_criterion_{{ criterion.id }}">-</td>
+                                <td></td>
+                                {% endfor %}
+                                <td class="text-center" id="avg_final">-</td>
+                                <td class="text-center" id="avg_status">-</td>
+                                {% if not is_locked %}
+                                <td></td>
+                                {% endif %}
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if not students %}
+    <div class="alert alert-warning mt-3">
+        <i class="bi bi-exclamation-triangle"></i> No hay estudiantes activos en este grado.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Grade class helper (rendered from server)
+function getGradeClass(score, passing) {
+    if (score >= 4.5) return 'grade-excellent';
+    if (score >= 4.0) return 'grade-good';
+    if (score >= passing) return 'grade-average';
+    if (score >= 2.0) return 'grade-below';
+    return 'grade-fail';
+}
+
+function validateAndCalculate(input) {
+    const min = parseFloat(input.min);
+    const max = parseFloat(input.max);
+    let value = parseFloat(input.value);
+
+    // Clear previous validation
+    input.classList.remove('is-invalid', 'is-valid');
+
+    if (input.value === '') {
+        input.dataset.hasGrade = 'false';
+        calculateStudentAverage(input.dataset.student);
+        return;
+    }
+
+    if (isNaN(value)) {
+        input.classList.add('is-invalid');
+        return;
+    }
+
+    if (value < min || value > max) {
+        input.classList.add('is-invalid');
+        return;
+    }
+
+    input.classList.add('is-valid');
+    input.value = value.toFixed(1);
+    input.dataset.hasGrade = 'true';
+
+    calculateStudentAverage(input.dataset.student);
+    calculateGroupAverages();
+}
+
+function calculateStudentAverage(studentId) {
+    const inputs = document.querySelectorAll(`input[data-student="${studentId}"]`);
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    inputs.forEach(input => {
+        const score = parseFloat(input.value);
+        const weight = parseFloat(input.dataset.weight);
+
+        if (!isNaN(score) && score > 0) {
+            weightedSum += score * (weight / 100);
+            totalWeight += weight;
+        }
+    });
+
+    const finalCell = document.getElementById(`final_${studentId}`);
+    const statusCell = document.getElementById(`status_${studentId}`);
+    const passing = {{ PASSING_GRADE }};
+
+    if (totalWeight > 0) {
+        let finalGrade;
+        if (totalWeight < 100) {
+            // Normalize if not all criteria have grades
+            finalGrade = (weightedSum / totalWeight) * 100;
+        } else {
+            finalGrade = weightedSum;
+        }
+
+        finalGrade = Math.max({{ MIN_GRADE }}, Math.min({{ MAX_GRADE }}, finalGrade));
+        finalGrade = Math.round(finalGrade * 100) / 100;
+
+        finalCell.innerHTML = `<span class="${getGradeClass(finalGrade, passing)}">${finalGrade.toFixed(1)}</span>`;
+
+        if (finalGrade >= passing) {
+            statusCell.innerHTML = '<span class="badge bg-success">Ganada</span>';
+        } else {
+            statusCell.innerHTML = '<span class="badge bg-danger">Perdida</span>';
+        }
+    } else {
+        finalCell.innerHTML = '<span class="text-muted">-</span>';
+        statusCell.innerHTML = '<span class="badge bg-secondary">N/A</span>';
+    }
+}
+
+function calculateGroupAverages() {
+    const criteria = {{ criteria|tojson }};
+    const passing = {{ PASSING_GRADE }};
+
+    // Per-criterion averages
+    criteria.forEach(criterion => {
+        const inputs = document.querySelectorAll(`input[data-criterion="${criterion.id}"]`);
+        let sum = 0;
+        let count = 0;
+
+        inputs.forEach(input => {
+            const score = parseFloat(input.value);
+            if (!isNaN(score) && score > 0) {
+                sum += score;
+                count++;
+            }
+        });
+
+        const avgCell = document.getElementById(`avg_criterion_${criterion.id}`);
+        if (count > 0) {
+            const avg = (sum / count).toFixed(1);
+            avgCell.innerHTML = `<span class="${getGradeClass(parseFloat(avg), passing)}">${avg}</span>`;
+        } else {
+            avgCell.textContent = '-';
+        }
+    });
+
+    // Final average
+    let finalSum = 0;
+    let finalCount = 0;
+
+    document.querySelectorAll('[id^="final_"]').forEach(cell => {
+        const span = cell.querySelector('span');
+        if (span && !span.classList.contains('text-muted')) {
+            const score = parseFloat(span.textContent);
+            if (!isNaN(score)) {
+                finalSum += score;
+                finalCount++;
+            }
+        }
+    });
+
+    const avgFinalCell = document.getElementById('avg_final');
+    const avgStatusCell = document.getElementById('avg_status');
+
+    if (finalCount > 0) {
+        const avg = (finalSum / finalCount).toFixed(1);
+        avgFinalCell.innerHTML = `<span class="${getGradeClass(parseFloat(avg), passing)}">${avg}</span>`;
+
+        if (parseFloat(avg) >= passing) {
+            avgStatusCell.innerHTML = '<span class="badge bg-success">Ganada</span>';
+        } else {
+            avgStatusCell.innerHTML = '<span class="badge bg-danger">Perdida</span>';
+        }
+    } else {
+        avgFinalCell.textContent = '-';
+        avgStatusCell.textContent = '-';
+    }
+}
+
+function showStudentInfo(name, studentId) {
+    window.open(`/grades/student/${studentId}`, '_blank');
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) {
+        return new bootstrap.Tooltip(el);
+    });
+
+    // Calculate initial averages for students with existing grades
+    document.querySelectorAll('input[data-has-grade="true"]').forEach(input => {
+        calculateStudentAverage(input.dataset.student);
+    });
+    calculateGroupAverages();
+
+    // Warn on unsaved changes
+    const form = document.getElementById('gradeForm');
+    form.addEventListener('change', function() {
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+    });
+});
+</script>
+{% endblock %}

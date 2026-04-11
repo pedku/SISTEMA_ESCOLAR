@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SIGE - Sistema Integral de Gestión Escolar{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="active">
+            <div class="sidebar-header">
+                <h3><i class="bi bi-building"></i> SIGE</h3>
+                <small>Sistema de Gestión Escolar</small>
+            </div>
+            
+            <ul class="list-unstyled components">
+                <!-- Dashboard -->
+                <li class="{% if is_active_route('/dashboard') or is_active_route('/') %}active{% endif %}">
+                    <a href="{{ url_for('dashboard.index') }}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                
+                {% if user_has_any_role('root', 'admin') %}
+                <!-- Configuración Institucional -->
+                <li>
+                    <a href="#institutionSubmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                        <i class="bi bi-gear"></i> Institución
+                    </a>
+                    <ul class="collapse list-unstyled" id="institutionSubmenu">
+                        {% if user_has_role('root') %}
+                        <li><a href="{{ url_for('institution.institutions_list') }}"><i class="bi bi-buildings"></i> Gestionar Instituciones</a></li>
+                        {% endif %}
+                        <li><a href="{{ url_for('institution.config') }}"><i class="bi bi-building"></i> Datos Institución</a></li>
+                        <li><a href="{{ url_for('institution.campuses') }}"><i class="bi bi-geo-alt"></i> Sedes</a></li>
+                        <li><a href="{{ url_for('institution.grades') }}"><i class="bi bi-journal"></i> Grados</a></li>
+                        <li><a href="{{ url_for('institution.subjects') }}"><i class="bi bi-book"></i> Asignaturas</a></li>
+                        <li><a href="{{ url_for('institution.periods') }}"><i class="bi bi-calendar3"></i> Periodos</a></li>
+                        <li><a href="{{ url_for('institution.criteria') }}"><i class="bi bi-list-check"></i> Criterios Evaluación</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+                
+                <!-- Estudiantes -->
+                <li class="{% if is_active_route('/students') %}active{% endif %}">
+                    <a href="{{ url_for('students.list') }}">
+                        <i class="bi bi-people"></i> Estudiantes
+                    </a>
+                </li>
+                
+                <!-- Notas -->
+                {% if user_has_any_role('root', 'admin', 'teacher', 'coordinator') %}
+                <li class="{% if is_active_route('/grades') %}active{% endif %}">
+                    <a href="{{ url_for('grades.grade_input') }}">
+                        <i class="bi bi-pencil-square"></i> Notas
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- Asistencia -->
+                <li class="{% if is_active_route('/attendance') %}active{% endif %}">
+                    <a href="{{ url_for('attendance.attendance') }}">
+                        <i class="bi bi-calendar-check"></i> Asistencia
+                    </a>
+                </li>
+                
+                <!-- Observaciones -->
+                <li class="{% if is_active_route('/observations') %}active{% endif %}">
+                    <a href="{{ url_for('observations.observations') }}">
+                        <i class="bi bi-chat-left-text"></i> Observaciones
+                    </a>
+                </li>
+                
+                <!-- Boletines -->
+                {% if user_has_any_role('root', 'admin', 'coordinator') %}
+                <li class="{% if is_active_route('/report-cards') %}active{% endif %}">
+                    <a href="{{ url_for('report_cards.report_cards') }}">
+                        <i class="bi bi-file-earmark-text"></i> Boletines
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- Métricas -->
+                {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
+                <li class="{% if is_active_route('/metrics') %}active{% endif %}">
+                    <a href="{{ url_for('metrics.institution_metrics') }}">
+                        <i class="bi bi-graph-up"></i> Métricas
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- Logros -->
+                <li class="{% if is_active_route('/achievements') %}active{% endif %}">
+                    <a href="{{ url_for('achievements.achievements') }}">
+                        <i class="bi bi-trophy"></i> Logros
+                    </a>
+                </li>
+                
+                <!-- Portal Padres -->
+                {% if user_has_role('parent') %}
+                <li class="{% if is_active_route('/parent') %}active{% endif %}">
+                    <a href="{{ url_for('parent.parent_dashboard') }}">
+                        <i class="bi bi-house-door"></i> Portal Padres
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- QR Access -->
+                <li class="{% if is_active_route('/qr') %}active{% endif %}">
+                    <a href="{{ url_for('qr.my_qr') }}">
+                        <i class="bi bi-qr-code"></i> Mi Código QR
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- Page Content -->
+        <div id="content">
+            <!-- Top Navbar -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-primary">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    
+                    <div class="ms-auto d-flex align-items-center">
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i> {{ current_user.get_full_name() }}
+                                <span class="badge bg-{{ 'primary' if current_user.role == 'root' else 'success' if current_user.role == 'admin' else 'info' if current_user.role == 'coordinator' else 'warning' if current_user.role == 'teacher' else 'secondary' }}">
+                                    {{ current_user.role|title }}
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person"></i> Mi Perfil</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- Flash Messages -->
+            <div class="container-fluid">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                            <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category in ['warning', 'error', 'danger'] else 'info-circle' }}"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            
+            <!-- Main Content -->
+            <main class="container-fluid">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+    <!-- Non-authenticated layout -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    {% block public_content %}{% endblock %}
+    {% endif %}
+    
+    <!-- Footer -->
+    <footer class="bg-light text-center text-muted py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">&copy; {{ current_year() }} SIGE - Sistema Integral de Gestión Escolar</p>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

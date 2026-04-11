@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if institution else 'Nueva' }} Institución - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-building"></i>
+            {{ 'Editar Institución' if institution else 'Nueva Institución' }}
+        </h2>
+        <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Listado
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pencil"></i> Datos de la Institución</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre de la Institución *</label>
+                                <input type="text" name="name" class="form-control"
+                                       value="{{ institution.name if institution else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">NIT</label>
+                                <input type="text" name="nit" class="form-control"
+                                       value="{{ institution.nit if institution else '' }}">
+                                <small class="text-muted">Número de Identificación Tributaria</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="text" name="phone" class="form-control"
+                                       value="{{ institution.phone if institution else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Correo Electrónico</label>
+                                <input type="email" name="email" class="form-control"
+                                       value="{{ institution.email if institution else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" name="address" class="form-control"
+                                   value="{{ institution.address if institution else '' }}">
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Municipio</label>
+                                <input type="text" name="municipality" class="form-control"
+                                       value="{{ institution.municipality if institution else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Departamento</label>
+                                <input type="text" name="department" class="form-control"
+                                       value="{{ institution.department if institution else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Año Lectivo</label>
+                                <input type="text" name="academic_year" class="form-control"
+                                       value="{{ institution.academic_year if institution else '2026' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Resolución de Aprobación</label>
+                            <input type="text" name="resolution" class="form-control"
+                                   value="{{ institution.resolution if institution else '' }}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Logo de la Institución</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*"
+                                   title="Formatos permitidos: PNG, JPG, JPEG, GIF, WEBP">
+                            <small class="text-muted">Formatos permitidos: PNG, JPG, JPEG, GIF, WEBP</small>
+                            {% if institution and institution.logo %}
+                            <div class="mt-2">
+                                <small class="d-block mb-1">Logo actual:</small>
+                                <img src="{{ url_for('static', filename='uploads/' + institution.logo) }}"
+                                     alt="Logo actual" class="rounded border" style="max-width: 120px; max-height: 120px;"
+                                     onerror="this.style.display='none'">
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ 'Actualizar' if institution else 'Crear' }} Institución
+                            </button>
+                            <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información</h5>
+                </div>
+                <div class="card-body">
+                    {% if institution %}
+                    <h6>Detalles de la Institución</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th scope="row">ID:</th>
+                                <td>{{ institution.id }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Creada:</th>
+                                <td>{{ institution.created_at.strftime('%d/%m/%Y %H:%M') if institution.created_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Sedes:</th>
+                                <td><span class="badge bg-secondary">{{ institution.campuses.count() }}</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {% endif %}
+
+                    <hr>
+
+                    <p class="text-muted">
+                        {% if institution %}
+                        Edite aquí los datos principales de la institución educativa.
+                        Los cambios se reflejarán en todos los módulos del sistema.
+                        {% else %}
+                        Complete el formulario para crear una nueva institución educativa.
+                        Todos los campos son opcionales excepto el nombre.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

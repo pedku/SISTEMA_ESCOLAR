@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Grados - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-journal"></i> Grados</h2>
+        <a href="{{ url_for('institution.grade_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nuevo Grado
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover datatable">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Sede</th>
+                            <th>Director</th>
+                            <th>Año Académico</th>
+                            <th>Max. Estudiantes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grade in grades %}
+                        <tr>
+                            <td>{{ grade.name }}</td>
+                            <td>{{ grade.campus.name }}</td>
+                            <td>{{ grade.director.get_full_name() if grade.director else '-' }}</td>
+                            <td>{{ grade.academic_year }}</td>
+                            <td>{{ grade.max_students }}</td>
+                            <td>
+                                <a href="{{ url_for('institution.grade_edit', id=grade.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button onclick="confirmDelete('¿Eliminar grado {{ grade.name }}?', () => window.location.href='{{ url_for('institution.grade_delete', id=grade.id) }}')" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

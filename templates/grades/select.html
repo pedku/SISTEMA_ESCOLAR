@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Ingreso de Notas - Seleccion - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-pencil-square"></i> Ingreso de Notas</h2>
+        <a href="{{ url_for('grades.grade_upload') }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Cargar desde Excel
+        </a>
+    </div>
+
+    <!-- Period Selection -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-calendar3"></i> Seleccionar Periodo Academico</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                {% for period in periods %}
+                <a href="{{ url_for('grades.grade_input', period_id=period.id) }}"
+                   class="btn btn-outline-primary {% if period.id == selected_period_id %}active{% endif %}">
+                    {{ period.name }}
+                    {% if period.is_active %}<span class="badge bg-success">Activo</span>{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if criteria %}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-list-check"></i> Criterios de Evaluacion</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for criterion in criteria %}
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">{{ criterion.name }}</h6>
+                            <span class="badge bg-primary fs-6">{{ criterion.weight }}%</span>
+                            {% if criterion.description %}
+                            <p class="card-text small text-muted mt-2">{{ criterion.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Grade and Subject Selection -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-journal-text"></i> Seleccionar Grado y Asignatura</h5>
+        </div>
+        <div class="card-body">
+            {% if grades %}
+                {% for grade_obj in grades %}
+                <div class="mb-4">
+                    <h5 class="border-bottom pb-2">
+                        <i class="bi bi-journal"></i> Grado: {{ grade_obj.name }}
+                        <span class="badge bg-secondary">{{ grade_obj.get_student_count() }} estudiantes</span>
+                    </h5>
+                    <div class="row g-3">
+                        {% for sg in subject_grades %}
+                        {% if sg.grade_id == grade_obj.id %}
+                        <div class="col-md-4 col-lg-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body d-flex flex-column">
+                                    <h6 class="card-title">
+                                        <i class="bi bi-book"></i> {{ sg.subject.name }}
+                                    </h6>
+                                    <p class="card-text small text-muted">
+                                        <i class="bi bi-person"></i> {{ sg.teacher_user.get_full_name() if sg.teacher_user else 'Sin docente' }}
+                                    </p>
+                                    <div class="mt-auto">
+                                        <a href="{{ url_for('grades.grade_input_form', sg_id=sg.id, period_id=selected_period_id) }}"
+                                           class="btn btn-primary btn-sm w-100">
+                                            <i class="bi bi-pencil-square"></i> Ingresar Notas
+                                        </a>
+                                        <a href="{{ url_for('grades.grade_summary', sg_id=sg.id, period_id=selected_period_id) }}"
+                                           class="btn btn-outline-secondary btn-sm w-100 mt-1">
+                                            <i class="bi bi-bar-chart"></i> Ver Resumen
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> No hay grados disponibles para el ano academico actual.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

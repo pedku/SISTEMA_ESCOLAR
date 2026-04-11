@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Notas de {{ user.get_full_name() }} - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.375rem;
+        font-weight: bold;
+        font-size: 1em;
+    }
+    .grade-superior { background-color: #d1e7dd; color: #198754; }
+    .grade-alto { background-color: #d1f2eb; color: #0dcaf0; }
+    .grade-basico { background-color: #fff3cd; color: #856404; }
+    .grade-bajo { background-color: #f8d7da; color: #dc3545; }
+
+    .status-ganada { color: #198754; }
+    .status-perdida { color: #dc3545; }
+    .status-no-evaluado { color: #6c757d; }
+
+    .period-card {
+        border-left: 4px solid #0d6efd;
+    }
+    .period-passed {
+        border-left-color: #198754;
+    }
+    .period-failed {
+        border-left-color: #dc3545;
+    }
+
+    .summary-stat {
+        text-align: center;
+        padding: 1rem;
+    }
+    .summary-stat .number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .summary-stat .label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-journal-text"></i> Notas del Estudiante</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('students.list') }}">Estudiantes</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('students.profile', id=student.id) }}">{{ user.get_full_name() }}</a></li>
+                    {% else %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Notas</li>
+                </ol>
+            </nav>
+        </div>
+        {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
+        <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Perfil
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Student Info -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="mb-1">{{ user.get_full_name() }}</h4>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-journal"></i> Grado: <strong>{{ student.grade.name if student.grade else 'Sin asignar' }}</strong>
+                        &nbsp;|&nbsp;
+                        <i class="bi bi-hash"></i> Documento: <strong>{{ student.document_number }}</strong>
+                        &nbsp;|&nbsp;
+                        <i class="bi bi-geo-alt"></i> Sede: <strong>{{ student.campus.name if student.campus else 'N/A' }}</strong>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge bg-{% if student.status == 'activo' %}success{% elif student.status == 'retirado' %}warning{% else %}info{% endif %} fs-6">
+                        {{ student.status|title }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    {% if total > 0 %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body summary-stat">
+                    <div class="number">{{ "%.1f"|format(overall_average) }}</div>
+                    <div class="label">Promedio General</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body summary-stat">
+                    <div class="number">{{ passed }}</div>
+                    <div class="label">Asignaturas Ganadas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body summary-stat">
+                    <div class="number">{{ failed }}</div>
+                    <div class="label">Asignaturas Perdidas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body summary-stat">
+                    <div class="number">{{ total }}</div>
+                    <div class="label">Total Calificaciones</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Grades by Period -->
+    {% if sorted_periods %}
+        {% for period_data in sorted_periods %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar3"></i> {{ period_data.period.name }}
+                    {% if period_data.period.is_active %}
+                    <span class="badge bg-success">Activo</span>
+                    {% endif %}
+                </h5>
+                <small>{{ period_data.period.start_date.strftime('%d/%m/%Y') if period_data.period.start_date else '' }}
+                    {% if period_data.period.end_date %} - {{ period_data.period.end_date.strftime('%d/%m/%Y') }}{% endif %}
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover datatable" id="gradesTable_{{ period_data.period.id }}">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Asignatura</th>
+                                {% if period_data.period.subjects.values()|list and period_data.period.subjects.values()|list[0].records %}
+                                {% for record in period_data.period.subjects.values()|list[0].records|rejectattr('criterion', 'none')|list %}
+                                {% if loop.index0 == 0 or record.criterion.id != period_data.period.subjects.values()|list[0].records[loop.index0-1].criterion.id if loop.index0 > 0 else true %}
+                                <th class="text-center">{{ record.criterion.name }} ({{ record.criterion.weight }}%)</th>
+                                {% endif %}
+                                {% endfor %}
+                                {% endif %}
+                                <th class="text-center">Nota Final</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Nivel de Desempeno</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sg_id, subject_data in period_data.subjects.items() %}
+                            <tr>
+                                <td>
+                                    <strong>{{ subject_data.subject.name }}</strong>
+                                    <br><small class="text-muted">{{ subject_data.grade.name }}</small>
+                                </td>
+                                {% for record in subject_data.records|sort(attribute='criterion.order') %}
+                                <td class="text-center">
+                                    {% if record.score %}
+                                    <span class="grade-badge {{ get_grade_class(record.score, PASSING_GRADE) }}">
+                                        {{ "%.1f"|format(record.score) }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    {% if subject_data.final_score %}
+                                    <span class="grade-badge {{ get_grade_class(subject_data.final_score, PASSING_GRADE) }}">
+                                        {{ "%.1f"|format(subject_data.final_score) }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if subject_data.status == 'ganada' %}
+                                    <span class="badge bg-success">Ganada</span>
+                                    {% elif subject_data.status == 'perdida' %}
+                                    <span class="badge bg-danger">Perdida</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No Evaluado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if subject_data.final_score %}
+                                    <strong>{{ get_grade_performance_level(subject_data.final_score) }}</strong>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No hay notas registradas para este estudiante aun.
+    </div>
+    {% endif %}
+
+    <!-- Grading Scale Reference -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-rulers"></i> Escala de Calificacion</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col">
+                    <div class="p-2 border rounded grade-superior">
+                        <strong>4.6 - 5.0</strong><br>Superior
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-2 border rounded grade-alto">
+                        <strong>4.0 - 4.5</strong><br>Alto
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-2 border rounded grade-basico">
+                        <strong>3.0 - 3.9</strong><br>Basico
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-2 border rounded grade-bajo">
+                        <strong>1.0 - 2.9</strong><br>Bajo
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted mt-2 text-center small">
+                Escala: {{ MIN_GRADE }} a {{ MAX_GRADE }} | Minimo aprobacion: {{ PASSING_GRADE }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    {% for period_data in sorted_periods %}
+    $('#gradesTable_{{ period_data.period.id }}').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        pageLength: 10,
+        responsive: true,
+        order: [[0, 'asc']],
+        searching: false,
+        paging: false,
+        info: false
+    });
+    {% endfor %}
+});
+</script>
+{% endblock %}
