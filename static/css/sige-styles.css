@@ -1,0 +1,317 @@
+/* ============================================================
+   SIGE - Global Stylesheet
+   Consistent professional design across all pages
+   ============================================================ */
+
+/* --- Page Headers --- */
+.page-header {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* --- Stat Cards --- */
+.stat-card {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+.stat-card .card-body {
+    padding: 1.5rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.stat-icon.small {
+    width: 45px;
+    height: 45px;
+    font-size: 1.3rem;
+}
+
+.counter {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.counter-lg {
+    font-size: 3rem;
+}
+
+/* --- Info Banner --- */
+.info-banner {
+    border: none;
+    border-radius: 15px;
+    border-left: 4px solid;
+}
+
+.info-banner.border-primary { border-left-color: #0d6efd; }
+.info-banner.border-success { border-left-color: #198754; }
+.info-banner.border-info { border-left-color: #0dcaf0; }
+.info-banner.border-warning { border-left-color: #ffc107; }
+
+/* --- Action Cards --- */
+.action-card {
+    border: none;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.action-card .card-header {
+    background: white;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 1rem 1.5rem;
+}
+
+.action-card .card-header h5 {
+    font-weight: 700;
+    margin: 0;
+}
+
+/* --- Quick Link Cards --- */
+.quick-link-card {
+    border: none;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.quick-link-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.quick-link-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+}
+
+/* --- Config/Setting Links --- */
+.config-link {
+    text-decoration: none;
+    display: block;
+}
+
+.config-link:hover .config-link-inner {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.config-link-inner {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+/* --- Tables --- */
+.table-modern {
+    margin-bottom: 0;
+}
+
+.table-modern thead {
+    background-color: #f8f9fa;
+}
+
+.table-modern thead th {
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1rem;
+}
+
+.table-modern tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.table-modern tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* --- Empty States --- */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #adb5bd;
+}
+
+.empty-state h4 {
+    color: #6c757d;
+    margin-top: 1rem;
+}
+
+.empty-state p {
+    color: #adb5bd;
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.delay-1 { animation-delay: 0.1s; opacity: 0; }
+.delay-2 { animation-delay: 0.2s; opacity: 0; }
+.delay-3 { animation-delay: 0.3s; opacity: 0; }
+.delay-4 { animation-delay: 0.4s; opacity: 0; }
+.delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+/* --- Badges --- */
+.badge-pill {
+    border-radius: 50px;
+    padding: 0.5em 1em;
+    font-weight: 600;
+}
+
+/* --- Buttons --- */
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 12px;
+}
+
+/* --- Card Utilities --- */
+.card-modern {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card-modern .card-header {
+    background: white;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 1rem 1.5rem;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.card-modern .card-body {
+    padding: 1.5rem;
+}
+
+/* --- Background Opacity Helpers --- */
+.bg-opacity-10 { background-color: rgba(var(--bs-primary-rgb), 0.1) !important; }
+.bg-primary.bg-opacity-10 { background-color: rgba(13, 110, 253, 0.1) !important; }
+.bg-success.bg-opacity-10 { background-color: rgba(25, 135, 84, 0.1) !important; }
+.bg-info.bg-opacity-10 { background-color: rgba(13, 202, 240, 0.1) !important; }
+.bg-warning.bg-opacity-10 { background-color: rgba(255, 193, 7, 0.1) !important; }
+.bg-danger.bg-opacity-10 { background-color: rgba(220, 53, 69, 0.1) !important; }
+
+/* --- Hover Shadow --- */
+.hover-shadow {
+    transition: box-shadow 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* --- Text Utilities --- */
+.text-purple { color: #6f42c1 !important; }
+.bg-purple { background-color: #6f42c1 !important; }
+.bg-purple.bg-opacity-10 { background-color: rgba(111, 66, 193, 0.1) !important; }
+
+/* --- Form Controls --- */
+.form-control-lg, .form-select-lg {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* --- Institution Header --- */
+.institution-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    position: relative;
+}
+
+.institution-header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+
+/* --- Progress Bars --- */
+.progress-thin {
+    height: 6px;
+    border-radius: 3px;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .counter {
+        font-size: 2rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+}

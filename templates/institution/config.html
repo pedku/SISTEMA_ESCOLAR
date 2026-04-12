@@ -1,124 +1,102 @@
 {% extends "base.html" %}
 
-{% block title %}Configuración de Institución - SIGE{% endblock %}
+{% block title %}Configuración de Institución{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h2 class="mb-4">
-        <i class="bi bi-building"></i> Configuración de Institución
-    </h2>
-    
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-gear text-primary me-2"></i>Configuración de Institución</h1>
+            <p class="text-muted mb-0">Datos principales de la institución educativa</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="card card-modern shadow-sm animate-in delay-1">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pencil"></i> Datos de la Institución</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Datos de la Institución</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form method="POST" enctype="multipart/form-data">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nombre de la Institución *</label>
-                                <input type="text" name="name" class="form-control" 
-                                       value="{{ institution.name if institution else '' }}" required>
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold">Nombre de la Institución <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control form-control-lg" value="{{ institution.name if institution else '' }}" required placeholder="Ej: Institución Educativa Simón Bolívar">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">NIT</label>
+                                <input type="text" name="nit" class="form-control" value="{{ institution.nit if institution else '' }}" placeholder="900.123.456-7">
+                                <div class="form-text">Número de Identificación Tributaria</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">NIT *</label>
-                                <input type="text" name="nit" class="form-control" 
-                                       value="{{ institution.nit if institution else '' }}">
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Teléfono</label>
-                                <input type="text" name="phone" class="form-control" 
-                                       value="{{ institution.phone if institution else '' }}">
+                                <label class="form-label fw-semibold">Teléfono</label>
+                                <div class="input-group"><span class="input-group-text"><i class="bi bi-telephone"></i></span><input type="tel" name="phone" class="form-control" value="{{ institution.phone if institution else '' }}" placeholder="(601) 234 5678"></div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Correo Electrónico</label>
-                                <input type="email" name="email" class="form-control" 
-                                       value="{{ institution.email if institution else '' }}">
+                                <label class="form-label fw-semibold">Correo Electrónico</label>
+                                <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input type="email" name="email" class="form-control" value="{{ institution.email if institution else '' }}" placeholder="contacto@inst.edu.co"></div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <input type="text" name="address" class="form-control" 
-                                   value="{{ institution.address if institution else '' }}">
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Municipio</label>
-                                <input type="text" name="municipality" class="form-control" 
-                                       value="{{ institution.municipality if institution else '' }}">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Dirección</label>
+                                <div class="input-group"><span class="input-group-text"><i class="bi bi-geo-alt"></i></span><input type="text" name="address" class="form-control" value="{{ institution.address if institution else '' }}" placeholder="Calle 123 # 45-67"></div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Departamento</label>
-                                <input type="text" name="department" class="form-control" 
-                                       value="{{ institution.department if institution else '' }}">
+                                <label class="form-label fw-semibold">Municipio</label>
+                                <input type="text" name="municipality" class="form-control" value="{{ institution.municipality if institution else '' }}" placeholder="Ej: Bogotá">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Año Lectivo</label>
-                                <input type="text" name="academic_year" class="form-control" 
-                                       value="{{ institution.academic_year if institution else '2026' }}">
+                                <label class="form-label fw-semibold">Departamento</label>
+                                <input type="text" name="department" class="form-control" value="{{ institution.department if institution else '' }}" placeholder="Ej: Cundinamarca">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Año Lectivo</label>
+                                <input type="text" name="academic_year" class="form-control" value="{{ institution.academic_year if institution else '2026' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Resolución de Aprobación</label>
+                                <input type="text" name="resolution" class="form-control" value="{{ institution.resolution if institution else '' }}" placeholder="Resolución No. 1234 del 01/01/2025">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Logo</label>
+                                <input type="file" name="logo" class="form-control" accept="image/*">
+                                <div class="form-text">PNG, JPG, JPEG, GIF, WEBP</div>
+                                {% if institution and institution.logo %}
+                                <div class="mt-2 p-2 bg-light rounded d-inline-block">
+                                    <small class="d-block mb-1 text-muted">Logo actual:</small>
+                                    <img src="{{ url_for('static', filename='uploads/' + institution.logo) }}" alt="Logo" class="rounded" style="max-width:100px;">
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Resolución de Aprobación</label>
-                            <input type="text" name="resolution" class="form-control" 
-                                   value="{{ institution.resolution if institution else '' }}">
+                        <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-circle me-1"></i>Guardar Configuración</button>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Logo de la Institución</label>
-                            <input type="file" name="logo" class="form-control" accept="image/*">
-                            {% if institution and institution.logo %}
-                            <small class="text-muted">Logo actual: {{ institution.logo }}</small>
-                            {% endif %}
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> Guardar Configuración
-                        </button>
                     </form>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">
-                        Configure aquí los datos principales de la institución educativa.
-                        Esta información aparecerá en los boletines y reportes.
-                    </p>
-                    
-                    <hr>
-                    
-                    <h6>Enlaces Rápidos:</h6>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card card-modern shadow-sm mb-4 animate-in delay-2">
+                <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-lightning-charge text-warning me-2"></i>Enlaces Rápidos</h6></div>
+                <div class="card-body p-3">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('institution.campuses') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-geo-alt"></i> Gestionar Sedes
-                        </a>
-                        <a href="{{ url_for('institution.grades') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-journal"></i> Gestionar Grados
-                        </a>
-                        <a href="{{ url_for('institution.subjects') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-book"></i> Gestionar Asignaturas
-                        </a>
-                        <a href="{{ url_for('institution.periods') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-calendar3"></i> Gestionar Periodos
-                        </a>
-                        <a href="{{ url_for('institution.criteria') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-list-check"></i> Criterios de Evaluación
-                        </a>
+                        <a href="{{ url_for('institution.campuses') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-geo-alt me-2"></i>Gestionar Sedes</a>
+                        <a href="{{ url_for('institution.grades') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-journal me-2"></i>Gestionar Grados</a>
+                        <a href="{{ url_for('institution.subjects') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-book me-2"></i>Gestionar Asignaturas</a>
+                        <a href="{{ url_for('institution.periods') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-calendar3 me-2"></i>Gestionar Periodos</a>
+                        <a href="{{ url_for('institution.criteria') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-list-check me-2"></i>Criterios de Evaluación</a>
                     </div>
+                </div>
+            </div>
+            <div class="card card-modern shadow-sm animate-in delay-3">
+                <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-info-circle text-info me-2"></i>Información</h6></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-0">Estos datos aparecen en boletines, reportes y documentos oficiales de la institución.</p>
                 </div>
             </div>
         </div>

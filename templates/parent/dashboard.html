@@ -1,1 +1,108 @@
-{% extends "base.html" %}{% block title %}Portal Padres{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-house-door"></i> Portal de Padres</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5><p>El portal para acudientes estará disponible próximamente.</p></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Portal de Padres{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: none; border-radius: 15px; overflow: hidden; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; }
+    .stat-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+    .info-card { border: none; border-radius: 15px; transition: all 0.3s ease; }
+    .info-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-house-door text-primary me-2"></i>Portal de Padres</h1>
+            <p class="text-muted mb-0">Seguimiento académico de tus hijos</p>
+        </div>
+    </div>
+
+    {% if students %}
+    <!-- Student Selector -->
+    <div class="card shadow-sm border-0 mb-4 animate-in delay-1" style="border-radius:15px;">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Mis Hijos</h5>
+            <div class="row g-3">
+                {% for student in students %}
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center p-3 bg-light rounded">
+                        <i class="bi bi-person-circle text-primary fs-3 me-3"></i>
+                        <div>
+                            <p class="mb-0 fw-semibold">{{ student.user.get_full_name() if student.user else 'Estudiante' }}</p>
+                            <small class="text-muted">{% if student.grade %}{{ student.grade.name }}{% endif %}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Access Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 animate-in delay-1">
+            <a href="#" class="text-decoration-none">
+                <div class="card info-card shadow-sm text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary mx-auto mb-3"><i class="bi bi-graph-up"></i></div>
+                        <h5 class="h6 fw-bold text-dark mb-1">Notas</h5>
+                        <p class="text-muted small mb-0">Calificaciones por periodo</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 animate-in delay-2">
+            <a href="#" class="text-decoration-none">
+                <div class="card info-card shadow-sm text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success mx-auto mb-3"><i class="bi bi-calendar-check"></i></div>
+                        <h5 class="h6 fw-bold text-dark mb-1">Asistencia</h5>
+                        <p class="text-muted small mb-0">Historial de asistencia</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 animate-in delay-3">
+            <a href="#" class="text-decoration-none">
+                <div class="card info-card shadow-sm text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info mx-auto mb-3"><i class="bi bi-chat-left-text"></i></div>
+                        <h5 class="h6 fw-bold text-dark mb-1">Observaciones</h5>
+                        <p class="text-muted small mb-0">Comportamiento</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 animate-in delay-3">
+            <a href="#" class="text-decoration-none">
+                <div class="card info-card shadow-sm text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning mx-auto mb-3"><i class="bi bi-file-earmark-pdf"></i></div>
+                        <h5 class="h6 fw-bold text-dark mb-1">Boletines</h5>
+                        <p class="text-muted small mb-0">Reportes PDF</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card shadow-sm border-0 animate-in" style="border-radius:15px;">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-person-x text-muted" style="font-size:4rem;"></i>
+            <h4 class="text-muted mt-3">No hay estudiantes asignados</h4>
+            <p class="text-muted">Contacta al administrador para vincular a tus hijos.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

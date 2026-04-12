@@ -1,55 +1,105 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Profesor - SIGE{% endblock %}
+{% block title %}Dashboard Profesor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: none; border-radius: 15px; overflow: hidden; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; }
+    .stat-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+    .counter { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+    .subject-card { border: none; border-radius: 15px; transition: all 0.3s ease; }
+    .subject-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">
-        <i class="bi bi-person-workspace"></i> Dashboard Profesor
-    </h1>
-    
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-book"></i> Mis Asignaturas y Grados Asignados</h5>
-                </div>
-                <div class="card-body">
-                    {% if subject_grades %}
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Asignatura</th>
-                                    <th>Grado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for sg in subject_grades %}
-                                <tr>
-                                    <td>{{ sg.subject.name }}</td>
-                                    <td>{{ sg.grade.name }}</td>
-                                    <td>
-                                        <a href="{{ url_for('grades.grade_input_form', sg_id=sg.id, period_id=1) }}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-pencil-square"></i> Ingresar Notas
-                                        </a>
-                                        <a href="{{ url_for('attendance.attendance') }}" class="btn btn-sm btn-success">
-                                            <i class="bi bi-calendar-check"></i> Tomar Asistencia
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> No tienes asignaturas asignadas aún. Contacta al administrador.
-                    </div>
-                    {% endif %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-person-workspace text-primary me-2"></i>Dashboard Profesor</h1>
+            <p class="text-muted mb-0">Bienvenido/a, {{ current_user.get_full_name() }}</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-4 col-md-6 animate-in delay-1">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3"><i class="bi bi-book"></i></div>
+                    <div><p class="text-muted mb-1 small text-uppercase fw-semibold">Asignaturas</p><p class="counter text-primary mb-0">{{ subject_grades|length if subject_grades else 0 }}</p></div>
                 </div>
             </div>
+        </div>
+        <div class="col-xl-4 col-md-6 animate-in delay-2">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3"><i class="bi bi-people"></i></div>
+                    <div><p class="text-muted mb-1 small text-uppercase fw-semibold">Estudiantes a Cargo</p><p class="counter text-success mb-0">{{ total_students if total_students else 0 }}</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 animate-in delay-3">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3"><i class="bi bi-journal-text"></i></div>
+                    <div><p class="text-muted mb-1 small text-uppercase fw-semibold">Grados</p><p class="counter text-info mb-0">{{ grades|length if grades else 0 }}</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject Grades Table -->
+    <div class="card shadow-sm border-0 animate-in delay-2" style="border-radius:15px;">
+        <div class="card-header bg-white border-bottom py-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-journal-bookmark text-primary me-2"></i>Mis Asignaturas y Grados</h5>
+        </div>
+        <div class="card-body p-4">
+            {% if subject_grades %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3">Asignatura</th>
+                            <th>Grado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sg in subject_grades %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3" style="width:40px;height:40px;font-size:1.1rem;"><i class="bi bi-book"></i></div>
+                                    <div><p class="mb-0 fw-semibold">{{ sg.subject.name }}</p><small class="text-muted">{{ sg.subject.code }}</small></div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary fs-6">{{ sg.grade.name }}</span></td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('grades.grade_input_form', sg_id=sg.id, period_id=1) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i>Notas</a>
+                                    <a href="{{ url_for('attendance.attendance') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-calendar-check me-1"></i>Asistencia</a>
+                                    <a href="{{ url_for('observations.new') }}" class="btn btn-sm btn-outline-info"><i class="bi bi-chat-left-text me-1"></i>Observaciones</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-info-circle text-muted" style="font-size:3rem;"></i>
+                <h5 class="text-muted mt-3">No tienes asignaturas asignadas aún</h5>
+                <p class="text-muted">Contacta al administrador para que te asigne materias y grados.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
