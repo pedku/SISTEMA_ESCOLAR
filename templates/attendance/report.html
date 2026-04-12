@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Asistencia - {{ subject_grade.subject.name }} - {{ subject_grade.grade.name }} - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .absence-high { background-color: #f8d7da !important; }
+    .absence-medium { background-color: #fff3cd !important; }
+    .absence-low { background-color: #d1e7dd !important; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .card { border: 1px solid #dee2e6 !important; }
+        body { font-size: 10pt; }
+    }
+
+    .stat-card {
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        color: white;
+    }
+    .stat-card .count { font-size: 2rem; font-weight: bold; line-height: 1; }
+    .stat-card .label { font-size: 0.85rem; opacity: 0.9; margin-top: 5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h2><i class="bi bi-file-earmark-text"></i> Reporte de Asistencia</h2>
+            <p class="text-muted">
+                {{ subject_grade.subject.name }} - {{ subject_grade.grade.name }}
+                <br>
+                <small>{{ start_date }} a {{ end_date }}</small>
+            </p>
+        </div>
+        <div class="d-flex gap-2 no-print">
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button class="btn btn-outline-secondary" onclick="exportToCSV()">
+                <i class="bi bi-download"></i> CSV
+            </button>
+            <a href="{{ url_for('attendance.attendance_summary', sg_id=subject_grade.id) }}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Print Header -->
+    <div class="d-none d-print-block text-center mb-4">
+        <h3>Reporte de Asistencia</h3>
+        <h5>{{ subject_grade.subject.name }} - {{ subject_grade.grade.name }}</h5>
+        <p>{{ start_date }} a {{ end_date }}</p>
+        <hr>
+    </div>
+
+    <!-- Stats -->
+    {% set total_p = student_report|sum(attribute='presentes') %}
+    {% set total_a = student_report|sum(attribute='ausentes') %}
+    {% set total_j = student_report|sum(attribute='justificados') %}
+    {% set total_all = student_report|sum(attribute='total') %}
+
+    <div class="row mb-4 no-print">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary">
+                <div class="count">{{ total_all }}</div>
+                <div class="label">Total Registros</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success">
+                <div class="count">{{ total_p }}</div>
+                <div class="label">Presentes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger">
+                <div class="count">{{ total_a }}</div>
+                <div class="label">Ausentes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-warning text-dark">
+                <div class="count">{{ total_j }}</div>
+                <div class="label">Justificados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Report Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Detalle por Estudiante</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0" id="reportTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Estudiante</th>
+                            <th class="text-center">Presentes</th>
+                            <th class="text-center">Ausentes</th>
+                            <th class="text-center">Justificados</th>
+                            <th class="text-center">% Asistencia</th>
+                            <th class="text-center">% Ausencia</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stats in student_report %}
+                        <tr class="{% if stats.absence_rate > 20 %}table-danger{% elif stats.absence_rate > 10 %}table-warning{% else %}table-success{% endif %}">
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                {% if stats.student.user %}
+                                    {{ stats.student.user.name }}
+                                {% else %}
+                                    Estudiante #{{ stats.student.id }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ stats.presentes }}</td>
+                            <td class="text-center">{{ stats.ausentes }}</td>
+                            <td class="text-center">{{ stats.justificados }}</td>
+                            <td class="text-center">
+                                <strong>{{ (100 - stats.absence_rate)|round(1) }}%</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong class="{% if stats.absence_rate > 20 %}text-danger{% elif stats.absence_rate > 10 %}text-warning{% else %}text-success{% endif %}">
+                                    {{ stats.absence_rate }}%
+                                </strong>
+                            </td>
+                            <td>
+                                {% if stats.absence_rate > 20 %}
+                                <span class="badge bg-danger">Critico</span>
+                                {% elif stats.absence_rate > 10 %}
+                                <span class="badge bg-warning text-dark">Atencion</span>
+                                {% else %}
+                                <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if student_report %}
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <td colspan="2"><strong>Totales</strong></td>
+                            <td class="text-center"><strong>{{ total_p }}</strong></td>
+                            <td class="text-center"><strong>{{ total_a }}</strong></td>
+                            <td class="text-center"><strong>{{ total_j }}</strong></td>
+                            <td class="text-center"><strong>{{ ((total_p / total_all * 100)|round(1)) if total_all > 0 else 0 }}%</strong></td>
+                            <td class="text-center"><strong>{{ ((total_a / total_all * 100)|round(1)) if total_all > 0 else 0 }}%</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            {% if not student_report %}
+            <div class="alert alert-info m-3">
+                <i class="bi bi-info-circle"></i>
+                No hay registros de asistencia en el periodo seleccionado.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Export to CSV
+    function exportToCSV() {
+        let csv = 'No,Estudiante,Presentes,Ausentes,Justificados,% Asistencia,% Ausencia,Estado\n';
+
+        document.querySelectorAll('#reportTable tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 8) {
+                csv += `${cells[0].textContent.trim()},"${cells[1].textContent.trim()}",${cells[2].textContent.trim()},${cells[3].textContent.trim()},${cells[4].textContent.trim()},${cells[5].textContent.trim()},${cells[6].textContent.trim()},"${cells[7].textContent.trim()}"\n`;
+            }
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `reporte_asistencia_{{ start_date }}_{{ end_date }}.csv`;
+        link.click();
+    }
+</script>
+{% endblock %}

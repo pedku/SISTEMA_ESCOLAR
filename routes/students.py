@@ -14,7 +14,8 @@ from models.user import User
 from models.institution import Institution, Campus
 from models.academic import Grade, AcademicStudent, ParentStudent
 from utils.decorators import role_required
-from utils.validators import validate_email, validate_document
+from utils.validators import validate_document, validate_email
+from utils.institution_resolver import get_current_institution, get_institution_students
 
 students_bp = Blueprint('students', __name__)
 
@@ -28,17 +29,17 @@ students_bp = Blueprint('students', __name__)
 @role_required('root', 'admin', 'coordinator', 'teacher')
 def list():
     """List all students with filters."""
-    institution = Institution.query.first()
-    
+    institution = get_current_institution()
+
     # Get filters
     campus_id = request.args.get('campus_id', type=int)
     grade_id = request.args.get('grade_id', type=int)
     status = request.args.get('status', 'activo')
     search = request.args.get('search', '')
-    
-    # Build query
-    query = AcademicStudent.query.filter_by(institution_id=institution.id)
-    
+
+    # Build query using institution-aware helper
+    query = get_institution_students(institution)
+
     if campus_id:
         query = query.filter_by(campus_id=campus_id)
     if grade_id:
@@ -53,12 +54,19 @@ def list():
                 User.document_number.ilike(f'%{search}%')
             )
         )
-    
+
     students = query.order_by(User.last_name).all()
-    campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
-    grades = Grade.query.filter_by(academic_year=institution.academic_year).all()
-    
-    return render_template('students/list.html', 
+
+    # Filter campuses by institution
+    if institution:
+        campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
+        grades = Grade.query.join(Campus).filter(Campus.institution_id == institution.id).all()
+    else:
+        # Root without active institution: see all
+        campuses = Campus.query.filter_by(active=True).all()
+        grades = Grade.query.all()
+
+    return render_template('students/list.html',
                           students=students,
                           campuses=campuses,
                           grades=grades,
@@ -95,8 +103,12 @@ def profile(id):
 @role_required('root', 'admin')
 def new():
     """Create a new student."""
-    institution = Institution.query.first()
-    
+    institution = get_current_institution()
+
+    if not institution:
+        flash('Debe seleccionar una institución antes de crear estudiantes.', 'error')
+        return redirect(url_for('students.list'))
+
     if request.method == 'POST':
         # Validate document
         doc_type = request.form.get('document_type', 'TI')
@@ -198,8 +210,8 @@ def new():
             flash(f'Error al crear el estudiante: {str(e)}', 'error')
     
     campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
-    grades = Grade.query.filter_by(academic_year=institution.academic_year).all()
-    
+    grades = Grade.query.join(Campus).filter(Campus.institution_id == institution.id).all()
+
     return render_template('students/form.html', student=None, campuses=campuses, grades=grades, institution=institution)
 
 
@@ -213,13 +225,17 @@ def new():
 def edit(id):
     """Edit an existing student."""
     student = db.session.get(AcademicStudent, id)
-    
+
     if not student:
         flash('Estudiante no encontrado.', 'error')
         return redirect(url_for('students.list'))
-    
-    institution = Institution.query.first()
-    
+
+    institution = get_current_institution()
+
+    if not institution:
+        flash('Debe seleccionar una institución antes de editar estudiantes.', 'error')
+        return redirect(url_for('students.list'))
+
     if request.method == 'POST':
         # Update User
         user = db.session.get(User, student.user_id)
@@ -227,7 +243,7 @@ def edit(id):
         user.last_name = request.form.get('last_name', '').strip()
         user.phone = request.form.get('phone', '').strip()
         user.address = request.form.get('address', '').strip()
-        
+
         # Update AcademicStudent
         student.campus_id = int(request.form.get('campus_id'))
         student.grade_id = int(request.form.get('grade_id')) if request.form.get('grade_id') else None
@@ -242,7 +258,7 @@ def edit(id):
         student.guardian_phone = request.form.get('guardian_phone', '').strip()
         student.guardian_email = request.form.get('guardian_email', '').strip()
         student.status = request.form.get('status', 'activo')
-        
+
         try:
             db.session.commit()
             flash('Estudiante actualizado exitosamente.', 'success')
@@ -250,10 +266,10 @@ def edit(id):
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar: {str(e)}', 'error')
-    
+
     campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
-    grades = Grade.query.filter_by(academic_year=institution.academic_year).all()
-    
+    grades = Grade.query.join(Campus).filter(Campus.institution_id == institution.id).all()
+
     return render_template('students/form.html', student=student, campuses=campuses, grades=grades, institution=institution)
 
 
@@ -296,35 +312,39 @@ def delete(id):
 @role_required('root', 'admin')
 def upload():
     """Upload students from Excel file."""
-    institution = Institution.query.first()
-    
+    institution = get_current_institution()
+
+    if not institution:
+        flash('Debe seleccionar una institución antes de importar estudiantes.', 'error')
+        return redirect(url_for('students.list'))
+
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No se seleccionó ningún archivo.', 'warning')
             return render_template('students/upload.html')
-        
+
         file = request.files['file']
-        
+
         if file.filename == '':
             flash('No se seleccionó ningún archivo.', 'warning')
             return render_template('students/upload.html')
-        
+
         if not file.filename.endswith(('.xlsx', '.xls')):
             flash('Solo se permiten archivos Excel (.xlsx, .xls).', 'error')
             return render_template('students/upload.html')
-        
+
         # Save file temporarily
         upload_folder = current_app.config['UPLOAD_FOLDER']
         excel_folder = os.path.join(upload_folder, 'excel_imports')
         os.makedirs(excel_folder, exist_ok=True)
-        
+
         file_path = os.path.join(excel_folder, file.filename)
         file.save(file_path)
-        
+
         try:
             # Read Excel file
             df = pd.read_excel(file_path)
-            
+
             # Expected columns (flexible matching)
             col_mapping = {
                 'nombre': 'first_name',
@@ -344,29 +364,29 @@ def upload():
                 'tipo_sangre': 'blood_type',
                 'eps': 'eps'
             }
-            
+
             # Normalize column names
             df.columns = [col.lower().strip().replace(' ', '_') for col in df.columns]
-            
+
             created_count = 0
             errors = []
-            
+
             for index, row in df.iterrows():
                 try:
                     # Extract data
                     first_name = str(row.get('nombre', '')).strip()
                     last_name = str(row.get('apellido', '')).strip()
                     doc_number = str(row.get('documento', '')).strip()
-                    
+
                     if not first_name or not last_name or not doc_number:
                         errors.append(f"Fila {index + 2}: Nombre, apellido y documento son requeridos")
                         continue
-                    
+
                     # Check if student already exists
                     if AcademicStudent.query.filter_by(document_number=doc_number).first():
                         errors.append(f"Fila {index + 2}: Estudiante con documento {doc_number} ya existe")
                         continue
-                    
+
                     # Create username
                     base_username = f"{first_name.lower()}.{last_name.lower().split()[0].lower()}"
                     username = base_username
@@ -374,7 +394,7 @@ def upload():
                     while User.query.filter_by(username=username).first():
                         username = f"{base_username}{counter}"
                         counter += 1
-                    
+
                     # Create user
                     user = User(
                         username=username,
@@ -389,29 +409,28 @@ def upload():
                     )
                     db.session.add(user)
                     db.session.flush()
-                    
+
                     # Find campus
                     campus_name = str(row.get('sede', '')).strip()
                     campus = Campus.query.filter_by(
-                        name=campus_name, 
+                        name=campus_name,
                         institution_id=institution.id
                     ).first() if campus_name else Campus.query.filter_by(
                         institution_id=institution.id
                     ).first()
-                    
+
                     if not campus:
                         errors.append(f"Fila {index + 2}: Sede '{campus_name}' no encontrada")
                         db.session.rollback()
                         continue
-                    
+
                     # Find grade
                     grade_name = str(row.get('grado', '')).strip()
                     grade = Grade.query.filter_by(
                         name=grade_name,
                         campus_id=campus.id,
-                        academic_year=institution.academic_year
                     ).first() if grade_name else None
-                    
+
                     # Create academic student
                     student = AcademicStudent(
                         user_id=user.id,
@@ -435,26 +454,26 @@ def upload():
                     )
                     db.session.add(student)
                     created_count += 1
-                    
+
                 except Exception as e:
                     errors.append(f"Fila {index + 2}: Error - {str(e)}")
                     db.session.rollback()
-            
+
             db.session.commit()
-            
+
             if created_count > 0:
                 flash(f'{created_count} estudiantes importados exitosamente.', 'success')
-            
+
             if errors:
                 flash(f'{len(errors)} errores encontrados. Revisa el archivo de errores.', 'warning')
                 # Save errors to file
                 error_file = os.path.join(excel_folder, f'errores_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt')
                 with open(error_file, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(errors))
-            
+
             return redirect(url_for('students.list'))
-            
+
         except Exception as e:
             flash(f'Error al procesar el archivo: {str(e)}', 'error')
-    
+
     return render_template('students/upload.html')

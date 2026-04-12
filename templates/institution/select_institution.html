@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Seleccionar Institución{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Seleccionar Institución</h1>
+        
+        <p class="text-gray-600 mb-6">
+            Como usuario root, puede seleccionar una institución específica para trabajar o ver datos de todas las instituciones.
+        </p>
+
+        <!-- Current institution indicator -->
+        {% if current_user.institution %}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <p class="text-sm text-blue-700">
+                <strong>Institución actual:</strong> {{ current_user.institution.name }}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Institution selection form -->
+        <form method="POST" action="{{ url_for('institution.switch_institution') }}" class="space-y-6">
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold text-gray-700">Instituciones Disponibles</h2>
+                
+                {% if institutions %}
+                    <div class="grid gap-4 md:grid-cols-2">
+                        {% for inst in institutions %}
+                        <label class="relative flex items-start p-4 border-2 rounded-lg cursor-pointer transition hover:border-blue-500 {% if session.get('active_institution_id') == inst.id %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="institution_id" value="{{ inst.id }}" 
+                                   class="mt-1 h-4 w-4 text-blue-600 border-gray-300"
+                                   {% if session.get('active_institution_id') == inst.id %}checked{% endif %}>
+                            <div class="ml-3">
+                                <span class="block text-sm font-medium text-gray-900">{{ inst.name }}</span>
+                                {% if inst.nit %}
+                                <span class="block text-xs text-gray-500">NIT: {{ inst.nit }}</span>
+                                {% endif %}
+                                {% if inst.municipality %}
+                                <span class="block text-xs text-gray-500">{{ inst.municipality }}, {{ inst.department }}</span>
+                                {% endif %}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <p>No hay instituciones creadas aún.</p>
+                        <a href="{{ url_for('institution.institution_new') }}" class="text-blue-600 hover:underline mt-2 inline-block">
+                            Crear primera institución
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between border-t pt-4">
+                <button type="submit" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                        {% if not institutions %}disabled{% endif %}>
+                    Seleccionar Institución
+                </button>
+                
+                {% if session.get('active_institution_id') %}
+                <button type="submit" name="institution_id" value=""
+                        class="text-gray-600 hover:text-gray-800 transition">
+                    Ver Todas las Instituciones
+                </button>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if institutions %}
+        <!-- Quick links to manage institutions -->
+        <div class="mt-8 pt-6 border-t">
+            <h3 class="text-sm font-semibold text-gray-600 mb-3">Gestionar Instituciones</h3>
+            <div class="flex gap-3">
+                <a href="{{ url_for('institution.institutions_list') }}" 
+                   class="text-sm text-blue-600 hover:underline">
+                    Ver lista completa
+                </a>
+                <a href="{{ url_for('institution.institution_new') }}" 
+                   class="text-sm text-green-600 hover:underline">
+                    Crear nueva institución
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

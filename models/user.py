@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20))
     address = db.Column(db.String(200))
     role = db.Column(db.String(20), nullable=False, index=True)  # root, admin, coordinator, teacher, student, parent, viewer
+    institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=True, index=True)
     photo = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime)
@@ -32,6 +33,9 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
     
     # Relationships
+    # Institution relationship
+    institution = db.relationship('Institution', backref='users', foreign_keys=[institution_id])
+
     # As director de grupo
     directed_grades = db.relationship('Grade', backref='director_user', lazy='dynamic', foreign_keys='Grade.director_id')
     
@@ -101,6 +105,20 @@ class User(UserMixin, db.Model):
     def can_view_all_grades(self):
         """Check if user can view all grades."""
         return self.role in ['root', 'admin', 'coordinator']
+
+    def get_institution(self):
+        """Get the institution this user belongs to.
+        For root users, returns None (they can access all institutions).
+        """
+        return self.institution
+
+    def can_access_institution(self, institution_id):
+        """Check if user can access a specific institution.
+        Root users can access all, others only their assigned institution.
+        """
+        if self.is_root():
+            return True
+        return self.institution_id == institution_id
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -115,6 +133,8 @@ class User(UserMixin, db.Model):
             'last_name': self.last_name,
             'full_name': self.get_full_name(),
             'role': self.role,
+            'institution_id': self.institution_id,
+            'institution_name': self.institution.name if self.institution else None,
             'document_type': self.document_type,
             'document_number': self.document_number,
             'phone': self.phone,

@@ -49,15 +49,21 @@ class Grade(db.Model):
 
 class Subject(db.Model):
     """Subject model (e.g., "Matemáticas", "Ciencias Naturales")."""
-    
+
     __tablename__ = 'subjects'
-    
+
     id = db.Column(db.Integer, primary_key=True)
+    institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
-    code = db.Column(db.String(20), unique=True, index=True)
-    
+    code = db.Column(db.String(20), index=True)
+
     # Relationships
+    institution = db.relationship('Institution', backref='subjects', foreign_keys=[institution_id])
     subject_grades = db.relationship('SubjectGrade', backref='subject', lazy='dynamic', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('institution_id', 'code', name='uq_subject_institution_code'),
+    )
     
     def __repr__(self):
         return f'<Subject {self.name}>'
@@ -66,6 +72,7 @@ class Subject(db.Model):
         """Convert subject to dictionary."""
         return {
             'id': self.id,
+            'institution_id': self.institution_id,
             'name': self.name,
             'code': self.code
         }
@@ -85,7 +92,7 @@ class SubjectGrade(db.Model):
     grade_records = db.relationship('GradeRecord', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
     final_grades = db.relationship('FinalGrade', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
     annual_grades = db.relationship('AnnualGrade', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
-    attendance_records = db.relationship('Attendance', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
+    attendance_records = db.relationship('Attendance', lazy='dynamic', cascade='all, delete-orphan')
     report_card_observations = db.relationship('ReportCardObservation', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
     
     __table_args__ = (
@@ -138,7 +145,7 @@ class AcademicStudent(db.Model):
     grade_records = db.relationship('GradeRecord', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     final_grades = db.relationship('FinalGrade', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     annual_grades = db.relationship('AnnualGrade', backref='student', lazy='dynamic', cascade='all, delete-orphan')
-    attendance_records = db.relationship('Attendance', backref='student', lazy='dynamic', cascade='all, delete-orphan')
+    attendance_records = db.relationship('Attendance', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='Attendance.student_id')
     observations = db.relationship('Observation', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     report_cards = db.relationship('ReportCard', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     achievements = db.relationship('StudentAchievement', backref='student', lazy='dynamic', cascade='all, delete-orphan')

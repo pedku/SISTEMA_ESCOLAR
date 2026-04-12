@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Asistencia - {{ student.user.name if student.user else 'Estudiante' }} - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-presente {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    .status-ausente {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    .status-justificado, .status-excusado {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
+
+    .stat-card {
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .stat-card .count {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .stat-card .label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 5px;
+    }
+    .stat-card .percentage {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-top: 8px;
+        background-color: rgba(255,255,255,0.2);
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 10px;
+    }
+
+    .month-stat-card {
+        border-left: 4px solid;
+        padding: 12px;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .absence-alert {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 0 8px 8px 0;
+    }
+    .absence-alert.critical {
+        background-color: #f8d7da;
+        border-left-color: #dc3545;
+    }
+
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #343a40;
+        color: white;
+        z-index: 10;
+    }
+
+    .student-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    .student-header .name {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .student-header .info {
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Back Button -->
+    <div class="mb-3">
+        <a href="{{ url_for('students.profile', id=student.user_id) if student.user_id else '#' }}"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Perfil
+        </a>
+    </div>
+
+    <!-- Student Header -->
+    {% if student.user %}
+    <div class="student-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="name">{{ student.user.name }}</div>
+                <div class="info">
+                    {% if student.grade %}
+                    <span class="me-3"><i class="bi bi-mortarboard"></i> {{ student.grade.name }}</span>
+                    {% endif %}
+                    {% if student.document_number %}
+                    <span class="me-3"><i class="bi bi-card-text"></i> {{ student.document_type }}: {{ student.document_number }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('attendance.attendance') }}" class="btn btn-light">
+                    <i class="bi bi-calendar-check"></i> Tomar Asistencia
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Absence Rate Alert -->
+    {% if absence_rate > 20 %}
+    <div class="absence-alert critical mb-4">
+        <h5><i class="bi bi-exclamation-triangle"></i> ¡Alerta de Inasistencia Critica!</h5>
+        <p class="mb-0">
+            Este estudiante tiene una tasa de inasistencia del <strong>{{ absence_rate }}%</strong>,
+            que supera el umbral critico del 20%. Se recomienda notificar a coordinacion y al acudiente.
+        </p>
+    </div>
+    {% elif absence_rate > 10 %}
+    <div class="absence-alert mb-4">
+        <h5><i class="bi bi-info-circle"></i> Atencion: Tendencia de Inasistencia</h5>
+        <p class="mb-0">
+            Este estudiante tiene una tasa de inasistencia del <strong>{{ absence_rate }}%</strong>.
+            Monitorear de cerca para evitar ausencias criticas.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary">
+                <div class="count">{{ total_records }}</div>
+                <div class="label">Total Registros</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success">
+                <div class="count">{{ presentes }}</div>
+                <div class="label">Presentes</div>
+                {% if total_records > 0 %}
+                <div class="percentage">{{ (presentes / total_records * 100)|round(1) }}%</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger">
+                <div class="count">{{ ausentes }}</div>
+                <div class="label">Ausentes</div>
+                {% if total_records > 0 %}
+                <div class="percentage">{{ (ausentes / total_records * 100)|round(1) }}%</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-warning text-dark">
+                <div class="count">{{ justificados }}</div>
+                <div class="label">Justificados</div>
+                {% if total_records > 0 %}
+                <div class="percentage">{{ (justificados / total_records * 100)|round(1) }}%</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    {% if monthly_stats %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Distribucion General</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Tendencia Mensual</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Monthly Breakdown -->
+    {% if monthly_stats %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-calendar-month"></i> Desglose Mensual</h5>
+        </div>
+        <div class="card-body">
+            {% for month, stats in monthly_stats.items()|sort(reverse=True) %}
+            {% set month_total = stats.presente + stats.ausente + stats.justificado + stats.excusado %}
+            {% set month_absence_rate = (stats.ausente / month_total * 100) if month_total > 0 else 0 %}
+            <div class="month-stat-card" style="border-left-color: {% if month_absence_rate > 20 %}#dc3545{% elif month_absence_rate > 10 %}#ffc107{% else %}#198754{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ month }}</strong>
+                        <span class="text-muted ms-2">({{ month_total }} registros)</span>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <span class="text-success"><i class="bi bi-check-circle"></i> {{ stats.presente }}</span>
+                        <span class="text-danger"><i class="bi bi-x-circle"></i> {{ stats.ausente }}</span>
+                        <span class="text-warning"><i class="bi bi-bookmark"></i> {{ stats.justificado + stats.excusado }}</span>
+                        <span class="{% if month_absence_rate > 20 %}text-danger{% else %}text-muted{% endif %}">
+                            <strong>{{ month_absence_rate|round(1) }}% ausencias</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Attendance History Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Historial de Asistencia</h5>
+            {% if attendance_records %}
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportToCSV()">
+                <i class="bi bi-download"></i> Exportar CSV
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            {% if attendance_records %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" id="attendanceTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Asignatura</th>
+                            <th>Estado</th>
+                            <th>Observacion</th>
+                            <th>Registrado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ record.date.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {% if record.subject_grade and record.subject_grade.subject %}
+                                    {{ record.subject_grade.subject.name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ record.status }}">
+                                    {% if record.status == 'presente' %}
+                                        ✓ Presente
+                                    {% elif record.status == 'ausente' %}
+                                        ✗ Ausente
+                                    {% elif record.status == 'justificado' %}
+                                        ⚑ Justificado
+                                    {% elif record.status == 'excusado' %}
+                                        ℹ Excusado
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>{{ record.observation or '-' }}</td>
+                            <td>
+                                {% if record.recorder and record.recorder.name %}
+                                    {{ record.recorder.name }}
+                                {% else %}
+                                    Usuario #{{ record.recorded_by }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info m-3">
+                <i class="bi bi-info-circle"></i>
+                No hay registros de asistencia para este estudiante.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Pie Chart - General Distribution
+    {% if monthly_stats %}
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Presentes', 'Ausentes', 'Justificados'],
+            datasets: [{
+                data: [{{ presentes }}, {{ ausentes }}, {{ justificados }}],
+                backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+
+    // Trend Chart - Monthly
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const months = {{ monthly_stats.keys()|list|tojson }};
+    const monthLabels = months.map(m => {
+        const [year, month] = m.split('-');
+        const date = new Date(year, month - 1);
+        return date.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+    });
+
+    const monthlyData = {{ monthly_stats|tojson }};
+    const presentesData = months.map(m => monthlyData[m]?.presente || 0);
+    const ausentesData = months.map(m => monthlyData[m]?.ausente || 0);
+    const justificadosData = months.map(m => (monthlyData[m]?.justificado || 0) + (monthlyData[m]?.excusado || 0));
+
+    new Chart(trendCtx, {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    label: 'Presentes',
+                    data: presentesData,
+                    backgroundColor: '#198754',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Ausentes',
+                    data: ausentesData,
+                    backgroundColor: '#dc3545',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Justificados',
+                    data: justificadosData,
+                    backgroundColor: '#ffc107',
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Export to CSV
+    function exportToCSV() {
+        let csv = 'Fecha,Asignatura,Estado,Observacion,Registrado por\n';
+
+        document.querySelectorAll('#attendanceTable tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 5) {
+                const fecha = cells[0].textContent.trim();
+                const asignatura = cells[1].textContent.trim();
+                const estado = cells[2].textContent.trim();
+                const observacion = cells[3].textContent.trim();
+                const registrado = cells[4].textContent.trim();
+
+                csv += `"${fecha}","${asignatura}","${estado}","${observacion}","${registrado}"\n`;
+            }
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'asistencia_{{ student.user.name if student.user else "estudiante" }}.csv';
+        link.click();
+    }
+</script>
+{% endblock %}

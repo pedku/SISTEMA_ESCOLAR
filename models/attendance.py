@@ -8,9 +8,9 @@ from extensions import db
 
 class Attendance(db.Model):
     """Student attendance record."""
-    
+
     __tablename__ = 'attendance'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('academic_students.id'), nullable=False, index=True)
     subject_grade_id = db.Column(db.Integer, db.ForeignKey('subject_grades.id'), nullable=False, index=True)
@@ -20,6 +20,11 @@ class Attendance(db.Model):
     observation = db.Column(db.String(300))
     recorded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    student = db.relationship('AcademicStudent', foreign_keys=[student_id])
+    subject_grade = db.relationship('SubjectGrade', backref='attendance_sg', foreign_keys=[subject_grade_id])
+    # recorder relationship is defined via backref in User model
     
     def __repr__(self):
         return f'<Attendance Student:{self.student_id} Date:{self.date} Status:{self.status}>'

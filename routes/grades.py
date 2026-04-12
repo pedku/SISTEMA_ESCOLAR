@@ -10,10 +10,11 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models.user import User
-from models.institution import Institution
+from models.institution import Institution, Campus
 from models.academic import Grade, Subject, SubjectGrade, AcademicStudent
 from models.grading import AcademicPeriod, GradeCriteria, GradeRecord, FinalGrade
 from utils.decorators import login_required, role_required
+from utils.institution_resolver import get_current_institution, get_institution_grades, get_institution_subjects
 
 grades_bp = Blueprint('grades', __name__)
 
@@ -36,10 +37,13 @@ def grade_input():
     Shows all grades and subjects available for the current user.
     Teachers only see their own assigned subject-grades.
     """
-    institution = Institution.query.first()
+    institution = get_current_institution()
     if not institution:
-        flash('No se ha configurado la institucion. Contacte al administrador.', 'warning')
-        return redirect(url_for('dashboard.index'))
+        # Root without active institution - use first institution or show all
+        institution = Institution.query.first()
+        if not institution:
+            flash('No se ha configurado la institucion. Contacte al administrador.', 'warning')
+            return redirect(url_for('dashboard.index'))
 
     academic_year = institution.academic_year
 
@@ -61,27 +65,32 @@ def grade_input():
     # Determine which grades and subject-grades the user can access
     if current_user.has_any_role('root', 'admin'):
         # Root/Admin: see all grades in the institution
-        grades_list = Grade.query.join(SubjectGrade).filter(
+        grades_list = Grade.query.join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).distinct().order_by(Grade.name).all()
 
-        subject_grades = SubjectGrade.query.join(Grade).filter(
+        subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
     elif current_user.has_role('coordinator'):
         # Coordinator: see all grades in the institution
-        grades_list = Grade.query.join(SubjectGrade).filter(
+        grades_list = Grade.query.join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).distinct().order_by(Grade.name).all()
 
-        subject_grades = SubjectGrade.query.join(Grade).filter(
+        subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
     else:
         # Teacher: only see their own subject-grades
         subject_grades = SubjectGrade.query.filter_by(
             teacher_id=current_user.id
-        ).join(Grade).filter(
+        ).join(Grade).join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
 
@@ -314,10 +323,12 @@ def grade_upload():
     Upload grades from an Excel file.
     Parses and validates the file, then saves to database.
     """
-    institution = Institution.query.first()
+    institution = get_current_institution()
     if not institution:
-        flash('No se ha configurado la institucion.', 'warning')
-        return redirect(url_for('dashboard.index'))
+        institution = Institution.query.first()
+        if not institution:
+            flash('No se ha configurado la institucion.', 'warning')
+            return redirect(url_for('dashboard.index'))
 
     periods = AcademicPeriod.query.filter_by(
         institution_id=institution.id,
@@ -330,15 +341,20 @@ def grade_upload():
 
     # Get available grades for the user
     if current_user.has_any_role('root', 'admin', 'coordinator'):
-        grades_list = Grade.query.filter_by(
-            academic_year=institution.academic_year
+        grades_list = Grade.query.join(Campus).filter(
+            Campus.institution_id == institution.id,
+            Grade.academic_year == institution.academic_year
         ).order_by(Grade.name).all()
-        all_subject_grades = SubjectGrade.query.join(Grade).filter(
+        all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+            Campus.institution_id == institution.id,
             Grade.academic_year == institution.academic_year
         ).order_by(Grade.name, Subject.name).all()
     else:
         # Teacher: only their grades
-        all_subject_grades = SubjectGrade.query.filter_by(teacher_id=current_user.id).all()
+        all_subject_grades = SubjectGrade.query.filter_by(teacher_id=current_user.id).join(Grade).join(Campus).filter(
+            Campus.institution_id == institution.id,
+            Grade.academic_year == institution.academic_year
+        ).all()
         grade_ids = set(sg.grade_id for sg in all_subject_grades)
         grades_list = Grade.query.filter(Grade.id.in_(grade_ids)).order_by(Grade.name).all()
 

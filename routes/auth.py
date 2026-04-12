@@ -3,12 +3,13 @@ Authentication routes: login, logout, profile, password change.
 """
 
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from extensions import db
 from models.user import User
 from utils.validators import validate_email
+from utils.institution_resolver import get_current_institution
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -37,13 +38,24 @@ def login():
             if not user.is_active:
                 flash('Su cuenta está desactivada. Contacte al administrador.', 'error')
                 return render_template('login.html')
-            
+
             # Update last login
             user.last_login = datetime.utcnow()
             db.session.commit()
-            
+
             login_user(user, remember=remember)
-            
+
+            # Set institution context in session for multi-institution support
+            if user.is_root():
+                # Root users: if they have an institution_id assigned, set it as active
+                if user.institution_id:
+                    session['active_institution_id'] = user.institution_id
+                # Otherwise, root can see all institutions (no active_institution_id set)
+            else:
+                # Non-root users: scoped to their assigned institution
+                if user.institution_id:
+                    session['active_institution_id'] = user.institution_id
+
             # Redirect to next page or dashboard
             next_page = request.args.get('next')
             flash(f'Bienvenido/a, {user.get_full_name()}!', 'success')
@@ -66,8 +78,9 @@ def logout():
 @auth_bp.route('/profile')
 @login_required
 def profile():
-    """Display user profile."""
-    return render_template('profile.html')
+    """Display user profile with institution context."""
+    current_institution = get_current_institution()
+    return render_template('profile.html', current_institution=current_institution)
 
 
 @auth_bp.route('/update_profile', methods=['POST'])

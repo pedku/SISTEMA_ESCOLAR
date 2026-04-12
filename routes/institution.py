@@ -12,6 +12,10 @@ from models.academic import Grade, Subject, SubjectGrade
 from models.grading import AcademicPeriod, GradeCriteria
 from models.user import User
 from utils.decorators import role_required
+from utils.institution_resolver import (
+    get_current_institution, filter_by_institution, 
+    get_institution_grades, get_institution_subjects
+)
 from datetime import datetime
 import os
 
@@ -213,13 +217,17 @@ def institution_delete(id):
 @role_required('root', 'admin')
 def config():
     """View and edit institution configuration."""
-    institution = Institution.query.first()
+    institution = get_current_institution()
     
+    # For root users without active institution, get first or allow selection
+    if not institution and current_user.is_root():
+        institution = Institution.query.first()
+
     if request.method == 'POST':
         if not institution:
-            institution = Institution()
-            db.session.add(institution)
-        
+            flash('No hay institución configurada. Cree una primero desde la lista de instituciones.', 'error')
+            return redirect(url_for('institution.institutions_list'))
+
         institution.name = request.form.get('name', '').strip()
         institution.nit = request.form.get('nit', '').strip()
         institution.address = request.form.get('address', '').strip()
@@ -258,8 +266,15 @@ def config():
 @role_required('root', 'admin', 'coordinator')
 def campuses():
     """List all campuses."""
-    campus_list = Campus.query.order_by(Campus.name).all()
-    return render_template('institution/campuses.html', campuses=campus_list)
+    institution = get_current_institution()
+    
+    if institution:
+        campus_list = Campus.query.filter_by(institution_id=institution.id).order_by(Campus.name).all()
+    else:
+        # Root can see all campuses
+        campus_list = Campus.query.order_by(Campus.name).all()
+    
+    return render_template('institution/campuses.html', campuses=campus_list, institution=institution)
 
 
 @institution_bp.route('/campuses/new', methods=['GET', 'POST'])
@@ -268,8 +283,18 @@ def campuses():
 def campus_new():
     """Create a new campus."""
     if request.method == 'POST':
-        institution = Institution.query.first()
+        institution = get_current_institution()
         
+        if not institution:
+            # For root, use institution_id from form or first
+            institution_id = request.form.get('institution_id')
+            if institution_id:
+                institution = Institution.query.get(int(institution_id))
+            else:
+                flash('Debe seleccionar una institución para crear la sede.', 'error')
+                institutions = Institution.query.order_by(Institution.name).all()
+                return render_template('institution/campus_form.html', campus=None, institutions=institutions)
+
         campus = Campus(
             institution_id=institution.id,
             name=request.form.get('name', '').strip(),
@@ -287,8 +312,11 @@ def campus_new():
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear la sede: {str(e)}', 'error')
-    
-    return render_template('institution/campus_form.html', campus=None)
+
+    # GET request - show form
+    institution = get_current_institution()
+    institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+    return render_template('institution/campus_form.html', campus=None, institutions=institutions)
 
 
 @institution_bp.route('/campuses/<int:id>/edit', methods=['GET', 'POST'])
@@ -355,8 +383,16 @@ def campus_delete(id):
 @role_required('root', 'admin', 'coordinator')
 def grades():
     """List all grades."""
-    grade_list = Grade.query.order_by(Grade.name).all()
-    return render_template('institution/grades.html', grades=grade_list)
+    institution = get_current_institution()
+    
+    if institution:
+        grade_list = Grade.query.join(Campus).filter(
+            Campus.institution_id == institution.id
+        ).order_by(Grade.name).all()
+    else:
+        grade_list = Grade.query.order_by(Grade.name).all()
+    
+    return render_template('institution/grades.html', grades=grade_list, institution=institution)
 
 
 @institution_bp.route('/grades/new', methods=['GET', 'POST'])
@@ -364,10 +400,18 @@ def grades():
 @role_required('root', 'admin')
 def grade_new():
     """Create a new grade."""
+    institution = get_current_institution()
+    
     if request.method == 'POST':
         campus = db.session.get(Campus, int(request.form.get('campus_id')))
-        director_id = request.form.get('director_id')
         
+        # Verify campus belongs to user's institution
+        if institution and campus.institution_id != institution.id:
+            flash('No tiene permiso para crear grados en esta sede.', 'error')
+            return redirect(url_for('institution.grades'))
+        
+        director_id = request.form.get('director_id')
+
         grade = Grade(
             campus_id=campus.id,
             director_id=int(director_id) if director_id else None,
@@ -385,10 +429,15 @@ def grade_new():
             db.session.rollback()
             flash(f'Error al crear el grado: {str(e)}', 'error')
     
-    campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
-    teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
-    
-    return render_template('institution/grade_form.html', grade=None, campuses=campuses, teachers=teachers)
+    if institution:
+        campuses = Campus.query.filter_by(institution_id=institution.id, active=True).order_by(Campus.name).all()
+        # Get teachers from this institution
+        teachers = User.query.filter_by(role='teacher', institution_id=institution.id).order_by(User.first_name).all()
+    else:
+        campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+        teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+
+    return render_template('institution/grade_form.html', grade=None, campuses=campuses, teachers=teachers, institution=institution)
 
 
 @institution_bp.route('/grades/<int:id>/edit', methods=['GET', 'POST'])
@@ -458,8 +507,14 @@ def grade_delete(id):
 @role_required('root', 'admin', 'coordinator', 'teacher')
 def subjects():
     """List all subjects."""
-    subject_list = Subject.query.order_by(Subject.name).all()
-    return render_template('institution/subjects.html', subjects=subject_list)
+    institution = get_current_institution()
+    
+    if institution:
+        subject_list = Subject.query.filter_by(institution_id=institution.id).order_by(Subject.name).all()
+    else:
+        subject_list = Subject.query.order_by(Subject.name).all()
+    
+    return render_template('institution/subjects.html', subjects=subject_list, institution=institution)
 
 
 @institution_bp.route('/subjects/new', methods=['GET', 'POST'])
@@ -467,8 +522,16 @@ def subjects():
 @role_required('root', 'admin')
 def subject_new():
     """Create a new subject."""
+    institution = get_current_institution()
+    
     if request.method == 'POST':
+        if not institution:
+            flash('Debe seleccionar una institución para crear la asignatura.', 'error')
+            institutions = Institution.query.order_by(Institution.name).all()
+            return render_template('institution/subject_form.html', subject=None, institutions=institutions)
+        
         subject = Subject(
+            institution_id=institution.id,
             name=request.form.get('name', '').strip(),
             code=request.form.get('code', '').strip()
         )
@@ -481,8 +544,10 @@ def subject_new():
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear la asignatura: {str(e)}', 'error')
-    
-    return render_template('institution/subject_form.html', subject=None)
+
+    institution = get_current_institution()
+    institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+    return render_template('institution/subject_form.html', subject=None, institutions=institutions)
 
 
 @institution_bp.route('/subjects/<int:id>/edit', methods=['GET', 'POST'])
@@ -546,8 +611,14 @@ def subject_delete(id):
 @role_required('root', 'admin', 'coordinator')
 def periods():
     """List all academic periods."""
-    period_list = AcademicPeriod.query.order_by(AcademicPeriod.order).all()
-    return render_template('institution/periods.html', periods=period_list)
+    institution = get_current_institution()
+    
+    if institution:
+        period_list = AcademicPeriod.query.filter_by(institution_id=institution.id).order_by(AcademicPeriod.order).all()
+    else:
+        period_list = AcademicPeriod.query.order_by(AcademicPeriod.order).all()
+    
+    return render_template('institution/periods.html', periods=period_list, institution=institution)
 
 
 @institution_bp.route('/periods/new', methods=['GET', 'POST'])
@@ -555,9 +626,18 @@ def periods():
 @role_required('root', 'admin')
 def period_new():
     """Create a new academic period."""
+    institution = get_current_institution()
+    
     if request.method == 'POST':
-        institution = Institution.query.first()
-        
+        if not institution:
+            institution_id = request.form.get('institution_id')
+            if institution_id:
+                institution = Institution.query.get(int(institution_id))
+            else:
+                flash('Debe seleccionar una institución para crear el periodo.', 'error')
+                institutions = Institution.query.order_by(Institution.name).all()
+                return render_template('institution/period_form.html', period=None, institutions=institutions)
+
         period = AcademicPeriod(
             institution_id=institution.id,
             name=request.form.get('name', '').strip(),
@@ -577,8 +657,10 @@ def period_new():
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear el periodo: {str(e)}', 'error')
-    
-    return render_template('institution/period_form.html', period=None)
+
+    institution = get_current_institution()
+    institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+    return render_template('institution/period_form.html', period=None, institutions=institutions)
 
 
 @institution_bp.route('/periods/<int:id>/edit', methods=['GET', 'POST'])
@@ -647,8 +729,14 @@ def period_delete(id):
 @role_required('root', 'admin', 'coordinator', 'teacher')
 def criteria():
     """List all evaluation criteria."""
-    criteria_list = GradeCriteria.query.order_by(GradeCriteria.order).all()
-    return render_template('institution/criteria.html', criteria=criteria_list)
+    institution = get_current_institution()
+    
+    if institution:
+        criteria_list = GradeCriteria.query.filter_by(institution_id=institution.id).order_by(GradeCriteria.order).all()
+    else:
+        criteria_list = GradeCriteria.query.order_by(GradeCriteria.order).all()
+    
+    return render_template('institution/criteria.html', criteria=criteria_list, institution=institution)
 
 
 @institution_bp.route('/criteria/new', methods=['GET', 'POST'])
@@ -656,9 +744,18 @@ def criteria():
 @role_required('root', 'admin')
 def criteria_new():
     """Create a new evaluation criterion."""
+    institution = get_current_institution()
+    
     if request.method == 'POST':
-        institution = Institution.query.first()
-        
+        if not institution:
+            institution_id = request.form.get('institution_id')
+            if institution_id:
+                institution = Institution.query.get(int(institution_id))
+            else:
+                flash('Debe seleccionar una institución para crear el criterio.', 'error')
+                institutions = Institution.query.order_by(Institution.name).all()
+                return render_template('institution/criteria_form.html', criterion=None, institutions=institutions)
+
         criterion = GradeCriteria(
             institution_id=institution.id,
             name=request.form.get('name', '').strip(),
@@ -675,8 +772,10 @@ def criteria_new():
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear el criterio: {str(e)}', 'error')
-    
-    return render_template('institution/criteria_form.html', criterion=None)
+
+    institution = get_current_institution()
+    institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+    return render_template('institution/criteria_form.html', criterion=None, institutions=institutions)
 
 
 @institution_bp.route('/criteria/<int:id>/edit', methods=['GET', 'POST'])
@@ -729,5 +828,48 @@ def criteria_delete(id):
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar: {str(e)}', 'error')
-    
+
     return redirect(url_for('institution.criteria'))
+
+
+# ============================================
+# Institution Switching (Root Users)
+# ============================================
+
+@institution_bp.route('/switch', methods=['POST'])
+@login_required
+@role_required('root')
+def switch_institution():
+    """Switch active institution for root users."""
+    from flask import session
+    
+    institution_id = request.form.get('institution_id')
+    
+    if not institution_id:
+        # Clear active institution - root sees all
+        if 'active_institution_id' in session:
+            del session['active_institution_id']
+        flash('Ahora puede ver todas las instituciones.', 'info')
+        return redirect(url_for('dashboard.index'))
+    
+    institution = Institution.query.get(int(institution_id))
+    
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        return redirect(url_for('institution.institutions_list'))
+    
+    session['active_institution_id'] = institution.id
+    flash(f'Ahora está trabajando en: {institution.name}', 'success')
+    
+    # Redirect back to the page they came from or default
+    next_url = request.form.get('next') or url_for('dashboard.index')
+    return redirect(next_url)
+
+
+@institution_bp.route('/institutions/select')
+@login_required
+@role_required('root')
+def select_institution():
+    """Show institution selection page for root users."""
+    all_institutions = Institution.query.order_by(Institution.name).all()
+    return render_template('institution/select_institution.html', institutions=all_institutions)

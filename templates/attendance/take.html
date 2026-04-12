@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}Tomar Asistencia - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-btn {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+        min-width: 100px;
+        text-align: center;
+    }
+    .status-btn:hover {
+        transform: scale(1.05);
+    }
+    .status-btn.presente {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border-color: #0f5132;
+    }
+    .status-btn.presente.active {
+        background-color: #198754;
+        color: white;
+    }
+    .status-btn.ausente {
+        background-color: #f8d7da;
+        color: #842029;
+        border-color: #842029;
+    }
+    .status-btn.ausente.active {
+        background-color: #dc3545;
+        color: white;
+    }
+    .status-btn.justificado {
+        background-color: #fff3cd;
+        color: #664d03;
+        border-color: #664d03;
+    }
+    .status-btn.justificado.active {
+        background-color: #ffc107;
+        color: #000;
+    }
+    .status-btn.excusado {
+        background-color: #cff4fc;
+        color: #055160;
+        border-color: #055160;
+    }
+    .status-btn.excusado.active {
+        background-color: #0dcaf0;
+        color: #000;
+    }
+
+    .student-row {
+        transition: background-color 0.2s;
+    }
+    .student-row:hover {
+        background-color: #f8f9fa;
+    }
+    .student-name-cell {
+        min-width: 200px;
+    }
+
+    .summary-card {
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        color: white;
+    }
+    .summary-card .count {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .summary-card .label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #343a40;
+        color: white;
+        z-index: 10;
+    }
+
+    .observation-input {
+        width: 100%;
+        min-width: 120px;
+        font-size: 0.85rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+    .observation-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .quick-actions {
+        display: flex;
+        gap: 5px;
+    }
+    .quick-actions .btn {
+        padding: 2px 8px;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="bi bi-calendar-check"></i> Tomar Asistencia</h2>
+                    <p class="text-muted">Registro diario de asistencia estudiantil</p>
+                </div>
+                <a href="{{ url_for('attendance.attendance_summary', sg_id=selected_sg_id) if selected_sg_id else url_for('attendance.attendance_summary') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-bar-chart-line"></i> Ver Resumen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selection Form -->
+    {% if not selected_sg %}
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Seleccione Grado y Asignatura</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('attendance.attendance') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Grado</label>
+                        <select name="grade_id" id="gradeSelect" class="form-select" required>
+                            <option value="">-- Seleccione un grado --</option>
+                            {% for grade in grades %}
+                            <option value="{{ grade.id }}" {% if request.args.get('grade_id')|int == grade.id %}selected{% endif %}>
+                                {{ grade.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Asignatura</label>
+                        <select name="sg_id" id="sgSelect" class="form-select" required>
+                            <option value="">-- Seleccione primero un grado --</option>
+                            {% for sg in subject_grades %}
+                            <option value="{{ sg.id }}" data-grade="{{ sg.grade_id }}"
+                                    {% if selected_sg_id == sg.id %}selected{% endif %}
+                                    {% if request.args.get('grade_id')|int != sg.grade_id %}style="display:none"{% endif %}>
+                                {{ sg.subject.name }} {% if sg.teacher %}- {{ sg.teacher.name }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="date" class="form-control" value="{{ selected_date }}" required>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Attendance Taking -->
+    {% if selected_sg and students %}
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-people"></i>
+                {{ selected_sg.subject.name }} - {{ selected_sg.grade.name }}
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-white">
+                    <i class="bi bi-calendar3"></i>
+                    <input type="date" id="attendanceDate" class="form-control form-control-sm d-inline-block"
+                           value="{{ selected_date }}" style="width: auto;">
+                </div>
+                <button id="btnLoadAttendance" class="btn btn-sm btn-light" onclick="loadExistingAttendance()">
+                    <i class="bi bi-arrow-clockwise"></i> Cargar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Summary -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="summary-card bg-success">
+                <div class="count" id="countPresente">0</div>
+                <div class="label">Presentes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card bg-danger">
+                <div class="count" id="countAusente">0</div>
+                <div class="label">Ausentes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card bg-warning text-dark">
+                <div class="count" id="countJustificado">0</div>
+                <div class="label">Justificados</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card bg-info text-dark">
+                <div class="count" id="countExcusado">0</div>
+                <div class="label">Excusados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted me-2">Acciones rapidas:</span>
+                <button class="btn btn-sm btn-success" onclick="markAll('presente')">
+                    <i class="bi bi-check-all"></i> Todos Presentes
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportAttendance()">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+                <div class="vr"></div>
+                <span class="text-muted me-2">Filtrar:</span>
+                <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('ausente')">
+                    Solo Ausentes
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearFilter()">
+                    Mostrar Todos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-hover table-bordered mb-0" id="attendanceTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th class="student-name-cell">Estudiante</th>
+                            <th style="width: 420px;">Estado</th>
+                            <th style="width: 200px;">Observacion</th>
+                            <th style="width: 100px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="student-row" data-student-id="{{ student.id }}">
+                            <td class="text-center">{{ loop.index }}</td>
+                            <td class="student-name-cell">
+                                {% if student.user %}
+                                    {{ student.user.name }}
+                                {% else %}
+                                    Estudiante #{{ student.id }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap" data-student-status="{{ student.id }}">
+                                    <button class="status-btn presente"
+                                            onclick="setStatus({{ student.id }}, 'presente')"
+                                            data-status="presente">
+                                        ✓ Presente
+                                    </button>
+                                    <button class="status-btn ausente"
+                                            onclick="setStatus({{ student.id }}, 'ausente')"
+                                            data-status="ausente">
+                                        ✗ Ausente
+                                    </button>
+                                    <button class="status-btn justificado"
+                                            onclick="setStatus({{ student.id }}, 'justificado')"
+                                            data-status="justificado">
+                                        ⚑ Justificado
+                                    </button>
+                                    <button class="status-btn excusado"
+                                            onclick="setStatus({{ student.id }}, 'excusado')"
+                                            data-status="excusado">
+                                        ℹ Excusado
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text" class="observation-input"
+                                       id="obs-{{ student.id }}"
+                                       placeholder="Observacion..."
+                                       data-student-id="{{ student.id }}">
+                            </td>
+                            <td>
+                                <div class="quick-actions">
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            onclick="setStatus({{ student.id }}, 'ausente')"
+                                            title="Marcar Ausente">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm"
+                                            onclick="setStatus({{ student.id }}, 'presente')"
+                                            title="Marcar Presente">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="d-grid gap-2 mt-3">
+        <button class="btn btn-primary btn-lg" onclick="saveAttendance()">
+            <i class="bi bi-save"></i> Guardar Asistencia ({{ students|length }} estudiantes)
+        </button>
+    </div>
+    {% endif %}
+
+    {% if selected_sg and not students %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        No hay estudiantes activos en este grado.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Attendance state
+    const attendanceState = {};
+    const totalStudents = {{ students|length if students else 0 }};
+
+    // Initialize: default all to present
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if students %}
+        // Set all students to 'presente' by default
+        {% for student in students %}
+        attendanceState[{{ student.id }}] = { status: 'presente', observation: '' };
+        {% endfor %}
+        updateAllStatusButtons();
+        updateSummaryCounts();
+
+        // Try to load existing attendance for this date
+        loadExistingAttendance();
+        {% endif %}
+    });
+
+    // Grade/Subject filtering
+    document.getElementById('gradeSelect')?.addEventListener('change', function() {
+        const gradeId = this.value;
+        const sgSelect = document.getElementById('sgSelect');
+
+        // Show/hide subject-grades based on selected grade
+        sgSelect.querySelectorAll('option').forEach(option => {
+            if (!option.value) return;
+            if (option.dataset.grade === gradeId) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        sgSelect.value = '';
+    });
+
+    // Set status for a student
+    function setStatus(studentId, status) {
+        if (!attendanceState[studentId]) {
+            attendanceState[studentId] = { observation: '' };
+        }
+        attendanceState[studentId].status = status;
+        updateStatusButtons(studentId);
+        updateSummaryCounts();
+    }
+
+    // Update buttons for a specific student
+    function updateStatusButtons(studentId) {
+        const container = document.querySelector(`[data-student-status="${studentId}"]`);
+        if (!container) return;
+
+        const currentStatus = attendanceState[studentId]?.status || 'presente';
+        container.querySelectorAll('.status-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.status === currentStatus) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    // Update all status buttons
+    function updateAllStatusButtons() {
+        Object.keys(attendanceState).forEach(studentId => {
+            updateStatusButtons(parseInt(studentId));
+        });
+    }
+
+    // Update summary counts
+    function updateSummaryCounts() {
+        let counts = { presente: 0, ausente: 0, justificado: 0, excusado: 0 };
+        Object.values(attendanceState).forEach(record => {
+            if (counts[record.status] !== undefined) {
+                counts[record.status]++;
+            }
+        });
+        document.getElementById('countPresente').textContent = counts.presente;
+        document.getElementById('countAusente').textContent = counts.ausente;
+        document.getElementById('countJustificado').textContent = counts.justificado;
+        document.getElementById('countExcusado').textContent = counts.excusado;
+    }
+
+    // Mark all students with a specific status
+    function markAll(status) {
+        Object.keys(attendanceState).forEach(studentId => {
+            attendanceState[studentId].status = status;
+        });
+        updateAllStatusButtons();
+        updateSummaryCounts();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Hecho',
+            text: `Todos marcados como ${status}`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+
+    // Load existing attendance for the selected date
+    function loadExistingAttendance() {
+        const sgId = {{ selected_sg_id or 'null' }};
+        const date = document.getElementById('attendanceDate').value;
+
+        if (!sgId || !date) return;
+
+        fetch(`/attendance/get?sg_id=${sgId}&date=${date}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && Object.keys(data.records).length > 0) {
+                    Object.entries(data.records).forEach(([studentId, record]) => {
+                        attendanceState[studentId] = {
+                            status: record.status,
+                            observation: record.observation
+                        };
+
+                        // Update observation input
+                        const obsInput = document.getElementById(`obs-${studentId}`);
+                        if (obsInput) {
+                            obsInput.value = record.observation;
+                        }
+                    });
+                    updateAllStatusButtons();
+                    updateSummaryCounts();
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Datos Cargados',
+                        text: `Se cargaron ${Object.keys(data.records).length} registros existentes`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            })
+            .catch(err => console.error('Error loading attendance:', err));
+    }
+
+    // Save attendance
+    function saveAttendance() {
+        const sgId = {{ selected_sg_id or 'null' }};
+        const date = document.getElementById('attendanceDate').value;
+
+        if (!sgId || !date) {
+            Swal.fire('Error', 'Seleccione una asignatura y fecha', 'error');
+            return;
+        }
+
+        const records = Object.entries(attendanceState).map(([studentId, record]) => ({
+            student_id: parseInt(studentId),
+            status: record.status,
+            observation: document.getElementById(`obs-${studentId}`)?.value || record.observation
+        }));
+
+        if (records.length === 0) {
+            Swal.fire('Error', 'No hay estudiantes para registrar', 'error');
+            return;
+        }
+
+        // Show loading
+        Swal.fire({
+            title: 'Guardando...',
+            text: 'Registrando asistencia',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        fetch('/attendance/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sg_id: sgId,
+                date: date,
+                records: records
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Asistencia Guardada',
+                    html: `<strong>${data.saved}</strong> registros guardados`,
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                Swal.fire('Error', data.error || 'Error al guardar', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error saving attendance:', err);
+            Swal.fire('Error', 'Error de conexion', 'error');
+        });
+    }
+
+    // Filter by status
+    function filterByStatus(status) {
+        document.querySelectorAll('.student-row').forEach(row => {
+            const studentId = row.dataset.studentId;
+            const currentStatus = attendanceState[studentId]?.status;
+            row.style.display = (currentStatus === status) ? '' : 'none';
+        });
+    }
+
+    // Clear filter
+    function clearFilter() {
+        document.querySelectorAll('.student-row').forEach(row => {
+            row.style.display = '';
+        });
+    }
+
+    // Export attendance to CSV
+    function exportAttendance() {
+        const date = document.getElementById('attendanceDate').value;
+        let csv = 'No,Estudiante,Estado,Observacion\n';
+
+        Object.entries(attendanceState).forEach(([studentId, record]) => {
+            const row = document.querySelector(`[data-student-id="${studentId}"]`);
+            const name = row?.querySelector('.student-name-cell')?.textContent?.trim() || '';
+            const obs = document.getElementById(`obs-${studentId}`)?.value || '';
+            csv += `${studentId},"${name}","${record.status}","${obs}"\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `asistencia_${date}.csv`;
+        link.click();
+    }
+</script>
+{% endblock %}

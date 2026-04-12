@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Resumen de Asistencia - {{ subject_grade.subject.name }} - {{ subject_grade.grade.name }} - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .absence-high {
+        background-color: #f8d7da !important;
+        color: #842029;
+        font-weight: bold;
+    }
+    .absence-medium {
+        background-color: #fff3cd !important;
+        color: #664d03;
+    }
+    .absence-low {
+        background-color: #d1e7dd !important;
+        color: #0f5132;
+    }
+
+    .stat-card {
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+    }
+    .stat-card .count {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .stat-card .label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 5px;
+    }
+
+    .progress-thin {
+        height: 8px;
+        border-radius: 4px;
+    }
+
+    .at-risk-card {
+        border-left: 4px solid #dc3545;
+        background-color: #fff5f5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-bar-chart-line"></i> Resumen de Asistencia</h2>
+            <p class="text-muted">
+                {{ subject_grade.subject.name }} - {{ subject_grade.grade.name }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('attendance.attendance', sg_id=subject_grade.id) }}" class="btn btn-primary">
+                <i class="bi bi-calendar-check"></i> Tomar Asistencia
+            </a>
+            <a href="{{ url_for('attendance.attendance_report', sg_id=subject_grade.id) }}" class="btn btn-outline-info">
+                <i class="bi bi-file-earmark-text"></i> Reporte por Rango
+            </a>
+            <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-people"></i> Ver Estudiantes
+            </a>
+        </div>
+    </div>
+
+    <!-- Overall Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary">
+                <div class="count">{{ total_records }}</div>
+                <div class="label">Total Registros</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success">
+                <div class="count">{{ total_presentes }}</div>
+                <div class="label">Presentes</div>
+                {% if total_records > 0 %}
+                <div class="mt-2 badge bg-white text-primary">
+                    {{ (total_presentes / total_records * 100)|round(1) }}%
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger">
+                <div class="count">{{ total_ausentes }}</div>
+                <div class="label">Ausentes</div>
+                {% if total_records > 0 %}
+                <div class="mt-2 badge bg-white text-danger">
+                    {{ (total_ausentes / total_records * 100)|round(1) }}%
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-warning text-dark">
+                <div class="count">{{ total_justificados }}</div>
+                <div class="label">Justificados</div>
+                {% if total_records > 0 %}
+                <div class="mt-2 badge bg-white text-warning">
+                    {{ (total_justificados / total_records * 100)|round(1) }}%
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- At Risk Students Alert -->
+    {% if at_risk_students %}
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Estudiantes en Riesgo por Inasistencia (>20%)</h5>
+        </div>
+        <div class="card-body">
+            {% for student in at_risk_students %}
+            <div class="at-risk-card p-3 mb-2 rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>
+                            <a href="{{ url_for('attendance.student_attendance_history', student_id=student.student.id) }}">
+                                {{ student.student.user.name if student.student.user else 'Estudiante #' ~ student.student.id }}
+                            </a>
+                        </strong>
+                        <span class="text-muted ms-2">{{ student.ausentes }} ausencias de {{ student.total }}</span>
+                    </div>
+                    <span class="badge bg-danger fs-6">{{ student.absence_rate }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Monthly Trend -->
+    {% if monthly_trend %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Tendencia Mensual</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="trendChart" height="100"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Student List Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Detalle por Estudiante</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportToCSV()">
+                <i class="bi bi-download"></i> Exportar CSV
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" id="studentTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Estudiante</th>
+                            <th class="text-center">Presentes</th>
+                            <th class="text-center">Ausentes</th>
+                            <th class="text-center">Justificados</th>
+                            <th class="text-center">% Asistencia</th>
+                            <th class="text-center">% Ausencia</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stats in student_stats %}
+                        <tr class="{% if stats.absence_rate > 20 %}absence-high{% elif stats.absence_rate > 10 %}absence-medium{% else %}absence-low{% endif %}">
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a href="{{ url_for('attendance.student_attendance_history', student_id=stats.student.id) }}">
+                                    {{ stats.student.user.name if stats.student.user else 'Estudiante #' ~ stats.student.id }}
+                                </a>
+                            </td>
+                            <td class="text-center">{{ stats.presentes }}</td>
+                            <td class="text-center">{{ stats.ausentes }}</td>
+                            <td class="text-center">{{ stats.justificados }}</td>
+                            <td class="text-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1 progress-thin">
+                                        <div class="progress-bar bg-success" style="width: {{ stats.present_rate }}%"></div>
+                                    </div>
+                                    <span class="small">{{ stats.present_rate }}%</span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1 progress-thin">
+                                        <div class="progress-bar bg-danger" style="width: {{ stats.absence_rate }}%"></div>
+                                    </div>
+                                    <span class="small">{{ stats.absence_rate }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if stats.absence_rate > 20 %}
+                                <span class="badge bg-danger">Critico</span>
+                                {% elif stats.absence_rate > 10 %}
+                                <span class="badge bg-warning text-dark">Atencion</span>
+                                {% else %}
+                                <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Trend Chart
+    {% if monthly_trend %}
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const months = {{ monthly_trend.keys()|list|tojson }};
+    const monthLabels = months.map(m => {
+        const [year, month] = m.split('-');
+        return new Date(year, month - 1).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+    });
+
+    const monthlyData = {{ monthly_trend|tojson }};
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    label: 'Presentes',
+                    data: months.map(m => monthlyData[m]?.presente || 0),
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Ausentes',
+                    data: months.map(m => monthlyData[m]?.ausente || 0),
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Justificados',
+                    data: months.map(m => (monthlyData[m]?.justificado || 0) + (monthlyData[m]?.excusado || 0)),
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    {% endif %}
+
+    // Export to CSV
+    function exportToCSV() {
+        let csv = 'No,Estudiante,Presentes,Ausentes,Justificados,% Asistencia,% Ausencia,Estado\n';
+
+        document.querySelectorAll('#studentTable tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 8) {
+                const no = cells[0].textContent.trim();
+                const name = cells[1].textContent.trim();
+                const presentes = cells[2].textContent.trim();
+                const ausentes = cells[3].textContent.trim();
+                const justificados = cells[4].textContent.trim();
+                const presentRate = cells[5].textContent.trim().replace('%', '');
+                const absenceRate = cells[6].textContent.trim().replace('%', '');
+                const status = cells[7].textContent.trim();
+
+                csv += `${no},"${name}",${presentes},${ausentes},${justificados},${presentRate}%,${absenceRate}%,"${status}"\n`;
+            }
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        const subjectGrade = '{{ subject_grade.subject.name }}_{{ subject_grade.grade.name }}'.replace(/\s+/g, '_');
+        link.download = `asistencia_grupo_${subjectGrade}.csv`;
+        link.click();
+    }
+</script>
+{% endblock %}

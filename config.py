@@ -62,7 +62,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     """Development configuration."""
-    DEBUG = True
+    DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 
 class ProductionConfig(Config):

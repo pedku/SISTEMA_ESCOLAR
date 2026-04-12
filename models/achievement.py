@@ -8,10 +8,11 @@ from extensions import db
 
 class Achievement(db.Model):
     """Achievement/Badge that students can earn."""
-    
+
     __tablename__ = 'achievements'
-    
+
     id = db.Column(db.Integer, primary_key=True)
+    institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=True, index=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(300), nullable=False)
     icon = db.Column(db.String(100))  # Icon/emoji or path to icon
@@ -20,8 +21,9 @@ class Achievement(db.Model):
     # 'académico', 'asistencia', 'comportamiento', 'mejora'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relationships
+    institution = db.relationship('Institution', backref='achievements', foreign_keys=[institution_id])
     student_achievements = db.relationship('StudentAchievement', backref='achievement', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
@@ -31,6 +33,7 @@ class Achievement(db.Model):
         """Convert achievement to dictionary."""
         return {
             'id': self.id,
+            'institution_id': self.institution_id,
             'name': self.name,
             'description': self.description,
             'icon': self.icon,
