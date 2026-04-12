@@ -22,8 +22,8 @@ class Attendance(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
-    student = db.relationship('AcademicStudent', foreign_keys=[student_id])
-    subject_grade = db.relationship('SubjectGrade', backref='attendance_sg', foreign_keys=[subject_grade_id])
+    student = db.relationship('AcademicStudent', foreign_keys=[student_id], overlaps="attendance_records")
+    subject_grade = db.relationship('SubjectGrade', backref='attendance_sg', foreign_keys=[subject_grade_id], overlaps="attendance_records")
     # recorder relationship is defined via backref in User model
     
     def __repr__(self):

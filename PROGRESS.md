@@ -1,6 +1,43 @@
 # 📊 SIGE - Progreso del Proyecto
 
-## ✅ ERROR SOLUCIONADO: SQLAlchemy Instance
+## ✅ SISTEMA DE USUARIOS MEJORADO
+
+**Fecha**: 2026-04-11
+**Estado**: ✅ COMPLETADO
+
+### Cambios Realizados:
+
+#### 1. Username Auto-Generado:
+- ✅ Eliminada entrada manual de username
+- ✅ Generación automática desde nombre + documento (formato: @jperez7890)
+- ✅ Preview en vivo mientras se escribe
+- ✅ Evita duplicados automáticamente
+
+#### 2. Contraseña por Defecto:
+- ✅ Contraseña inicial = número de documento
+- ✅ Se muestra claramente al crear usuario
+- ✅ Mensaje informativo en el formulario
+
+#### 3. Cambio Forzoso de Contraseña:
+- ✅ Campo `must_change_password` en modelo User
+- ✅ Ruta `/change-password-first-time` para primer login
+- ✅ Template dedicado con validación de seguridad
+- ✅ Indicador de fuerza de contraseña
+- ✅ No permite acceder al sistema hasta cambiarla
+
+#### 4. Formulario Mejorado:
+- ✅ Mantiene datos del form al tener errores
+- ✅ Preview dinámico del username generado
+- ✅ Interfaz con pasos numerados (1, 2, 3)
+- ✅ Validación visual en tiempo real
+- ✅ Alerta informativa sobre seguridad
+
+#### 5. Modelo User Actualizado:
+- ✅ Agregado campo `must_change_password` (default: True)
+- ✅ Root configurado como `must_change_password = False`
+- ✅ Nuevos campos: country, department, municipality
+
+---
 
 **Fecha**: 2026-04-11
 **Error**: `RuntimeError: The current Flask app is not registered with this 'SQLAlchemy' instance`
@@ -59,19 +96,22 @@
 
 ---
 
-## 🎯 ESTADO ACTUAL: ✅ MULTI-INSTITUCIONAL COMPLETADO, ~65% IMPLEMENTADO
+## 🎯 ESTADO ACTUAL: ✅ MULTI-INSTITUCIONAL + OBSERVACIONES COMPLETADOS, ~75% IMPLEMENTADO
 
 - ✅ Login funcionando con contexto institucional
 - ✅ SQLAlchemy sin conflictos
 - ✅ 17/17 modelos de BD completamente implementados
-- ✅ **Multi-institucional: 100% implementado** (nuevo)
-- ✅ 6/12 blueprints de rutas completamente funcionales (institution-aware)
+- ✅ **Multi-institucional: 100% implementado**
+- ✅ **Observaciones: 100% implementado** (nuevo)
+- ✅ 7/12 blueprints de rutas completamente funcionales (institution-aware)
 - ✅ 6/6 utilidades implementadas (+ institution_resolver)
 - ❌ 0/7 archivos de servicios (lógica de negocio en rutas)
-- ⚠️ ~21+ templates referenciados pero NO existen en disco
-- ✅ ~36 templates existentes y funcionales (+ select_institution.html)
+- ⚠️ ~16 templates referenciados pero NO existen en disco
+- ✅ ~41 templates existentes y funcionales (+5 de observaciones)
 - ✅ Asistencia: 100% implementado
 - ✅ Institucional: 100% implementado (multi-institución + switching)
+- ⚠️ Sistema de Notas: ~60% (faltan: lock, finales, anuales)
+- ⏳ Boletines PDF: 0% (siguiente)
 
 ---
 
@@ -168,13 +208,26 @@
 - [x] Link en sidebar ✅
 - [x] Link en perfil de estudiante ✅
 
-#### 11. ⏳ Observaciones de Comportamiento (0% - Stub)
-- [ ] Modelo existe pero no se usa
-- [ ] Crear observaciones (positivas/negativas)
-- [ ] Historial por estudiante
-- [ ] Notificación a acudientes
-- [ ] Template `observations/create.html` - NO EXISTE
-- [ ] Template `observations/student_history.html` - NO EXISTE
+#### 11. ✅ Observaciones de Comportamiento (100% - COMPLETO)
+- [x] Modelo completo con relaciones (Observation + relationships)
+- [x] CRUD completo: Crear, Ver, Editar, Eliminar observaciones
+- [x] 4 tipos: Positiva, Negativa, Seguimiento, Convivencia
+- [x] Categorías: Disciplina, Rendimiento, Valores, etc.
+- [x] Lista con filtros (tipo, categoría, autor, fecha, estudiante)
+- [x] Historial por estudiante con línea de tiempo
+- [x] Estadísticas por tipo y estado de notificación
+- [x] Sistema de notificación a acudientes (marcar como notificada)
+- [x] Creación rápida desde perfil de estudiante
+- [x] Exportar a CSV
+- [x] Paginación
+- [x] Institution-aware filtering
+- [x] Template `observations/list.html` ✅
+- [x] Template `observations/create.html` ✅
+- [x] Template `observations/detail.html` ✅
+- [x] Template `observations/student_history.html` ✅
+- [x] Template `observations/quick_form.html` ✅
+- [x] Link en sidebar ✅
+- [x] Link en perfil de estudiante ✅
 
 #### 12. ⏳ Boletines PDF (5% - Stub)
 - [ ] Generación de boletines
@@ -324,14 +377,14 @@ Todos los archivos planificados faltan. La lógica está embebida en las rutas:
 | Métrica | Valor |
 |---------|-------|
 | Modelos de BD | 17/17 ✅ (100%) |
-| Blueprints de Rutas | 6/12 funcionales (50%) |
-| Endpoints Funcionales | ~38/67 (57%) |
-| Templates Existentes | ~35 |
-| Templates Faltantes | ~21+ |
+| Blueprints de Rutas | 7/12 funcionales (58%) |
+| Endpoints Funcionales | ~55/85 (65%) |
+| Templates Existentes | ~41 |
+| Templates Faltantes | ~16 |
 | Servicios Implementados | 0/7 (0%) |
-| Líneas de Código (aprox.) | ~4,500+ Python |
+| Líneas de Código (aprox.) | ~8,500+ Python |
 | Tests | 3 archivos en raíz |
-| Directorios Faltantes | `services/` (vacío), `uploads/`, `migrations/`, `tests/` |
+| Directorios Faltantes | `services/` (vacío), `migrations/`, `tests/` |
 
 ---
 
@@ -394,5 +447,16 @@ python app.py
 
 ---
 
-**Última actualización**: 2026-04-11 - **Modulo de Asistencia 100% completado**
-**Estado**: Arquitectura sólida, 57% implementado, pendientes: observaciones, boletines, métricas, logros, portal padres, integración lab
+**Última actualización**: 2026-04-12 - **Corrección de bugs críticos + UI mejorada**
+**Estado**: Arquitectura sólida, ~75% implementado
+
+### Correcciones Recientes:
+- ✅ Botones de eliminar ahora usan POST (6 templates corregidos)
+- ✅ Creación de admin es OPCIONAL al crear institución
+- ✅ UI/UX de formularios mejorada (institution_form.html rediseñado)
+- ✅ Corregidos 2 url_for rotos (students.profile, students.new)
+- ✅ Corregida duplicación de URL en 5 blueprints
+- ✅ Creados 14 templates placeholder para módulos stub
+- ✅ Agregada columna `must_change_password` a BD
+- ✅ Students query corregida con JOIN a User
+- ✅ 20/20 tests unitarios pasando

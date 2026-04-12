@@ -22,7 +22,7 @@ def index():
     """Main dashboard - redirects based on user role."""
     # Map roles to their dashboard routes
     role_dashboards = {
-        'root': 'dashboard.admin_dashboard',  # Root uses admin dashboard
+        'root': 'dashboard.root_dashboard',  # Root has its own dashboard
         'admin': 'dashboard.admin_dashboard',
         'coordinator': 'dashboard.coordinator_dashboard',
         'teacher': 'dashboard.teacher_dashboard',
@@ -33,6 +33,59 @@ def index():
 
     dashboard_route = role_dashboards.get(current_user.role, 'dashboard.admin_dashboard')
     return redirect(url_for(dashboard_route))
+
+
+@dashboard_bp.route('/dashboard/root')
+@login_required
+def root_dashboard():
+    """Dashboard for root/super-admin - shows all institutions overview."""
+    from models.institution import Institution, Campus
+    from models.user import User
+    
+    # All institutions with stats
+    institutions = Institution.query.order_by(Institution.name).all()
+    
+    # Build institution stats
+    inst_stats = []
+    total_users_all = 0
+    total_admins_all = 0
+    
+    for inst in institutions:
+        # Count users for this institution
+        students = AcademicStudent.query.filter_by(institution_id=inst.id, status='activo').count()
+        teachers = User.query.filter_by(institution_id=inst.id, role='teacher').count()
+        admins = User.query.filter_by(institution_id=inst.id, role='admin').count()
+        campuses = Campus.query.filter_by(institution_id=inst.id).count()
+        
+        inst_stats.append({
+            'institution': inst,
+            'students': students,
+            'teachers': teachers,
+            'admins': admins,
+            'campuses': campuses,
+            'total_users': students + teachers + admins
+        })
+        
+        total_users_all += students + teachers + admins
+        total_admins_all += admins
+    
+    # Global stats
+    total_institutions = len(institutions)
+    total_users = User.query.count()
+    total_students = AcademicStudent.query.filter_by(status='activo').count()
+    total_teachers = User.query.filter_by(role='teacher').count()
+    
+    return render_template(
+        'dashboard/root.html',
+        inst_stats=inst_stats,
+        global_stats={
+            'institutions': total_institutions,
+            'users': total_users,
+            'students': total_students,
+            'teachers': total_teachers,
+            'admins': total_admins_all
+        }
+    )
 
 
 @dashboard_bp.route('/dashboard/admin')

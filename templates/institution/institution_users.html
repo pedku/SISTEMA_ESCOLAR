@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios - {{ institution.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Usuarios de {{ institution.name }}</h1>
+            <p class="text-gray-600 mt-1">Gestión de usuarios asignados a esta institución</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('institution.institution_add_admin', id=institution.id) }}" 
+               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                + Nuevo Admin
+            </a>
+            <a href="{{ url_for('institution.institutions_list') }}" 
+               class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                ← Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <p class="text-sm text-gray-600">Admins</p>
+            <p class="text-2xl font-bold text-blue-600">{{ stats.admin }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+            <p class="text-sm text-gray-600">Coordinadores</p>
+            <p class="text-2xl font-bold text-purple-600">{{ stats.coordinator }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+            <p class="text-sm text-gray-600">Profesores</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ stats.teacher }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+            <p class="text-sm text-gray-600">Estudiantes</p>
+            <p class="text-2xl font-bold text-green-600">{{ stats.student }}</p>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if users %}
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rol</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in users %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium">{{ user.username }}</td>
+                    <td class="px-4 py-3 text-sm">{{ user.get_full_name() }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if user.role == 'admin' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Admin</span>
+                        {% elif user.role == 'coordinator' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Coordinador</span>
+                        {% elif user.role == 'teacher' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Profesor</span>
+                        {% elif user.role == 'student' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Estudiante</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{{ user.role }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center text-sm space-x-2">
+                        <a href="{{ url_for('users.user_edit', id=user.id) }}" class="text-yellow-600 hover:text-yellow-900">Editar</a>
+                        <button onclick="showChangePasswordModal({{ user.id }}, '{{ user.username }}')" 
+                                class="text-blue-600 hover:text-blue-900">Cambiar Clave</button>
+                        {% if user.role != 'root' %}
+                        <form method="POST" action="{{ url_for('users.user_delete', id=user.id) }}" 
+                              class="inline" onsubmit="return confirm('¿Eliminar {{ user.username }}?')">
+                            <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-12">
+            <p class="text-gray-500">No hay usuarios asignados a esta institución.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePasswordModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <h3 class="text-lg font-bold mb-4">Cambiar Contraseña</h3>
+        <p class="text-sm text-gray-600 mb-4">Usuario: <span id="modalUsername"></span></p>
+        <form id="changePasswordForm" method="POST">
+            <input type="password" name="new_password" required minlength="6" 
+                   placeholder="Nueva contraseña (mín. 6 caracteres)"
+                   class="w-full px-3 py-2 border rounded-lg mb-4">
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    Actualizar
+                </button>
+                <button type="button" onclick="closeChangePasswordModal()" 
+                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showChangePasswordModal(userId, username) {
+    document.getElementById('modalUsername').textContent = username;
+    document.getElementById('changePasswordForm').action = `/users/${userId}/change-password`;
+    document.getElementById('changePasswordModal').classList.remove('hidden');
+}
+
+function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

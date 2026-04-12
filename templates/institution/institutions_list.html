@@ -60,10 +60,11 @@
                                        class="btn btn-warning" title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <button onclick="confirmDelete('¿Eliminar institución {{ inst.name }}?', () => window.location.href='{{ url_for('institution.institution_delete', id=inst.id) }}')"
-                                            class="btn btn-danger" title="Eliminar">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <form method="POST" action="{{ url_for('institution.institution_delete', id=inst.id) }}" style="display:inline" onsubmit="return confirm('¿Eliminar institución {{ inst.name }}?')">
+                                        <button type="submit" class="btn btn-danger" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

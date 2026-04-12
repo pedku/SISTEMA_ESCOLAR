@@ -139,12 +139,12 @@
                             </a>
                         </div>
                         <div class="col-md-3 mb-2">
-                            <a href="#" class="btn btn-outline-success w-100">
+                            <a href="{{ url_for('attendance.student_attendance_history', student_id=student.id) }}" class="btn btn-outline-success w-100">
                                 <i class="bi bi-calendar-check"></i> Ver Asistencia
                             </a>
                         </div>
                         <div class="col-md-3 mb-2">
-                            <a href="#" class="btn btn-outline-info w-100">
+                            <a href="{{ url_for('observations.student_observations', student_id=student.id) }}" class="btn btn-outline-info w-100">
                                 <i class="bi bi-chat-left-text"></i> Observaciones
                             </a>
                         </div>

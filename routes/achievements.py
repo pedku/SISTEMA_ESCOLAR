@@ -4,7 +4,7 @@ Achievement and gamification routes.
 
 from flask import Blueprint, render_template
 
-achievements_bp = Blueprint('achievements', __name__, url_prefix='/')
+achievements_bp = Blueprint('achievements', __name__)
 
 
 @achievements_bp.route('/achievements')

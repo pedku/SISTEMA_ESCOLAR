@@ -4,10 +4,10 @@ QR access routes (from existing system).
 
 from flask import Blueprint, render_template
 
-qr_bp = Blueprint('qr', __name__, url_prefix='/')
+qr_bp = Blueprint('qr', __name__)
 
 
-@qr_bp.route('/qr')
+@qr_bp.route('/')
 def qr_validate():
     """QR validation page."""
     return render_template('qr/validate.html')

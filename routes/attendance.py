@@ -15,7 +15,7 @@ from models.attendance import Attendance
 from utils.decorators import login_required, role_required
 from utils.institution_resolver import get_current_institution, get_institution_grades, get_institution_students
 
-attendance_bp = Blueprint('attendance', __name__, url_prefix='/')
+attendance_bp = Blueprint('attendance', __name__)
 
 # Attendance status options
 ATTENDANCE_STATUS = {
@@ -30,7 +30,7 @@ ATTENDANCE_STATUS = {
 # 1. Take Attendance Page
 # ============================================
 
-@attendance_bp.route('/attendance')
+@attendance_bp.route('/')
 @login_required
 @role_required('root', 'admin', 'teacher', 'coordinator')
 def attendance():
@@ -126,7 +126,7 @@ def attendance():
 # 2. Save Attendance (POST)
 # ============================================
 
-@attendance_bp.route('/attendance/save', methods=['POST'])
+@attendance_bp.route('/save', methods=['POST'])
 @login_required
 @role_required('root', 'admin', 'teacher', 'coordinator')
 def save_attendance():
@@ -225,7 +225,7 @@ def save_attendance():
 # 3. Get Existing Attendance (AJAX)
 # ============================================
 
-@attendance_bp.route('/attendance/get', methods=['GET'])
+@attendance_bp.route('/get', methods=['GET'])
 @login_required
 @role_required('root', 'admin', 'teacher', 'coordinator')
 def get_attendance():
@@ -258,7 +258,7 @@ def get_attendance():
 # 4. Student Attendance History
 # ============================================
 
-@attendance_bp.route('/attendance/student/<int:student_id>')
+@attendance_bp.route('/student/<int:student_id>')
 @login_required
 def student_attendance_history(student_id):
     """
@@ -311,7 +311,7 @@ def student_attendance_history(student_id):
 # 5. Attendance Summary for Group
 # ============================================
 
-@attendance_bp.route('/attendance/summary')
+@attendance_bp.route('/summary')
 @login_required
 @role_required('root', 'admin', 'teacher', 'coordinator')
 def attendance_summary():

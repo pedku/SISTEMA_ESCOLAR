@@ -55,6 +55,15 @@
                 </li>
                 {% endif %}
                 
+                <!-- Usuarios -->
+                {% if user_has_any_role('root', 'admin') %}
+                <li class="{% if is_active_route('/users') %}active{% endif %}">
+                    <a href="{{ url_for('users.users_list') }}">
+                        <i class="bi bi-people-fill"></i> Usuarios
+                    </a>
+                </li>
+                {% endif %}
+
                 <!-- Estudiantes -->
                 <li class="{% if is_active_route('/students') %}active{% endif %}">
                     <a href="{{ url_for('students.list') }}">
@@ -79,11 +88,13 @@
                 </li>
                 
                 <!-- Observaciones -->
+                {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
                 <li class="{% if is_active_route('/observations') %}active{% endif %}">
-                    <a href="{{ url_for('observations.observations') }}">
+                    <a href="{{ url_for('observations.observations_list') }}">
                         <i class="bi bi-chat-left-text"></i> Observaciones
                     </a>
                 </li>
+                {% endif %}
                 
                 <!-- Boletines -->
                 {% if user_has_any_role('root', 'admin', 'coordinator') %}

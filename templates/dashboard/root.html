@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Administración General{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Panel de Administración General</h1>
+            <p class="text-gray-600 mt-1">Gestión de todas las instituciones del sistema</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('institution.institution_new') }}" 
+               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Nueva Institución
+            </a>
+        </div>
+    </div>
+
+    <!-- Global Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+            <p class="text-sm text-gray-600">Instituciones</p>
+            <p class="text-2xl font-bold text-red-600">{{ global_stats.institutions }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <p class="text-sm text-gray-600">Usuarios Totales</p>
+            <p class="text-2xl font-bold text-blue-600">{{ global_stats.users }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+            <p class="text-sm text-gray-600">Estudiantes</p>
+            <p class="text-2xl font-bold text-green-600">{{ global_stats.students }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+            <p class="text-sm text-gray-600">Profesores</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ global_stats.teachers }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+            <p class="text-sm text-gray-600">Admins</p>
+            <p class="text-2xl font-bold text-purple-600">{{ global_stats.admins }}</p>
+        </div>
+    </div>
+
+    <!-- Institutions Grid -->
+    <h2 class="text-xl font-bold text-gray-800 mb-4">Instituciones</h2>
+    
+    {% if inst_stats %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for inst_stat in inst_stats %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+            <!-- Institution Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                <h3 class="text-lg font-bold text-white">{{ inst_stat.institution.name }}</h3>
+                {% if inst_stat.institution.nit %}
+                <p class="text-sm text-blue-100">NIT: {{ inst_stat.institution.nit }}</p>
+                {% endif %}
+                {% if inst_stat.institution.municipality %}
+                <p class="text-sm text-blue-100">📍 {{ inst_stat.institution.municipality }}, {{ inst_stat.institution.department }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Stats -->
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-blue-600">{{ inst_stat.admins }}</p>
+                        <p class="text-xs text-gray-600">Admins</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-600">{{ inst_stat.campuses }}</p>
+                        <p class="text-xs text-gray-600">Sedes</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-yellow-600">{{ inst_stat.teachers }}</p>
+                        <p class="text-xs text-gray-600">Profesores</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-green-600">{{ inst_stat.students }}</p>
+                        <p class="text-xs text-gray-600">Estudiantes</p>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ url_for('institution.institution_users', id=inst_stat.institution.id) }}" 
+                       class="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded text-sm hover:bg-blue-200 transition text-center">
+                        👥 Usuarios
+                    </a>
+                    <a href="{{ url_for('institution.institution_edit', id=inst_stat.institution.id) }}" 
+                       class="flex-1 bg-yellow-100 text-yellow-700 px-3 py-2 rounded text-sm hover:bg-yellow-200 transition text-center">
+                        ✏️ Editar
+                    </a>
+                    <a href="{{ url_for('institution.switch_institution') }}?next={{ url_for('dashboard.index') }}" 
+                       class="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded text-sm hover:bg-green-200 transition text-center">
+                        👁️ Ver
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-12 text-center">
+        <div class="text-6xl mb-4">🏫</div>
+        <h3 class="text-xl font-medium text-gray-900 mb-2">No hay instituciones creadas</h3>
+        <p class="text-gray-500 mb-6">Comience creando la primera institución educativa.</p>
+        <a href="{{ url_for('institution.institution_new') }}" 
+           class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+            Crear Primera Institución
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="mt-8 bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Accesos Rápidos</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{{ url_for('users.users_list') }}" class="p-4 border rounded-lg hover:bg-gray-50 transition text-center">
+                <div class="text-3xl mb-2">👥</div>
+                <p class="text-sm font-medium">Gestionar Usuarios</p>
+            </a>
+            <a href="{{ url_for('institution.institutions_list') }}" class="p-4 border rounded-lg hover:bg-gray-50 transition text-center">
+                <div class="text-3xl mb-2">🏫</div>
+                <p class="text-sm font-medium">Lista Instituciones</p>
+            </a>
+            <a href="{{ url_for('users.users_list') }}?role=admin" class="p-4 border rounded-lg hover:bg-gray-50 transition text-center">
+                <div class="text-3xl mb-2">👔</div>
+                <p class="text-sm font-medium">Ver Admins</p>
+            </a>
+            <a href="{{ url_for('institution.select_institution') }}" class="p-4 border rounded-lg hover:bg-gray-50 transition text-center">
+                <div class="text-3xl mb-2">🔄</div>
+                <p class="text-sm font-medium">Cambiar Institución</p>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

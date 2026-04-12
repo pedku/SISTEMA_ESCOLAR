@@ -86,8 +86,57 @@ def institution_new():
 
         try:
             db.session.add(institution)
+            db.session.flush()  # Get institution.id without committing
+            
+            # Admin creation is MANDATORY - only basic data required
+            admin_first_name = request.form.get('admin_first_name', '').strip()
+            admin_last_name = request.form.get('admin_last_name', '').strip()
+            admin_email = request.form.get('admin_email', '').strip()
+            admin_document = request.form.get('admin_document', '').strip()
+            
+            # Validate required fields
+            if not all([admin_first_name, admin_last_name, admin_email, admin_document]):
+                db.session.rollback()
+                flash('Es obligatorio crear un administrador: Nombre, Apellido, Email y Documento son requeridos.', 'error')
+                return render_template('institution/institution_form.html', institution=None)
+            
+            from werkzeug.security import generate_password_hash
+            from utils.username_generator import generate_username
+            
+            # Auto-generate username from name + document
+            existing_usernames = [u.username for u in User.query.all()]
+            admin_username = generate_username(admin_first_name, admin_last_name, admin_document, existing_usernames)
+            
+            # Default password = document number
+            default_password = admin_document.strip()
+            
+            # Check if email already exists
+            if User.query.filter_by(email=admin_email).first():
+                db.session.rollback()
+                flash(f'El email "{admin_email}" ya está registrado.', 'error')
+                return render_template('institution/institution_form.html', institution=None,
+                                       generated_username=admin_username)
+            
+            # Create admin user with auto-generated username
+            admin_user = User(
+                username=admin_username,
+                email=admin_email,
+                password_hash=generate_password_hash(default_password),
+                first_name=admin_first_name,
+                last_name=admin_last_name,
+                role='admin',
+                institution_id=institution.id,
+                document_type=request.form.get('admin_document_type', 'CC'),
+                document_number=admin_document,
+                phone=request.form.get('admin_phone', '').strip() or None,
+                country='Colombia',
+                must_change_password=True,  # Force password change on first login
+                is_active=True
+            )
+            db.session.add(admin_user)
             db.session.commit()
-            flash('Institución creada exitosamente.', 'success')
+            
+            flash(f'✅ Institución "{institution.name}" creada exitosamente.\n\n👤 Admin: {admin_username}\n🔑 Contraseña: {default_password}\n\n⚠️ El admin deberá cambiar la contraseña en su primer inicio de sesión.', 'success')
             return redirect(url_for('institution.institutions_list'))
         except Exception as e:
             db.session.rollback()
@@ -873,3 +922,121 @@ def select_institution():
     """Show institution selection page for root users."""
     all_institutions = Institution.query.order_by(Institution.name).all()
     return render_template('institution/select_institution.html', institutions=all_institutions)
+
+
+# ============================================
+# Root: Institution User Management
+# ============================================
+
+@institution_bp.route('/<int:id>/users')
+@login_required
+@role_required('root')
+def institution_users(id):
+    """View all users of a specific institution - root only."""
+    institution = db.session.get(Institution, id)
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        return redirect(url_for('institution.institutions_list'))
+    
+    users = User.query.filter_by(institution_id=id).order_by(User.role, User.first_name).all()
+    
+    stats = {
+        'total': len(users),
+        'admin': sum(1 for u in users if u.role == 'admin'),
+        'coordinator': sum(1 for u in users if u.role == 'coordinator'),
+        'teacher': sum(1 for u in users if u.role == 'teacher'),
+        'student': sum(1 for u in users if u.role == 'student'),
+    }
+    
+    return render_template(
+        'institution/institution_users.html',
+        institution=institution,
+        users=users,
+        stats=stats
+    )
+
+
+@institution_bp.route('/<int:id>/users/add-admin', methods=['GET', 'POST'])
+@login_required
+@role_required('root')
+def institution_add_admin(id):
+    """Add a new admin to an institution - root only."""
+    institution = db.session.get(Institution, id)
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        return redirect(url_for('institution.institutions_list'))
+    
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        document_number = request.form.get('document_number', '').strip()
+        
+        if not all([first_name, last_name, email, password]):
+            flash('Todos los campos son obligatorios.', 'error')
+            return render_template('institution/add_admin_form.html', institution=institution)
+        
+        from werkzeug.security import generate_password_hash
+        from utils.username_generator import generate_username
+        
+        existing_usernames = [u.username for u in User.query.all()]
+        username = generate_username(first_name, last_name, document_number, existing_usernames)
+        
+        if User.query.filter_by(email=email).first():
+            flash('El email ya está registrado.', 'error')
+            return render_template('institution/add_admin_form.html', institution=institution)
+        
+        admin = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            first_name=first_name,
+            last_name=last_name,
+            role='admin',
+            institution_id=institution.id,
+            document_type=request.form.get('document_type', 'CC'),
+            document_number=document_number,
+            phone=request.form.get('phone', '').strip() or None,
+            country='Colombia',
+            is_active=True
+        )
+        
+        try:
+            db.session.add(admin)
+            db.session.commit()
+            flash(f'Administrador "{username}" creado exitosamente para {institution.name}.', 'success')
+            return redirect(url_for('institution.institution_users', id=id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear: {str(e)}', 'error')
+    
+    return render_template('institution/add_admin_form.html', institution=institution)
+
+
+@institution_bp.route('/users/<int:user_id>/change-password', methods=['POST'])
+@login_required
+@role_required('root')
+def change_user_password(user_id):
+    """Change any user's password - root only."""
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('users.users_list'))
+    
+    new_password = request.form.get('new_password', '').strip()
+    if not new_password or len(new_password) < 6:
+        flash('La contraseña debe tener al menos 6 caracteres.', 'error')
+        return redirect(url_for('users.user_edit', id=user_id))
+    
+    from werkzeug.security import generate_password_hash
+    user.password_hash = generate_password_hash(new_password)
+    
+    try:
+        db.session.commit()
+        flash(f'Contraseña de {user.username} actualizada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar: {str(e)}', 'error')
+    
+    return redirect(url_for('users.user_edit', id=user_id))

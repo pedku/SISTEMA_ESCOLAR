@@ -56,6 +56,11 @@ def login():
                 if user.institution_id:
                     session['active_institution_id'] = user.institution_id
 
+            # Check if user must change password (first login or password was reset)
+            if user.must_change_password:
+                flash('⚠️ Debe cambiar su contraseña antes de continuar.', 'warning')
+                return redirect(url_for('auth.force_password_change'))
+
             # Redirect to next page or dashboard
             next_page = request.args.get('next')
             flash(f'Bienvenido/a, {user.get_full_name()}!', 'success')
@@ -73,6 +78,48 @@ def logout():
     logout_user()
     flash('Ha cerrado sesión exitosamente.', 'info')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/change-password-first-time', methods=['GET', 'POST'])
+@login_required
+def force_password_change():
+    """Force user to change password on first login."""
+    # If user doesn't need to change password, redirect to dashboard
+    if not current_user.must_change_password:
+        return redirect(url_for('dashboard.index'))
+    
+    if request.method == 'POST':
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Verify current password
+        if not current_user.check_password(current_password):
+            flash('La contraseña actual es incorrecta.', 'error')
+            return render_template('auth/force_password_change.html')
+        
+        # Validate new password
+        if len(new_password) < 6:
+            flash('La nueva contraseña debe tener al menos 6 caracteres.', 'error')
+            return render_template('auth/force_password_change.html')
+        
+        if new_password != confirm_password:
+            flash('Las contraseñas nuevas no coinciden.', 'error')
+            return render_template('auth/force_password_change.html')
+        
+        if current_password == new_password:
+            flash('La nueva contraseña debe ser diferente a la actual.', 'error')
+            return render_template('auth/force_password_change.html')
+        
+        # Update password
+        current_user.password_hash = generate_password_hash(new_password)
+        current_user.must_change_password = False
+        db.session.commit()
+        
+        flash('✅ Contraseña actualizada exitosamente. Ahora puede acceder al sistema.', 'success')
+        return redirect(url_for('dashboard.index'))
+    
+    return render_template('auth/force_password_change.html')
 
 
 @auth_bp.route('/profile')

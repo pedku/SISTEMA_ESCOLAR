@@ -1,152 +1,299 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Editar' if institution else 'Nueva' }} Institución - SIGE{% endblock %}
+{% block title %}{{ 'Editar' if institution else 'Nueva' }} Institución{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid px-4">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-            <i class="bi bi-building"></i>
-            {{ 'Editar Institución' if institution else 'Nueva Institución' }}
-        </h2>
-        <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Volver al Listado
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-building text-primary"></i>
+                {{ 'Editar Institución' if institution else 'Nueva Institución' }}
+            </h1>
+            <p class="text-muted mb-0">{{ 'Modifique los datos de' if institution else 'Complete los datos para crear' }} la institución educativa</p>
+        </div>
+        <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
         </a>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pencil"></i> Datos de la Institución</h5>
+    <div class="row g-4">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Datos Institucionales</h5>
                 </div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nombre de la Institución *</label>
-                                <input type="text" name="name" class="form-control"
-                                       value="{{ institution.name if institution else '' }}" required>
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="institutionForm">
+                        <div class="row g-3">
+                            <!-- Name & NIT -->
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold">Nombre de la Institución <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control form-control-lg"
+                                       value="{{ institution.name if institution else '' }}" required
+                                       placeholder="Ej: Institución Educativa Simón Bolívar">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">NIT</label>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">NIT</label>
                                 <input type="text" name="nit" class="form-control"
-                                       value="{{ institution.nit if institution else '' }}">
-                                <small class="text-muted">Número de Identificación Tributaria</small>
+                                       value="{{ institution.nit if institution else '' }}"
+                                       placeholder="900.123.456-7">
+                                <div class="form-text">Número de Identificación Tributaria</div>
                             </div>
-                        </div>
 
-                        <div class="row mb-3">
+                            <!-- Phone & Email -->
                             <div class="col-md-6">
-                                <label class="form-label">Teléfono</label>
-                                <input type="text" name="phone" class="form-control"
-                                       value="{{ institution.phone if institution else '' }}">
+                                <label class="form-label fw-semibold">Teléfono</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                    <input type="tel" name="phone" class="form-control"
+                                           value="{{ institution.phone if institution else '' }}"
+                                           placeholder="(601) 234 5678">
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Correo Electrónico</label>
-                                <input type="email" name="email" class="form-control"
-                                       value="{{ institution.email if institution else '' }}">
+                                <label class="form-label fw-semibold">Correo Electrónico</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" name="email" class="form-control"
+                                           value="{{ institution.email if institution else '' }}"
+                                           placeholder="contacto@inst.edu.co">
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <input type="text" name="address" class="form-control"
-                                   value="{{ institution.address if institution else '' }}">
-                        </div>
+                            <!-- Address -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Dirección</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                                    <input type="text" name="address" class="form-control"
+                                           value="{{ institution.address if institution else '' }}"
+                                           placeholder="Calle 123 # 45-67, Barrio Centro">
+                                </div>
+                            </div>
 
-                        <div class="row mb-3">
+                            <!-- Location -->
                             <div class="col-md-4">
-                                <label class="form-label">Municipio</label>
+                                <label class="form-label fw-semibold">Municipio</label>
                                 <input type="text" name="municipality" class="form-control"
-                                       value="{{ institution.municipality if institution else '' }}">
+                                       value="{{ institution.municipality if institution else '' }}"
+                                       placeholder="Ej: Bogotá">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Departamento</label>
+                                <label class="form-label fw-semibold">Departamento</label>
                                 <input type="text" name="department" class="form-control"
-                                       value="{{ institution.department if institution else '' }}">
+                                       value="{{ institution.department if institution else '' }}"
+                                       placeholder="Ej: Cundinamarca">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Año Lectivo</label>
+                                <label class="form-label fw-semibold">Año Lectivo</label>
                                 <input type="text" name="academic_year" class="form-control"
                                        value="{{ institution.academic_year if institution else '2026' }}">
                             </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Resolución de Aprobación</label>
-                            <input type="text" name="resolution" class="form-control"
-                                   value="{{ institution.resolution if institution else '' }}">
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Logo de la Institución</label>
-                            <input type="file" name="logo" class="form-control" accept="image/*"
-                                   title="Formatos permitidos: PNG, JPG, JPEG, GIF, WEBP">
-                            <small class="text-muted">Formatos permitidos: PNG, JPG, JPEG, GIF, WEBP</small>
-                            {% if institution and institution.logo %}
-                            <div class="mt-2">
-                                <small class="d-block mb-1">Logo actual:</small>
-                                <img src="{{ url_for('static', filename='uploads/' + institution.logo) }}"
-                                     alt="Logo actual" class="rounded border" style="max-width: 120px; max-height: 120px;"
-                                     onerror="this.style.display='none'">
+                            <!-- Resolution -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Resolución de Aprobación</label>
+                                <input type="text" name="resolution" class="form-control"
+                                       value="{{ institution.resolution if institution else '' }}"
+                                       placeholder="Resolución No. 1234 del 01/01/2025">
                             </div>
-                            {% endif %}
-                        </div>
 
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> {{ 'Actualizar' if institution else 'Crear' }} Institución
-                            </button>
-                            <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-circle"></i> Cancelar
-                            </a>
+                            <!-- Logo -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Logo de la Institución</label>
+                                <input type="file" name="logo" class="form-control" accept="image/*">
+                                <div class="form-text">Formatos: PNG, JPG, JPEG, GIF, WEBP</div>
+                                {% if institution and institution.logo %}
+                                <div class="mt-2 p-2 bg-light rounded d-inline-block">
+                                    <small class="d-block mb-1 text-muted">Logo actual:</small>
+                                    <img src="{{ url_for('static', filename='uploads/' + institution.logo) }}"
+                                         alt="Logo" class="rounded" style="max-width: 100px;">
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información</h5>
+            {% if not institution %}
+            <!-- Admin Creation Section (MANDATORY) -->
+            <div class="card shadow-sm border-0 border-start border-4 border-primary mt-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-person-check-fill me-2"></i>Crear Administrador (Obligatorio)</h5>
                 </div>
-                <div class="card-body">
-                    {% if institution %}
-                    <h6>Detalles de la Institución</h6>
-                    <table class="table table-sm">
-                        <tbody>
-                            <tr>
-                                <th scope="row">ID:</th>
-                                <td>{{ institution.id }}</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">Creada:</th>
-                                <td>{{ institution.created_at.strftime('%d/%m/%Y %H:%M') if institution.created_at else '-' }}</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">Sedes:</th>
-                                <td><span class="badge bg-secondary">{{ institution.campuses.count() }}</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    {% endif %}
+                <div class="card-body p-4">
+                    <div class="alert alert-warning mb-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Requerido:</strong> Cada institución debe tener un administrador (Rector) que la gestione.
+                    </div>
 
-                    <hr>
+                    <!-- Live Username Preview -->
+                    <div id="usernamePreviewBox" class="bg-light border-2 border-primary rounded-lg p-3 mb-4" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted mb-0 small text-uppercase fw-semibold">Username auto-generado:</p>
+                                <p id="generatedUsername" class="mb-0 h4 font-monospace text-primary fw-bold"></p>
+                            </div>
+                            <div class="text-end">
+                                <p class="text-muted mb-0 small">Contraseña inicial:</p>
+                                <p class="mb-0 h5 text-success fw-semibold">Nº de documento</p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <p class="text-muted">
-                        {% if institution %}
-                        Edite aquí los datos principales de la institución educativa.
-                        Los cambios se reflejarán en todos los módulos del sistema.
-                        {% else %}
-                        Complete el formulario para crear una nueva institución educativa.
-                        Todos los campos son opcionales excepto el nombre.
-                        {% endif %}
-                    </p>
+                    <form id="adminForm">
+                        <h6 class="text-muted mb-3 border-bottom pb-2">📋 Datos Básicos del Admin</h6>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
+                                <input type="text" id="adminFirstName" name="admin_first_name" class="form-control form-control-lg" required placeholder="Ej: Juan Carlos">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" id="adminLastName" name="admin_last_name" class="form-control form-control-lg" required placeholder="Ej: Pérez García">
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Tipo Doc. <span class="text-danger">*</span></label>
+                                <select name="admin_document_type" class="form-select form-select-lg" required>
+                                    <option value="CC">CC</option>
+                                    <option value="TI">TI</option>
+                                    <option value="CE">CE</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Nº Documento <span class="text-danger">*</span></label>
+                                <input type="text" id="adminDocument" name="admin_document" class="form-control form-control-lg" required placeholder="1234567890" minlength="5">
+                                <div class="form-text">Se usará como <strong>contraseña inicial</strong></div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="admin_email" class="form-control form-control-lg" required placeholder="rector@inst.edu.co">
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Teléfono</label>
+                                <input type="text" name="admin_phone" class="form-control" placeholder="3001234567">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    El username se genera automáticamente al escribir los datos
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                        <button type="submit" form="institutionForm" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ 'Actualizar Institución' if institution else 'Crear Institución con Admin' }}
+                        </button>
+                        <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary btn-lg">
+                            Cancelar
+                        </a>
+                    </div>
                 </div>
             </div>
+            {% else %}
+            <!-- Submit Buttons for edit mode -->
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" form="institutionForm" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Actualizar Institución
+                </button>
+                <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary btn-lg">
+                    Cancelar
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            {% if institution %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td class="text-muted">ID:</td><td class="fw-semibold">{{ institution.id }}</td></tr>
+                        <tr><td class="text-muted">Creada:</td><td class="fw-semibold">{{ institution.created_at.strftime('%d/%m/%Y') if institution.created_at else '-' }}</td></tr>
+                        <tr><td class="text-muted">Sedes:</td><td class="fw-semibold"><span class="badge bg-secondary">{{ institution.campuses.count() }}</span></td></tr>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-question-circle me-2"></i>¿Qué es una Institución?</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Una institución educativa es el ente principal que agrupa sedes, estudiantes, profesores y datos académicos.</p>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Puede tener múltiples sedes</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Gestiona grados y asignaturas</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Configura periodos académicos</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i>Administra criterios de evaluación</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mt-3">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Seguridad del Admin</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2"><i class="bi bi-key text-warning me-2"></i>Username auto-generado desde nombre + documento</li>
+                        <li class="mb-2"><i class="bi bi-lock text-danger me-2"></i>Contraseña inicial = Nº de documento</li>
+                        <li><i class="bi bi-arrow-repeat text-info me-2"></i>Debe cambiar contraseña al primer login</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+{% if not institution %}
+<script>
+// Auto-generate username preview dynamically
+function updateUsernamePreview() {
+    const firstName = document.getElementById('adminFirstName').value.trim();
+    const lastName = document.getElementById('adminLastName').value.trim();
+    const doc = document.getElementById('adminDocument').value.trim();
+    const box = document.getElementById('usernamePreviewBox');
+    const preview = document.getElementById('generatedUsername');
+    
+    if (firstName && lastName) {
+        const firstInitial = firstName.charAt(0).toLowerCase();
+        const cleanLastName = lastName.toLowerCase().replace(/[^a-z]/g, '');
+        const docSuffix = doc ? doc.slice(-4) : '';
+        
+        let username = `@${firstInitial}${cleanLastName}`;
+        if (docSuffix) username += docSuffix;
+        
+        preview.textContent = username;
+        box.style.display = 'block';
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+document.getElementById('adminFirstName').addEventListener('input', updateUsernamePreview);
+document.getElementById('adminLastName').addEventListener('input', updateUsernamePreview);
+document.getElementById('adminDocument').addEventListener('input', updateUsernamePreview);
+</script>
+{% endif %}
 {% endblock %}

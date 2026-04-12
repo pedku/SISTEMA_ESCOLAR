@@ -55,7 +55,7 @@ def list():
             )
         )
 
-    students = query.order_by(User.last_name).all()
+    students = query.join(User).order_by(User.last_name).all()
 
     # Filter campuses by institution
     if institution:

@@ -51,6 +51,7 @@ def create_app(config_name=None):
     from routes.report_cards import report_cards_bp
     from routes.attendance import attendance_bp
     from routes.observations import observations_bp
+    from routes.users import users_bp
     from routes.metrics import metrics_bp
     from routes.achievements import achievements_bp
     from routes.parent import parent_bp
@@ -63,7 +64,8 @@ def create_app(config_name=None):
     app.register_blueprint(grades_bp, url_prefix='/grades')
     app.register_blueprint(report_cards_bp, url_prefix='/report-cards')
     app.register_blueprint(attendance_bp, url_prefix='/attendance')
-    app.register_blueprint(observations_bp, url_prefix='/observations')
+    app.register_blueprint(observations_bp)
+    app.register_blueprint(users_bp, url_prefix='/users')
     app.register_blueprint(metrics_bp, url_prefix='/metrics')
     app.register_blueprint(achievements_bp, url_prefix='/achievements')
     app.register_blueprint(parent_bp, url_prefix='/parent')
