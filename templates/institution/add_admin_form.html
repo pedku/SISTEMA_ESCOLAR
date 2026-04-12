@@ -75,19 +75,43 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="POST" id="adminForm" novalidate>
+                        <!-- General Error Alert -->
+                        {% if errors and errors.general %}
+                        <div class="alert alert-danger alert-dismissible fade show mb-4">
+                            <i class="bi bi-exclamation-triangle me-2"></i>{{ errors.general }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+                        
                         <!-- Personal Info -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-person me-1 text-primary"></i>Nombres <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="firstName" name="first_name" required class="form-control" placeholder="Ej: Juan Carlos">
+                                <input type="text" id="firstName" name="first_name" required 
+                                       value="{{ form_data.first_name if form_data else '' }}" 
+                                       class="form-control {% if errors and errors.first_name %}is-invalid{% endif %}" 
+                                       placeholder="Ej: Juan Carlos">
+                                {% if errors and errors.first_name %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.first_name }}
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-person me-1 text-primary"></i>Apellidos <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="lastName" name="last_name" required class="form-control" placeholder="Ej: Pérez García">
+                                <input type="text" id="lastName" name="last_name" required 
+                                       value="{{ form_data.last_name if form_data else '' }}" 
+                                       class="form-control {% if errors and errors.last_name %}is-invalid{% endif %}" 
+                                       placeholder="Ej: Pérez García">
+                                {% if errors and errors.last_name %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.last_name }}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -96,19 +120,30 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Tipo Documento</label>
                                 <select name="document_type" class="form-select">
-                                    <option value="CC" selected>CC - Cédula de Ciudadanía</option>
-                                    <option value="TI">TI - Tarjeta de Identidad</option>
-                                    <option value="CE">CE - Cédula de Extranjería</option>
+                                    <option value="CC" {% if form_data and form_data.document_type == 'CC' %}selected{% endif %}>CC - Cédula de Ciudadanía</option>
+                                    <option value="TI" {% if form_data and form_data.document_type == 'TI' %}selected{% endif %}>TI - Tarjeta de Identidad</option>
+                                    <option value="CE" {% if form_data and form_data.document_type == 'CE' %}selected{% endif %}>CE - Cédula de Extranjería</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">Nº Documento</label>
-                                <input type="text" id="documentNumber" name="document_number" class="form-control" placeholder="Ej: 1234567890">
+                                <label class="form-label fw-semibold">Nº Documento <span class="text-danger">*</span></label>
+                                <input type="text" id="documentNumber" name="document_number" 
+                                       value="{{ form_data.document_number if form_data else '' }}" 
+                                       class="form-control {% if errors and errors.document_number %}is-invalid{% endif %}" 
+                                       placeholder="Ej: 1234567890">
+                                {% if errors and errors.document_number %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.document_number }}
+                                </div>
+                                {% endif %}
                                 <div class="form-text">Número de identificación</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Teléfono</label>
-                                <input type="tel" name="phone" class="form-control" placeholder="Ej: 3001234567">
+                                <input type="tel" name="phone" 
+                                       value="{{ form_data.phone if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: 3001234567">
                             </div>
                         </div>
 
@@ -117,7 +152,15 @@
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-envelope me-1 text-success"></i>Email <span class="text-danger">*</span>
                             </label>
-                            <input type="email" name="email" required class="form-control" placeholder="admin@ejemplo.com">
+                            <input type="email" name="email" required 
+                                   value="{{ form_data.email if form_data else '' }}" 
+                                   class="form-control {% if errors and errors.email %}is-invalid{% endif %}" 
+                                   placeholder="admin@ejemplo.com">
+                            {% if errors and errors.email %}
+                            <div class="invalid-feedback">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ errors.email }}
+                            </div>
+                            {% endif %}
                             <div class="form-text">Correo válido para notificaciones</div>
                         </div>
 
@@ -126,7 +169,14 @@
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-key me-1 text-warning"></i>Contraseña <span class="text-danger">*</span>
                             </label>
-                            <input type="password" name="password" required minlength="6" class="form-control" placeholder="Mínimo 6 caracteres">
+                            <input type="password" name="password" required minlength="6" 
+                                   class="form-control {% if errors and errors.password %}is-invalid{% endif %}" 
+                                   placeholder="Mínimo 6 caracteres">
+                            {% if errors and errors.password %}
+                            <div class="invalid-feedback">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ errors.password }}
+                            </div>
+                            {% endif %}
                             <div class="form-text">
                                 <i class="bi bi-info-circle me-1"></i>
                                 El admin deberá cambiar esta contraseña en su primer inicio de sesión

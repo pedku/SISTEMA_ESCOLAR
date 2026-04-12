@@ -817,27 +817,49 @@ def subjects():
 def subject_new():
     """Create a new subject."""
     institution = get_current_institution()
-    
+
     if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        code = request.form.get('code', '').strip()
+        
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre de la asignatura es obligatorio'
+        
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/subject_form.html', 
+                                 subject=None, 
+                                 institutions=institutions,
+                                 form_data={'name': name, 'code': code},
+                                 errors=errors)
+
         if not institution:
             flash('Debe seleccionar una institución para crear la asignatura.', 'error')
             institutions = Institution.query.order_by(Institution.name).all()
             return render_template('institution/subject_form.html', subject=None, institutions=institutions)
-        
+
         subject = Subject(
             institution_id=institution.id,
-            name=request.form.get('name', '').strip(),
-            code=request.form.get('code', '').strip()
+            name=name,
+            code=code
         )
-        
+
         try:
             db.session.add(subject)
             db.session.commit()
-            flash('Asignatura creada exitosamente.', 'success')
+            flash('✅ Asignatura creada exitosamente.', 'success')
             return redirect(url_for('institution.subjects'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear la asignatura: {str(e)}', 'error')
+            flash(f'❌ Error al crear la asignatura: {str(e)}', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/subject_form.html', 
+                                 subject=None, 
+                                 institutions=institutions,
+                                 form_data={'name': name, 'code': code},
+                                 errors={'general': f'Error inesperado: {str(e)}'})
 
     institution = get_current_institution()
     institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
@@ -850,23 +872,41 @@ def subject_new():
 def subject_edit(id):
     """Edit an existing subject."""
     subject = db.session.get(Subject, id)
-    
+
     if not subject:
         flash('Asignatura no encontrada.', 'error')
         return redirect(url_for('institution.subjects'))
-    
+
     if request.method == 'POST':
-        subject.name = request.form.get('name', '').strip()
-        subject.code = request.form.get('code', '').strip()
+        name = request.form.get('name', '').strip()
+        code = request.form.get('code', '').strip()
         
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre de la asignatura es obligatorio'
+        
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            return render_template('institution/subject_form.html', 
+                                 subject=subject,
+                                 form_data={'name': name, 'code': code},
+                                 errors=errors)
+
+        subject.name = name
+        subject.code = code
+
         try:
             db.session.commit()
-            flash('Asignatura actualizada exitosamente.', 'success')
+            flash('✅ Asignatura actualizada exitosamente.', 'success')
             return redirect(url_for('institution.subjects'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
-    
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+            return render_template('institution/subject_form.html', 
+                                 subject=subject,
+                                 form_data={'name': name, 'code': code},
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     return render_template('institution/subject_form.html', subject=subject)
 
 
@@ -921,8 +961,43 @@ def periods():
 def period_new():
     """Create a new academic period."""
     institution = get_current_institution()
-    
+
     if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        short_name = request.form.get('short_name', '').strip()
+        start_date = request.form.get('start_date', '').strip()
+        end_date = request.form.get('end_date', '').strip()
+        academic_year = request.form.get('academic_year', '2026').strip()
+        order = request.form.get('order', '1').strip()
+        is_active = request.form.get('is_active') == 'on'
+        
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del periodo es obligatorio'
+        if not short_name:
+            errors['short_name'] = 'El nombre corto es obligatorio'
+        if not start_date:
+            errors['start_date'] = 'La fecha de inicio es obligatoria'
+        if not end_date:
+            errors['end_date'] = 'La fecha de fin es obligatoria'
+        
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/period_form.html', 
+                                 period=None, 
+                                 institutions=institutions,
+                                 form_data={
+                                     'name': name,
+                                     'short_name': short_name,
+                                     'start_date': start_date,
+                                     'end_date': end_date,
+                                     'academic_year': academic_year,
+                                     'order': order,
+                                     'is_active': is_active
+                                 },
+                                 errors=errors)
+
         if not institution:
             institution_id = request.form.get('institution_id')
             if institution_id:
@@ -932,25 +1007,40 @@ def period_new():
                 institutions = Institution.query.order_by(Institution.name).all()
                 return render_template('institution/period_form.html', period=None, institutions=institutions)
 
+        from datetime import datetime
         period = AcademicPeriod(
             institution_id=institution.id,
-            name=request.form.get('name', '').strip(),
-            short_name=request.form.get('short_name', '').strip(),
-            start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date(),
-            end_date=datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date(),
-            is_active=request.form.get('is_active') == 'on',
-            academic_year=request.form.get('academic_year', '2026').strip(),
-            order=int(request.form.get('order'))
+            name=name,
+            short_name=short_name,
+            start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
+            end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+            is_active=is_active,
+            academic_year=academic_year,
+            order=int(order) if order else 1
         )
-        
+
         try:
             db.session.add(period)
             db.session.commit()
-            flash('Periodo académico creado exitosamente.', 'success')
+            flash('✅ Periodo académico creado exitosamente.', 'success')
             return redirect(url_for('institution.periods'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear el periodo: {str(e)}', 'error')
+            flash(f'❌ Error al crear el periodo: {str(e)}', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/period_form.html', 
+                                 period=None, 
+                                 institutions=institutions,
+                                 form_data={
+                                     'name': name,
+                                     'short_name': short_name,
+                                     'start_date': start_date,
+                                     'end_date': end_date,
+                                     'academic_year': academic_year,
+                                     'order': order,
+                                     'is_active': is_active
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
 
     institution = get_current_institution()
     institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
@@ -963,28 +1053,75 @@ def period_new():
 def period_edit(id):
     """Edit an academic period."""
     period = db.session.get(AcademicPeriod, id)
-    
+
     if not period:
         flash('Periodo no encontrado.', 'error')
         return redirect(url_for('institution.periods'))
-    
+
     if request.method == 'POST':
-        period.name = request.form.get('name', '').strip()
-        period.short_name = request.form.get('short_name', '').strip()
-        period.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
-        period.end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
-        period.is_active = request.form.get('is_active') == 'on'
-        period.academic_year = request.form.get('academic_year', '2026').strip()
-        period.order = int(request.form.get('order'))
+        name = request.form.get('name', '').strip()
+        short_name = request.form.get('short_name', '').strip()
+        start_date = request.form.get('start_date', '').strip()
+        end_date = request.form.get('end_date', '').strip()
+        academic_year = request.form.get('academic_year', '2026').strip()
+        order = request.form.get('order', '1').strip()
+        is_active = request.form.get('is_active') == 'on'
         
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del periodo es obligatorio'
+        if not short_name:
+            errors['short_name'] = 'El nombre corto es obligatorio'
+        if not start_date:
+            errors['start_date'] = 'La fecha de inicio es obligatoria'
+        if not end_date:
+            errors['end_date'] = 'La fecha de fin es obligatoria'
+        
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            from datetime import datetime
+            return render_template('institution/period_form.html', 
+                                 period=period,
+                                 form_data={
+                                     'name': name,
+                                     'short_name': short_name,
+                                     'start_date': start_date,
+                                     'end_date': end_date,
+                                     'academic_year': academic_year,
+                                     'order': order,
+                                     'is_active': is_active
+                                 },
+                                 errors=errors)
+
+        from datetime import datetime
+        period.name = name
+        period.short_name = short_name
+        period.start_date = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else period.start_date
+        period.end_date = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else period.end_date
+        period.is_active = is_active
+        period.academic_year = academic_year
+        period.order = int(order) if order else period.order
+
         try:
             db.session.commit()
-            flash('Periodo académico actualizado exitosamente.', 'success')
+            flash('✅ Periodo académico actualizado exitosamente.', 'success')
             return redirect(url_for('institution.periods'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
-    
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+            return render_template('institution/period_form.html', 
+                                 period=period,
+                                 form_data={
+                                     'name': name,
+                                     'short_name': short_name,
+                                     'start_date': start_date,
+                                     'end_date': end_date,
+                                     'academic_year': academic_year,
+                                     'order': order,
+                                     'is_active': is_active
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     return render_template('institution/period_form.html', period=period)
 
 
@@ -1232,18 +1369,53 @@ def institution_add_admin(id):
     if not institution:
         flash('Institución no encontrada.', 'error')
         return redirect(url_for('institution.institutions_list'))
-    
+
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
+        document_type = request.form.get('document_type', 'CC')
         document_number = request.form.get('document_number', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+
+        errors = {}
         
-        if not all([first_name, last_name, email, password]):
-            flash('Todos los campos son obligatorios.', 'error')
-            return render_template('institution/add_admin_form.html', institution=institution)
-        
+        # Validate required fields
+        if not first_name:
+            errors['first_name'] = 'El nombre es obligatorio'
+        if not last_name:
+            errors['last_name'] = 'El apellido es obligatorio'
+        if not email:
+            errors['email'] = 'El email es obligatorio'
+        elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            errors['email'] = 'El email no tiene un formato válido'
+        if not password:
+            errors['password'] = 'La contraseña es obligatoria'
+        elif len(password) < 6:
+            errors['password'] = 'La contraseña debe tener al menos 6 caracteres'
+        if not document_number:
+            errors['document_number'] = 'El número de documento es obligatorio'
+
+        # Check email uniqueness
+        if email and User.query.filter_by(email=email).first():
+            errors['email'] = 'El email ya está registrado en el sistema'
+
+        # If has errors, return form with data and errors
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            return render_template('institution/add_admin_form.html', 
+                                 institution=institution,
+                                 form_data={
+                                     'first_name': first_name,
+                                     'last_name': last_name,
+                                     'email': email,
+                                     'document_type': document_type,
+                                     'document_number': document_number,
+                                     'phone': phone
+                                 },
+                                 errors=errors)
+
         from werkzeug.security import generate_password_hash
         from utils.username_generator import generate_username, generate_username_from_db
 
@@ -1256,11 +1428,7 @@ def institution_add_admin(id):
                 ).all()
             ]
         )
-        
-        if User.query.filter_by(email=email).first():
-            flash('El email ya está registrado.', 'error')
-            return render_template('institution/add_admin_form.html', institution=institution)
-        
+
         admin = User(
             username=username,
             email=email,
@@ -1269,22 +1437,34 @@ def institution_add_admin(id):
             last_name=last_name,
             role='admin',
             institution_id=institution.id,
-            document_type=request.form.get('document_type', 'CC'),
+            document_type=document_type,
             document_number=document_number,
-            phone=request.form.get('phone', '').strip() or None,
+            phone=phone,
             country='Colombia',
-            is_active=True
+            is_active=True,
+            must_change_password=True
         )
-        
+
         try:
             db.session.add(admin)
             db.session.commit()
-            flash(f'Administrador "{username}" creado exitosamente para {institution.name}.', 'success')
+            flash(f'✅ Administrador "{username}" creado exitosamente para {institution.name}.', 'success')
             return redirect(url_for('institution.institution_users', id=id))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear: {str(e)}', 'error')
-    
+            flash(f'❌ Error al crear: {str(e)}', 'error')
+            return render_template('institution/add_admin_form.html', 
+                                 institution=institution,
+                                 form_data={
+                                     'first_name': first_name,
+                                     'last_name': last_name,
+                                     'email': email,
+                                     'document_type': document_type,
+                                     'document_number': document_number,
+                                     'phone': phone
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     return render_template('institution/add_admin_form.html', institution=institution)
 
 
