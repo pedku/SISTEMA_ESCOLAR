@@ -18,6 +18,7 @@ from utils.institution_resolver import (
 )
 from datetime import datetime
 import os
+import re
 
 institution_bp = Blueprint('institution', __name__)
 
