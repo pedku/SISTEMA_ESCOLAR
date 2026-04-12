@@ -443,3 +443,212 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 - Rediseño de lista de instituciones con stat cards y modal de detalles
 - Migración de created_at a tabla campuses
 - Corrección de doble inicialización de DataTables
+
+---
+
+## 🎨 RECOMENDACIONES DE UX/UI - ESTÁNDARES DEL PROYECTO
+
+> **NOTA IMPORTANTE**: Estas recomendaciones deben cumplirse **SIEMPRE** en cualquier nueva funcionalidad o modificación del sistema. Son el resultado de iteraciones y mejoras continuas que han llevado la plataforma a un nivel profesional.
+
+### 1. 🎯 Principios Generales de Diseño
+
+#### **Consistencia Visual**
+- ✅ **Mantener el mismo estilo** en todos los módulos (cards, botones, tablas, modales)
+- ✅ **Usar los colores definidos**: Primary (#667eea), Success (#198754), Warning (#ffc107), Danger (#dc3545), Info (#0dcaf0)
+- ✅ **Seguir patrones establecidos**: Si un CRUD ya tiene cierto diseño, replicarlo en los demás
+- ✅ **No mezclar estilos**: Evitar crear componentes con estilos diferentes a los existentes
+
+#### **Profesionalismo y Pulcritud**
+- ✅ **Espaciado generoso**: Usar `p-4`, `g-4`, `mb-4` para dar aire a los elementos
+- ✅ **Bordes redondeados**: Todos los cards y modales usan `border-radius: 15px`
+- ✅ **Sombras sutiles**: `shadow-sm` para cards normales, `shadow` para modales
+- ✅ **Tipografía clara**: Títulos con `fw-bold`, textos secundarios con `text-muted small`
+- ✅ **Iconos descriptivos**: Usar Bootstrap Icons con `me-1` o `me-2` para espaciado
+
+#### **Animaciones y Transiciones**
+- ✅ ** fadeInUp** para entrada de elementos: `animation: fadeInUp 0.6s ease forwards`
+- ✅ **Delays escalonados**: `.delay-1` (0.1s), `.delay-2` (0.2s), `.delay-3` (0.3s)
+- ✅ **Hover effects**: `transform: translateY(-5px)` + `box-shadow` en cards
+- ✅ **Transiciones suaves**: `transition: all 0.3s ease` en botones y links
+- ✅ **NO abusar de animaciones**: Solo usar donde aporte valor visual
+
+### 2. 📋 Estructura Estándar de Páginas CRUD
+
+#### **Header de Página**
+```
+┌─────────────────────────────────────────────┐
+│ 📋 Título de Gestión         [+ Botón]      │
+│ Subtítulo descriptivo                       │
+└─────────────────────────────────────────────┘
+```
+- ✅ Título con ícono + texto grande (`h3 fw-bold`)
+- ✅ Subtítulo con `text-muted` explicando la sección
+- ✅ Botones de acción a la derecha (`d-flex gap-2`)
+
+#### **Banner de Institución (si aplica)**
+```
+┌─────────────────────────────────────────────┐
+│ 🏫 Nombre Institución        [Badge Rol]    │
+│ 📍 Ubicación                                │
+└─────────────────────────────────────────────┘
+```
+- ✅ Borde izquierdo de color (`border-start border-4`)
+- ✅ Ícono circular con fondo de color
+- ✅ Badge diferenciador: Root (azul), Admin (verde)
+
+#### **Stat Cards**
+```
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│  [Ícono] │ │  [Ícono] │ │  [Ícono] │
+│   15     │ │    12    │ │     3    │
+│  Total   │ │ Activas  │ │ Principal│
+└──────────┘ └──────────┘ └──────────┘
+```
+- ✅ 3-4 cards en fila (`col-md-3` o `col-md-4`)
+- ✅ Ícono circular con fondo de color (`bg-X bg-opacity-10`)
+- ✅ Número grande (`fw-bold`) + texto descriptivo pequeño
+- ✅ Hover: `translateY(-5px)` + sombra
+
+#### **Tabla de Datos**
+```
+┌─────────────────────────────────────────────┐
+│ 📊 Listado de [Entidad]                     │
+├─────────────────────────────────────────────┤
+│ Col 1 │ Col 2 │ Col 3 │ Acciones            │
+├───────┼───────┼───────┼─────────────────────┤
+│ dato  │ dato  │ dato  │ [✏️] [🗑️]           │
+└─────────────────────────────────────────────┘
+```
+- ✅ Header con gradiente (`bg-primary text-white`)
+- ✅ DataTables configurado en español
+- ✅ Badges para estados y tipos
+- ✅ Botones de acción centrados con íconos
+- ✅ Hover: `background-color: #f8f9ff` + ligero scale
+
+#### **Empty State**
+```
+┌─────────────────────────────────────────────┐
+│            [Ícono Grande 5rem]              │
+│       No hay registros registrados          │
+│    Descripción de qué hacer                 │
+│           [+ Botón CTA]                     │
+└─────────────────────────────────────────────┘
+```
+- ✅ Ícono grande (`font-size: 5rem`) con `text-muted`
+- ✅ Título `h4 text-muted`
+- ✅ Descripción corta
+- ✅ Botón CTA grande (`btn-lg px-5`)
+
+### 3. 📝 Formularios - Estándares
+
+#### **Estructura**
+- ✅ **2 columnas** para formularios cortos, **1 columna** para largos
+- ✅ **Labels con íconos**: `<i class="bi bi-X text-primary me-1"></i>`
+- ✅ **Campos obligatorios**: Marcados con `<span class="text-danger">*</span>`
+- ✅ **Hints de ayuda**: Debajo de cada campo con ejemplos (`💡 Ejemplo: ...`)
+- ✅ **Sidebar de ayuda**: Columna derecha con información y consejos
+
+#### **Validación en Tiempo Real**
+- ✅ **JavaScript** valida al salir del campo (on blur)
+- ✅ **Borde verde** + ícono check para válidos (`is-valid`)
+- ✅ **Borde rojo** + mensaje de error para inválidos (`is-invalid`)
+- ✅ **Mensajes descriptivos**: No solo "campo requerido", sino "campo requerido. Ejemplo: ..."
+- ✅ **Mantener datos**: Al retornar con errores, NUNCA borrar lo que el usuario llenó
+- ✅ **Scroll al primer error**: Automáticamente llevar al usuario al campo problemático
+
+#### **Botones de Acción**
+- ✅ **Primario**: `btn-primary btn-lg` para guardar/crear
+- ✅ **Secundario**: `btn-outline-secondary btn-lg` para cancelar
+- ✅ **Espaciado**: `d-flex gap-2` entre botones
+- ✅ **Íconos**: Check para guardar, X para cancelar
+
+### 4. 🎭 Modales - Estándares
+
+#### **Diseño**
+- ✅ **Header**: Color de la acción (primary para crear, success para sedes, etc.)
+- ✅ **Body**: Padding generoso (`p-4` o `p-5`)
+- ✅ **Footer**: `bg-light` con botones alineados
+- ✅ **Tamaño**: `modal-lg` para formularios, `modal-xl` para gestión completa
+- ✅ **Animación**: Scale + translateY al entrar
+
+#### **Contenido**
+- ✅ **Cards internas** para organizar información
+- ✅ **Badges** para estados y tipos
+- ✅ **Íconos** en cada sección
+- ✅ **Estadísticas** si aplica (como en modal de sedes)
+
+### 5. 🚫 Errores Comunes a Evitar
+
+#### **NO Hacer:**
+- ❌ Usar estilos inline en lugar de clases CSS
+- ❌ Crear páginas sin header descriptivo
+- ❌ Tablas sin DataTables configurado
+- ❌ Formularios que borren datos al tener errores
+- ❌ Mensajes de error genéricos ("Error desconocido")
+- ❌ Mezclar diferentes estilos en la misma página
+- ❌ No usar animaciones de entrada (fadeInUp)
+- ❌ Botones sin íconos descriptivos
+- ❌ Cards sin sombras o bordes redondeados
+- ❌ Selector de institución en página separada (debe estar integrado)
+
+#### **SI Hacer:**
+- ✅ Usar clases CSS del archivo `sige-styles.css`
+- ✅ Seguir la estructura estándar de páginas CRUD
+- ✅ Configurar DataTables en español
+- ✅ Mantener datos del formulario al retornar con errores
+- ✅ Mensajes de error descriptivos con ejemplos
+- ✅ Mantener consistencia visual en todo el sistema
+- ✅ Usar animaciones fadeInUp con delays
+- ✅ Botones con íconos de Bootstrap Icons
+- ✅ Cards con shadow-sm y border-radius: 15px
+- ✅ Selectores de institución integrados en la gestión
+
+### 6. 🎨 Paleta de Colores y Uso
+
+| Color | Código | Uso |
+|-------|--------|-----|
+| Primary | `#667eea` → `#764ba2` | Headers, botones principales, gradientes |
+| Success | `#198754` | Activos, completados, estudiantes |
+| Warning | `#ffc107` | Advertencias, sede principal, edit |
+| Danger | `#dc3545` | Errores, eliminar, inactivos |
+| Info | `#0dcaf0` | Información, jornadas, badges secundarios |
+| Secondary | `#6c757d` | Textos secundarios, placeholders |
+
+**Regla**: Usar `bg-X bg-opacity-10` para fondos de íconos, no colores sólidos.
+
+### 7. 📱 Responsive Design
+
+- ✅ **Desktop**: `col-md-X` para layouts principales
+- ✅ **Mobile**: Usar `col-12` para apilar en pantallas pequeñas
+- ✅ **Tablas**: Siempre envolver en `table-responsive`
+- ✅ **Modales**: Usar `modal-dialog-centered` para mejor UX
+- ✅ **Botones**: `btn-sm` para mobile, `btn-lg` para desktop
+
+### 8. 🔧 Arquitectura de Código
+
+#### **Rutas (Backend)**
+- ✅ Usar `get_current_institution()` para obtener institución activa
+- ✅ Para root: verificar si necesita selector de institución
+- ✅ Validar datos antes de guardar, retornar `form_data` + `errors` si hay problemas
+- ✅ Flash messages con emojis: ✅ éxito, ⚠️ advertencia, ❌ error
+- ✅ Redirigir después de POST (PRG pattern)
+
+#### **Templates (Frontend)**
+- ✅ Extender `base.html`
+- ✅ Usar `{% block extra_css %}` para estilos específicos
+- ✅ Usar `{% block extra_js %}` para scripts específicos
+- ✅ Verificar `form_data` y `errors` para rellenar campos y mostrar errores
+- ✅ DataTables con `retrieve: true` para evitar re-inicialización
+
+#### **JavaScript**
+- ✅ Validación en `form-validation.js` para uso general
+- ✅ Scripts específicos en `{% block extra_js %}`
+- ✅ Usar jQuery para manipulación DOM
+- ✅ AJAX para APIs con manejo de errores
+
+---
+
+**Última actualización**: 2026-04-12 - **Validación de Formularios + Gestión de Grados con Selector + Correcciones de Flujo Root + Estándares UX/UI**
+**Estado**: Arquitectura sólida, ~88% implementado, **UX/UI profesional estandarizada**
+**Pendientes principales**: Notas (parcial), Boletines, Métricas, Logros, Portal Padres, Integración Lab
+**Tests**: 20/20 pasando ✅

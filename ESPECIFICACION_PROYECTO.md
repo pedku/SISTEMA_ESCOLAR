@@ -618,13 +618,65 @@ sistema_escolar/
 
 ## 🎨 DISEÑO / UX
 
-### Principios:
+### Principios Fundamentales:
 - **Mobile-first**: Muchos profesores usarán celular
-- **DataTables**: Todas las tablas con búsqueda, ordenamiento, paginación
+- **Consistencia visual**: Mismo estilo en todos los módulos
+- **Profesionalismo y pulcritud**: Espaciado generoso, bordes redondeados, sombras sutiles
+- **Animaciones moderadas**: fadeInUp con delays, hover effects suaves
+- **DataTables**: Todas las tablas con búsqueda, ordenamiento, paginación en español
 - **SweetAlert2**: Confirmaciones y alertas bonitas
 - **Bootstrap 5**: Framework CSS consistente
-- **Colores semánticos**: Verde=bueno, Rojo=malo, Amarillo=alerta
+- **Colores semánticos**: Verde=bueno, Rojo=error, Amarillo=advertencia, Azul=info
 - **Iconografía**: Iconos claros por sección (notas 📝, asistencia 📋, boletín 📄)
+
+### Estándares de Formularios:
+- **Validación en tiempo real**: JavaScript valida al salir del campo (on blur)
+- **Mantener datos**: Al retornar con errores, NUNCA borrar lo que el usuario llenó
+- **Mensajes descriptivos**: No solo "campo requerido", sino "campo requerido. Ejemplo: ..."
+- **Hints de ayuda**: Debajo de cada campo con ejemplos (💡 Ejemplo: ...)
+- **Indicadores visuales**: Borde verde para válidos, rojo para inválidos
+
+### Estructura de Páginas CRUD:
+1. Header con título + subtítulo + botones de acción
+2. Banner de institución (si aplica) con badge de rol
+3. Stat Cards (3-4) con íconos circulares y hover effects
+4. Tabla profesional con DataTables
+5. Empty state con CTA si no hay datos
+
+### Selectores de Institución:
+- **Integrados en la gestión**: Nunca en páginas separadas
+- **Para root**: Debe seleccionar institución antes de gestionar
+- **Para admin**: Ve directamente los datos de su institución
+- **Cards visuales**: Con hover effects y selección marcada
+
+### Paleta de Colores:
+
+| Color | Código | Uso |
+|-------|--------|-----|
+| Primary | `#667eea` → `#764ba2` | Headers, botones principales, gradientes |
+| Success | `#198754` | Activos, completados, estudiantes |
+| Warning | `#ffc107` | Advertencias, sede principal, edit |
+| Danger | `#dc3545` | Errores, eliminar, inactivos |
+| Info | `#0dcaf0` | Información, jornadas, badges secundarios |
+| Secondary | `#6c757d` | Textos secundarios, placeholders |
+
+**Regla de fondos**: Usar `bg-X bg-opacity-10` para fondos de íconos, no colores sólidos.
+
+### Arquitectura de Código:
+
+#### Backend (Rutas):
+- Usar `get_current_institution()` para obtener institución activa
+- Para root: verificar si necesita selector de institución
+- Validar datos antes de guardar, retornar `form_data` + `errors` si hay problemas
+- Flash messages con emojis: ✅ éxito, ⚠️ advertencia, ❌ error
+- Redirigir después de POST (PRG pattern)
+
+#### Frontend (Templates):
+- Extender `base.html`
+- Usar `{% block extra_css %}` para estilos específicos
+- Usar `{% block extra_js %}` para scripts específicos
+- Verificar `form_data` y `errors` para rellenar campos y mostrar errores
+- DataTables con `retrieve: true` para evitar re-inicialización
 
 ---
 
@@ -658,6 +710,54 @@ python-dotenv
 WeasyPrint o pdfkit (para generar PDFs de boletines)
 matplotlib o plotly (para gráficos de métricas)
 ```
+
+---
+
+## 🎨 ESTÁNDARES DE UX/UI - OBLIGATORIOS
+
+> **NOTA**: Estos estándares deben cumplirse **SIEMPRE** en cualquier nueva funcionalidad. Son el resultado de iteraciones continuas que han llevado la plataforma a un nivel profesional.
+
+### Principios Fundamentales
+
+1. **Consistencia Visual**: Mantener el mismo estilo en todos los módulos
+2. **Profesionalismo**: Espaciado generoso, bordes redondeados, sombras sutiles
+3. **Animaciones Moderadas**: fadeInUp con delays, hover effects suaves
+4. **Validación Inteligente**: Formularios que mantienen datos y muestran errores descriptivos
+5. **Selectores Integrados**: Nunca en páginas separadas, siempre dentro del contexto de gestión
+
+### Estructura Estándar de Páginas
+
+- Header con título + subtítulo + botones de acción
+- Banner de institución (si aplica)
+- Stat Cards (3-4) con íconos circulares
+- Tabla con DataTables en español
+- Empty state con CTA si no hay datos
+
+### Formularios
+
+- Labels con íconos
+- Campos obligatorios marcados con *
+- Hints de ayuda con ejemplos
+- Validación en tiempo real (JS)
+- Mantener datos al retornar con errores
+- Mensajes de error descriptivos por campo
+
+### Modales
+
+- Headers con colores según acción
+- Body con padding generoso
+- Cards internas para organizar información
+- Animación de entrada con scale + translateY
+
+### Paleta de Colores
+
+| Color | Uso |
+|-------|-----|
+| Primary (#667eea → #764ba2) | Headers, botones principales |
+| Success (#198754) | Activos, completados |
+| Warning (#ffc107) | Advertencias, sede principal |
+| Danger (#dc3545) | Errores, eliminar |
+| Info (#0dcaf0) | Información, badges secundarios |
 
 ---
 
