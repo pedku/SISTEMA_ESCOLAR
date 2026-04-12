@@ -128,7 +128,7 @@
             {% else %}
             <div class="empty-state">
                 <i class="bi bi-people"></i>
-                <h4 class="text-muted mt-3">No se encontraron estudiantes</h4>
+                <h4 class="text-muted mt-3">No se encontraron estudiantes con perfil académico completo</h4>
                 <p class="text-muted mb-4">Intenta cambiar los filtros o crea un nuevo estudiante.</p>
                 <a href="{{ url_for('students.new') }}" class="btn btn-primary btn-lg px-5">
                     <i class="bi bi-plus-circle me-2"></i>Crear Estudiante
@@ -137,6 +137,65 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Incomplete Profiles Section -->
+    {% if incomplete_profiles %}
+    <div class="card card-modern shadow-sm mb-4 animate-in delay-1 border-warning border-2">
+        <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Perfiles Académicos Incompletos</h5>
+            <span class="badge bg-warning text-dark fs-6">{{ incomplete_profiles|length }} pendientes</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-modern table-hover align-middle mb-0" id="incompleteTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Estudiante</th>
+                            <th>Documento</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Institución</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in incomplete_profiles %}
+                        <tr class="table-warning opacity-75">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon small bg-warning bg-opacity-25 text-warning me-3">
+                                        <i class="bi bi-person-x"></i>
+                                    </div>
+                                    <div>
+                                        <p class="mb-0 fw-semibold">{{ u.get_full_name() }}</p>
+                                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Sin perfil académico</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-muted">{{ u.document_type }} {{ u.document_number }}</span>
+                            </td>
+                            <td><code>{{ u.username }}</code></td>
+                            <td class="text-muted">{{ u.email }}</td>
+                            <td><span class="badge bg-secondary">{{ u.institution.name if u.institution else 'Sin asignar' }}</span></td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('students.new', user_id=u.id) }}" class="btn btn-sm btn-success" title="Completar perfil académico">
+                                        <i class="bi bi-pencil-square me-1"></i>Completar
+                                    </a>
+                                    <a href="{{ url_for('users.user_edit', id=u.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar usuario">
+                                        <i class="bi bi-gear"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -149,6 +208,14 @@ $(document).ready(function() {
         order: [[0, 'asc']],
         columnDefs: [{ orderable: false, targets: [-1] }]
     });
+    {% if incomplete_profiles %}
+    $('#incompleteTable').DataTable({
+        language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },
+        pageLength: 10,
+        order: [[0, 'asc']],
+        columnDefs: [{ orderable: false, targets: [-1] }]
+    });
+    {% endif %}
 });
 </script>
 {% endblock %}

@@ -29,7 +29,7 @@ students_bp = Blueprint('students', __name__)
 @login_required
 @role_required('root', 'admin', 'coordinator', 'teacher')
 def list():
-    """List all students with filters."""
+    """List all students with filters. Includes students without academic profile."""
     institution = get_current_institution()
 
     # Get filters
@@ -58,6 +58,34 @@ def list():
 
     students = query.join(User).order_by(User.last_name).all()
 
+    # Also find users with role=student who don't have academic profile yet
+    # This helps admins identify incomplete student registrations
+    student_users_query = User.query.filter_by(role='student', is_active=True)
+
+    # Filter by institution
+    if institution:
+        student_users_query = student_users_query.filter(
+            db.or_(
+                User.institution_id == institution.id,
+                User.institution_id.is_(None)  # Include students without institution set
+            )
+        )
+
+    if search:
+        student_users_query = student_users_query.filter(
+            db.or_(
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%'),
+                User.document_number.ilike(f'%{search}%')
+            )
+        )
+
+    all_student_users = student_users_query.order_by(User.last_name).all()
+
+    # Find which ones don't have academic profile
+    academic_user_ids = set(s.user_id for s in students)
+    incomplete_profiles = [u for u in all_student_users if u.id not in academic_user_ids]
+
     # Filter campuses by institution
     if institution:
         campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
@@ -69,6 +97,7 @@ def list():
 
     return render_template('students/list.html',
                           students=students,
+                          incomplete_profiles=incomplete_profiles,
                           campuses=campuses,
                           grades=grades,
                           selected_campus=campus_id,
