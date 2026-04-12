@@ -142,6 +142,8 @@ class AcademicStudent(db.Model):
     status = db.Column(db.String(20), default='activo', index=True)  # activo, retirado, graduado
     
     # Relationships
+    campus = db.relationship('Campus', backref='academic_students_ref', lazy=True)
+    grade = db.relationship('Grade', backref='academic_students_ref', lazy=True)
     grade_records = db.relationship('GradeRecord', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     final_grades = db.relationship('FinalGrade', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     annual_grades = db.relationship('AnnualGrade', backref='student', lazy='dynamic', cascade='all, delete-orphan')

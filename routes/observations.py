@@ -421,7 +421,7 @@ def quick_observation(student_id):
             flash('Observación creada exitosamente.', 'success')
             
             # Return to student profile
-            return redirect(url_for('students.profile', id=student.user_id))
+            return redirect(url_for('students.profile', id=student.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear: {str(e)}', 'error')
