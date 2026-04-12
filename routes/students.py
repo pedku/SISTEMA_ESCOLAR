@@ -105,9 +105,20 @@ def new():
     """Create a new student."""
     institution = get_current_institution()
 
-    if not institution:
+    # For root users without active institution, allow selecting institution
+    if not institution and current_user.is_root():
+        if request.method == 'POST':
+            inst_id = request.form.get('institution_id', type=int)
+            if inst_id:
+                institution = Institution.query.get(inst_id)
+        
+        if not institution:
+            # Show form with institution selector for root
+            institutions = Institution.query.order_by(Institution.name).all()
+            return render_template('students/form.html', student=None, institution=None, institutions=institutions, campuses=[], grades=[])
+    elif not institution:
         flash('Debe seleccionar una institución antes de crear estudiantes.', 'error')
-        return redirect(url_for('students.list'))
+        return redirect(url_for('institution.select_institution'))
 
     if request.method == 'POST':
         # Validate document
