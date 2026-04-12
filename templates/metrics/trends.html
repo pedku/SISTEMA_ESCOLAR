@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Tendencias Academicas{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-graph-up-arrow text-info"></i> Tendencias Academicas</h2>
+            <p class="text-muted mb-0">Evolucion del rendimiento en los ultimos 2 anos</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('metrics.institution_metrics') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Volver a Metricas
+            </a>
+            <a href="{{ url_for('metrics.metrics_export') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </a>
+        </div>
+    </div>
+
+    {% if period_labels %}
+    <!-- Trend Analysis Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            {% if trend_analysis == 'mejora' %}
+                            <div class="bg-success bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-arrow-up-circle text-success fs-4"></i>
+                            </div>
+                            {% elif trend_analysis == 'deterioro' %}
+                            <div class="bg-danger bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-arrow-down-circle text-danger fs-4"></i>
+                            </div>
+                            {% else %}
+                            <div class="bg-warning bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-dash-circle text-warning fs-4"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Analisis de Tendencia</h5>
+                            <p class="mb-0 text-muted">
+                                El rendimiento institucional muestra una tendencia de
+                                <strong class="{% if trend_analysis == 'mejora' %}text-success{% elif trend_analysis == 'deterioro' %}text-danger{% else %}text-warning{% endif %}">
+                                    {{ trend_analysis|upper }}
+                                </strong>
+                                en los ultimos periodos analizados.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
+        <!-- Average Trend Line Chart -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-graph-up text-info me-2"></i>Promedio Institucional por Periodo</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="350"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pass Rate Trend -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-check-circle text-success me-2"></i>% Aprobacion por Periodo</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="passRateChart" height="350"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Trend -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check text-info me-2"></i>Tendencia de Asistencia Mensual</h5>
+                </div>
+                <div class="card-body">
+                    {% if attendance_labels %}
+                    <canvas id="attendanceChart" height="300"></canvas>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+                        <p>No hay registros de asistencia disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period Detail Table -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-table text-info me-2"></i>Detalle por Periodo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="periodTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Periodo</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">% Aprobacion</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(period_labels|length) %}
+                                <tr>
+                                    <td><strong>{{ period_labels[i] }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="fw-bold {% if avg_per_period[i] >= 4.0 %}text-success{% elif avg_per_period[i] >= 3.0 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ avg_per_period[i] }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1" style="max-width: 120px; height: 8px;">
+                                                <div class="progress-bar {% if pass_rate_per_period[i] >= 80 %}bg-success{% elif pass_rate_per_period[i] >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     role="progressbar" style="width: {{ pass_rate_per_period[i] }}%">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold">{{ pass_rate_per_period[i] }}%</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if avg_per_period[i] >= 3.5 %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aceptable</span>
+                                        {% elif avg_per_period[i] >= 3.0 %}
+                                        <span class="badge bg-warning"><i class="bi bi-exclamation-circle"></i> Regular</span>
+                                        {% else %}
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Deficiente</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            <h5>No hay datos de periodos disponibles</h5>
+            <p>Se necesitan periodos academicos con calificaciones registradas.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const periodLabels = {{ period_labels | tojson if period_labels else '[]' }};
+    const avgData = {{ avg_per_period | tojson if avg_per_period else '[]' }};
+    const passRateData = {{ pass_rate_per_period | tojson if pass_rate_per_period else '[]' }};
+    const attendanceLabels = {{ attendance_labels | tojson if attendance_labels else '[]' }};
+    const attendanceRates = {{ attendance_rates | tojson if attendance_rates else '[]' }};
+
+    // Trend Line Chart
+    const trendCanvas = document.getElementById('trendChart');
+    if (trendCanvas && periodLabels.length > 0) {
+        const pointColors = avgData.map(function(v) {
+            if (v >= 4.0) return '#22c55e';
+            if (v >= 3.0) return '#eab308';
+            return '#ef4444';
+        });
+
+        new Chart(trendCanvas, {
+            type: 'line',
+            data: {
+                labels: periodLabels,
+                datasets: [{
+                    label: 'Promedio Institucional',
+                    data: avgData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return 'Promedio: ' + item.raw; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 1.0,
+                        max: 5.0,
+                        title: { display: true, text: 'Promedio' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Periodo Academico' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Pass Rate Bar Chart
+    const passCanvas = document.getElementById('passRateChart');
+    if (passCanvas && periodLabels.length > 0) {
+        const barColors = passRateData.map(function(v) {
+            if (v >= 80) return 'rgba(34, 197, 94, 0.7)';
+            if (v >= 60) return 'rgba(234, 179, 8, 0.7)';
+            return 'rgba(239, 68, 68, 0.7)';
+        });
+
+        new Chart(passCanvas, {
+            type: 'bar',
+            data: {
+                labels: periodLabels,
+                datasets: [{
+                    label: '% Aprobacion',
+                    data: passRateData,
+                    backgroundColor: barColors,
+                    borderColor: barColors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return item.raw + '% aprobacion'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: '% Aprobacion' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Attendance Trend Chart
+    const attCanvas = document.getElementById('attendanceChart');
+    if (attCanvas && attendanceLabels.length > 0) {
+        new Chart(attCanvas, {
+            type: 'line',
+            data: {
+                labels: attendanceLabels,
+                datasets: [{
+                    label: '% Asistencia',
+                    data: attendanceRates,
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return 'Asistencia: ' + item.raw + '%'; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: '% Asistencia' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Mes' },
+                        ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Period Table
+    const periodTable = document.getElementById('periodTable');
+    if (periodTable) {
+        new DataTable(periodTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[0, 'desc']],
+            searching: false,
+            paging: false
+        });
+    }
+});
+</script>
+{% endblock %}

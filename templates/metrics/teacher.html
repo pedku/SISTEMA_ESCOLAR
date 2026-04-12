@@ -1,1 +1,514 @@
-{% extends "base.html" %}{% block title %}Métricas Docente{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-graph-up"></i> Métricas del Docente</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5><p>Las métricas y análisis de rendimiento estarán disponibles próximamente.</p></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Métricas del Docente{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-graph-up-arrow text-primary"></i> Métricas del Docente</h2>
+            {% if selected_teacher %}
+            <p class="text-muted mb-0">Analizando: <strong>{{ selected_teacher.get_full_name() }}</strong></p>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            {% if teachers_list and current_user.has_any_role('root', 'admin', 'coordinator') %}
+            <select class="form-select form-select-sm" id="teacherSelect" style="width: 200px;">
+                <option value="">Seleccionar docente...</option>
+                {% for t in teachers_list %}
+                <option value="{{ t.id }}" {% if current_teacher_id == t.id %}selected{% endif %}>{{ t.get_full_name() }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <a href="{{ url_for('metrics.teacher_metrics') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-primary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-calculator text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Promedio General</p>
+                            <h4 class="mb-0 fw-bold">{{ overall_avg }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-success bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-check-circle text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">% Aprobación</p>
+                            <h4 class="mb-0 fw-bold">{{ overall_pass_rate }}%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-danger bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-person-x text-danger fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Inasistencias</p>
+                            <h4 class="mb-0 fw-bold">{{ absence_pct }}%</h4>
+                            <small class="text-muted">{{ absences }} totales</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-info bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-people text-info fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Estudiantes a Cargo</p>
+                            <h4 class="mb-0 fw-bold">{{ total_students }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Groups Table -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-table text-primary me-2"></i>Análisis por Grupo</h5>
+                </div>
+                <div class="card-body">
+                    {% if groups_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="groupsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Grupo</th>
+                                    <th>Materia</th>
+                                    <th class="text-center">Estudiantes</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">% Aprobación</th>
+                                    <th class="text-center">En Riesgo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for g in groups_data %}
+                                <tr>
+                                    <td><strong>{{ g.grade_name }}</strong></td>
+                                    <td>{{ g.subject_name }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ g.student_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if g.avg_score is not none %}
+                                        <span class="fw-bold {% if g.avg_score >= 4.0 %}text-success{% elif g.avg_score >= 3.0 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ g.avg_score }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1" style="max-width: 120px; height: 8px;">
+                                                <div class="progress-bar {% if g.pass_rate >= 80 %}bg-success{% elif g.pass_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ g.pass_rate }}%"
+                                                     aria-valuenow="{{ g.pass_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold {% if g.pass_rate >= 80 %}text-success{% elif g.pass_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ g.pass_rate }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if g.at_risk_count > 0 %}
+                                        <span class="badge bg-danger">{{ g.at_risk_count }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                        <p>No hay datos de grupos disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Grade Distribution Chart -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart text-primary me-2"></i>Distribución de Notas</h5>
+                </div>
+                <div class="card-body">
+                    {% if grade_distribution %}
+                    <canvas id="gradeDistributionChart" height="300"></canvas>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-bar-chart fs-1 d-block mb-3"></i>
+                        <p>No hay datos de notas disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Period Trend Chart -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-graph-up text-primary me-2"></i>Tendencia por Periodo</h5>
+                </div>
+                <div class="card-body">
+                    {% if period_labels %}
+                    <canvas id="periodTrendChart" height="300"></canvas>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-graph-up fs-1 d-block mb-3"></i>
+                        <p>No hay datos de periodos disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- At-Risk Students -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Estudiantes en Riesgo</h5>
+                    {% if risk_students %}
+                    <span class="badge bg-danger">{{ risk_students|length }} estudiantes con promedio &lt; 3.0</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if risk_students %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="riskTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Estudiante</th>
+                                    <th>Grado</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th>Materias Afectadas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rs in risk_students %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                <i class="bi bi-person text-danger"></i>
+                                            </div>
+                                            <strong>{{ rs.student_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ rs.grade_name }}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger fs-6">{{ rs.avg_score }}</span>
+                                    </td>
+                                    <td><small>{{ rs.subjects }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-1 d-block mb-3"></i>
+                        <p>No hay estudiantes en riesgo. ¡Excelente trabajo!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <a href="{{ url_for('metrics.teacher_comparison') }}{% if current_teacher_id %}?teacher_id={{ current_teacher_id }}{% endif %}" class="card text-decoration-none border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="bg-warning bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="bi bi-people text-warning fs-4"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-dark">Comparativa Anónima</h6>
+                        <small class="text-muted">Tu rendimiento vs. promedio institucional</small>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="{{ url_for('metrics.teacher_attendance') }}{% if current_teacher_id %}?teacher_id={{ current_teacher_id }}{% endif %}" class="card text-decoration-none border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="bg-info bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="bi bi-calendar-check text-info fs-4"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-dark">Asistencia vs Rendimiento</h6>
+                        <small class="text-muted">Correlación asistencia-notas</small>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Teacher selector
+    const teacherSelect = document.getElementById('teacherSelect');
+    if (teacherSelect) {
+        teacherSelect.addEventListener('change', function() {
+            if (this.value) {
+                window.location.href = '?teacher_id=' + this.value;
+            }
+        });
+    }
+
+    // Groups DataTable
+    const groupsTable = document.getElementById('groupsTable');
+    if (groupsTable) {
+        new DataTable(groupsTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                infoEmpty: "No hay registros disponibles",
+                infoFiltered: "(filtrado de _MAX_ registros)",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 10,
+            order: [[3, 'desc']]
+        });
+    }
+
+    // Risk Table
+    const riskTable = document.getElementById('riskTable');
+    if (riskTable) {
+        new DataTable(riskTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 10,
+            order: [[2, 'asc']]
+        });
+    }
+
+    // Grade Distribution Chart
+    const gradeDistCanvas = document.getElementById('gradeDistributionChart');
+    if (gradeDistCanvas) {
+        const grades = {{ grade_distribution | tojson if grade_distribution else '[]' }};
+
+        // Create bins
+        const bins = {
+            'Excelente (4.5-5.0)': 0,
+            'Muy Bien (4.0-4.4)': 0,
+            'Bien (3.5-3.9)': 0,
+            'Aceptable (3.0-3.4)': 0,
+            'Deficiente (2.5-2.9)': 0,
+            'Bajo (2.0-2.4)': 0,
+            'Muy Bajo (1.0-1.9)': 0
+        };
+
+        grades.forEach(function(g) {
+            if (g >= 4.5) bins['Excelente (4.5-5.0)']++;
+            else if (g >= 4.0) bins['Muy Bien (4.0-4.4)']++;
+            else if (g >= 3.5) bins['Bien (3.5-3.9)']++;
+            else if (g >= 3.0) bins['Aceptable (3.0-3.4)']++;
+            else if (g >= 2.5) bins['Deficiente (2.5-2.9)']++;
+            else if (g >= 2.0) bins['Bajo (2.0-2.4)']++;
+            else bins['Muy Bajo (1.0-1.9)']++;
+        });
+
+        const binLabels = Object.keys(bins);
+        const binValues = Object.values(bins);
+        const binColors = binLabels.map(function(label) {
+            if (label.startsWith('Excelente') || label.startsWith('Muy Bien')) return '#22c55e';
+            if (label.startsWith('Bien') || label.startsWith('Aceptable')) return '#eab308';
+            return '#ef4444';
+        });
+
+        new Chart(gradeDistCanvas, {
+            type: 'bar',
+            data: {
+                labels: binLabels,
+                datasets: [{
+                    label: 'Cantidad de Estudiantes',
+                    data: binValues,
+                    backgroundColor: binColors,
+                    borderColor: binColors.map(c => c + 'cc'),
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) { return items[0].label; },
+                            label: function(item) { return item.raw + ' estudiantes'; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        title: { display: true, text: 'Número de Estudiantes' }
+                    },
+                    x: {
+                        ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Period Trend Chart
+    const periodCanvas = document.getElementById('periodTrendChart');
+    if (periodCanvas) {
+        const labels = {{ period_labels | tojson if period_labels else '[]' }};
+        const scores = {{ period_scores | tojson if period_scores else '[]' }};
+
+        const pointColors = scores.map(function(s) {
+            if (s >= 4.0) return '#22c55e';
+            if (s >= 3.0) return '#eab308';
+            return '#ef4444';
+        });
+
+        new Chart(periodCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Promedio General',
+                    data: scores,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return 'Promedio: ' + item.raw; }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                yMin: 3.0,
+                                yMax: 3.0,
+                                borderColor: 'rgb(239, 68, 68)',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: { display: true, content: 'Mínimo aprobatorio (3.0)', position: 'start' }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 1.0,
+                        max: 5.0,
+                        title: { display: true, text: 'Promedio' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Periodo Académico' }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

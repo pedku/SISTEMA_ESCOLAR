@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Alertas Tempranas - SIGE{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-exclamation-triangle-fill text-danger"></i> Alertas Tempranas</h2>
+    <div>
+        <a href="{{ url_for('alerts.run_panel') }}" class="btn btn-primary btn-sm me-2">
+            <i class="bi bi-gear-fill"></i> Ejecutar Motor
+        </a>
+        <a href="{{ url_for('alerts.export_alerts', type=alert_type, severity=severity, resolved=resolved_filter) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-download"></i> Exportar CSV
+        </a>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h4 class="mb-0 fw-bold">{{ stats.active }}</h4>
+                        <small class="text-muted">Alertas Activas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h4 class="mb-0 fw-bold">{{ stats.resolved }}</h4>
+                        <small class="text-muted">Resueltas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-bar-chart-fill text-primary fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h4 class="mb-0 fw-bold">{{ stats.total }}</h4>
+                        <small class="text-muted">Total Historico</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-exclamation-circle-fill text-warning fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h4 class="mb-0 fw-bold">{{ stats.by_severity.alta }}</h4>
+                        <small class="text-muted">Severidad Alta</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-pie-chart-fill"></i> Alertas por Tipo</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="alertsByTypeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-pie-chart-fill"></i> Alertas por Severidad</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="alertsBySeverityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-funnel-fill"></i> Filtros</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="type" class="form-label">Tipo de Alerta</label>
+                <select name="type" id="type" class="form-select form-select-sm">
+                    <option value="">Todos los tipos</option>
+                    {% for type_key, type_label in rule_labels.items() %}
+                    <option value="{{ type_key }}" {% if alert_type == type_key %}selected{% endif %}>{{ type_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="severity" class="form-label">Severidad</label>
+                <select name="severity" id="severity" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="alta" {% if severity == 'alta' %}selected{% endif %}>Alta</option>
+                    <option value="media" {% if severity == 'media' %}selected{% endif %}>Media</option>
+                    <option value="baja" {% if severity == 'baja' %}selected{% endif %}>Baja</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="resolved" class="form-label">Estado</label>
+                <select name="resolved" id="resolved" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="false" {% if resolved_filter == 'false' %}selected{% endif %}>Activas</option>
+                    <option value="true" {% if resolved_filter == 'true' %}selected{% endif %}>Resueltas</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm me-2">
+                    <i class="bi bi-search"></i> Filtrar
+                </button>
+                <a href="{{ url_for('alerts.alerts_list') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Alerts Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-list-ul"></i> Listado de Alertas</h6>
+        <span class="badge bg-primary">{{ alerts|length }} alertas</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="alertsTable" class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Estudiante</th>
+                        <th>Tipo</th>
+                        <th>Severidad</th>
+                        <th>Titulo</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr class="{% if alert.resolved %}table-light text-muted{% endif %}">
+                        <td>{{ alert.id }}</td>
+                        <td>
+                            {% if alert.student and alert.student.user %}
+                            {{ alert.student.user.get_full_name() }}
+                            {% else %}
+                            Desconocido
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                <i class="bi bi-{{ alert.alert_type_icon }}"></i>
+                                {{ alert.alert_type_label }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ alert.severity_color }}">
+                                <i class="bi bi-{{ alert.severity_icon }}"></i>
+                                {{ alert.severity|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ alert.title }}">
+                                {{ alert.title }}
+                            </div>
+                        </td>
+                        <td>{{ alert.triggered_at.strftime('%d/%m/%Y %H:%M') if alert.triggered_at else '-' }}</td>
+                        <td>
+                            {% if alert.resolved %}
+                            <span class="badge bg-success">Resuelta</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Activa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('alerts.alert_detail', alert_id=alert.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#alertsTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        order: [[0, 'desc']],
+        pageLength: 25,
+        columnDefs: [
+            { orderable: false, targets: [7] }
+        ]
+    });
+
+    // Chart: Alerts by Type
+    const byTypeCtx = document.getElementById('alertsByTypeChart').getContext('2d');
+    new Chart(byTypeCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for type_key, type_data in stats.by_type.items() %}'{{ type_data.label }}',{% endfor %}],
+            datasets: [{
+                label: 'Alertas Activas',
+                data: [{% for type_key, type_data in stats.by_type.items() %}{{ type_data.count }},{% endfor %}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(25, 135, 84, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(25, 135, 84, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+
+    // Chart: Alerts by Severity
+    const bySeverityCtx = document.getElementById('alertsBySeverityChart').getContext('2d');
+    new Chart(bySeverityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Alta', 'Media', 'Baja'],
+            datasets: [{
+                data: [{{ stats.by_severity.alta }}, {{ stats.by_severity.media }}, {{ stats.by_severity.baja }}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(25, 135, 84, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(25, 135, 84, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

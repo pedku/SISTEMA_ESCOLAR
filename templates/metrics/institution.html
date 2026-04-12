@@ -1,1 +1,415 @@
-{% extends "base.html" %}{% block title %}Métricas Institucionales{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-graph-up"></i> Métricas Institucionales</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5><p>El análisis institucional estará disponible próximamente.</p></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Metricas Institucionales{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-graph-up text-primary"></i> Metricas Institucionales</h2>
+            <p class="text-muted mb-0">Vista general del rendimiento academico</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('metrics.metrics_export') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+            </a>
+            <a href="{{ url_for('metrics.metrics_heatmap') }}" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-grid-3x3"></i> Mapa de Calor
+            </a>
+            <a href="{{ url_for('metrics.metrics_trends') }}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-graph-up-arrow"></i> Tendencias
+            </a>
+            <a href="{{ url_for('metrics.teacher_comparison') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-people"></i> Comparativa Docentes
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-primary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-calculator text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Promedio Institucional</p>
+                            <h4 class="mb-0 fw-bold">{{ inst_avg }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-success bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-check-circle text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">% Aprobacion General</p>
+                            <h4 class="mb-0 fw-bold">{{ pass_rate }}%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-danger bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-person-x text-danger fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Estudiantes en Riesgo</p>
+                            <h4 class="mb-0 fw-bold">{{ at_risk_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-warning bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-calendar-x text-warning fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-muted mb-0 small">Tasa de Inasistencia</p>
+                            <h4 class="mb-0 fw-bold">{{ absence_rate }}%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance by Campus -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt text-primary me-2"></i>Rendimiento por Sede</h5>
+                </div>
+                <div class="card-body">
+                    {% if campus_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="campusTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sede</th>
+                                    <th class="text-center">Estudiantes</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">% Aprobacion</th>
+                                    <th class="text-center">En Riesgo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in campus_data %}
+                                <tr>
+                                    <td><strong>{{ c.campus_name }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ c.student_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold {% if c.avg_score >= 4.0 %}text-success{% elif c.avg_score >= 3.0 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ c.avg_score }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1" style="max-width: 120px; height: 8px;">
+                                                <div class="progress-bar {% if c.pass_rate >= 80 %}bg-success{% elif c.pass_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     role="progressbar" style="width: {{ c.pass_rate }}%">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold {% if c.pass_rate >= 80 %}text-success{% elif c.pass_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ c.pass_rate }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if c.at_risk_count > 0 %}
+                                        <span class="badge bg-danger">{{ c.at_risk_count }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                        <p>No hay datos de sedes disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance by Grade -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-journal text-primary me-2"></i>Rendimiento por Grado</h5>
+                </div>
+                <div class="card-body">
+                    {% if grade_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="gradeTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Grado</th>
+                                    <th>Sede</th>
+                                    <th class="text-center">Estudiantes</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">% Aprobacion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for g in grade_data %}
+                                <tr>
+                                    <td><strong>{{ g.grade_name }}</strong></td>
+                                    <td><span class="badge bg-info">{{ g.campus_name }}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ g.student_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold {% if g.avg_score >= 4.0 %}text-success{% elif g.avg_score >= 3.0 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ g.avg_score }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1" style="max-width: 120px; height: 8px;">
+                                                <div class="progress-bar {% if g.pass_rate >= 80 %}bg-success{% elif g.pass_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     role="progressbar" style="width: {{ g.pass_rate }}%">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold {% if g.pass_rate >= 80 %}text-success{% elif g.pass_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ g.pass_rate }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                        <p>No hay datos de grados disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 10 Best Students -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-trophy text-warning me-2"></i>Top 10 Mejores Estudiantes</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_students %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="topStudentsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Estudiante</th>
+                                    <th>Grado</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ts in top_students %}
+                                <tr>
+                                    <td class="text-center">
+                                        {% if loop.index <= 3 %}
+                                        <span class="badge bg-warning">{{ loop.index }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ loop.index }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle {% if loop.index <= 3 %}bg-warning{% else %}bg-secondary{% endif %} bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                <i class="bi bi-person {% if loop.index <= 3 %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                            </div>
+                                            <strong>{{ ts.student_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ ts.grade_name }}</span></td>
+                                    <td class="text-center">
+                                        <span class="fw-bold text-success">{{ ts.avg_score }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if ts.failed_subjects == 0 %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Sin perdidas</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ ts.failed_subjects }} perdida(s)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                        <p>No hay datos de estudiantes disponibles.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 10 Students at Risk -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Top 10 Estudiantes en Riesgo</h5>
+                </div>
+                <div class="card-body">
+                    {% if risk_students %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="riskStudentsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Estudiante</th>
+                                    <th>Grado</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">Materias Perdidas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rs in risk_students %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                <i class="bi bi-person text-danger"></i>
+                                            </div>
+                                            <strong>{{ rs.student_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ rs.grade_name }}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger fs-6">{{ rs.avg_score }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger">{{ rs.failed_subjects }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-1 d-block mb-3"></i>
+                        <p>No hay estudiantes en riesgo academico.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Campus Table
+    const campusTable = document.getElementById('campusTable');
+    if (campusTable) {
+        new DataTable(campusTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[2, 'desc']]
+        });
+    }
+
+    // Grade Table
+    const gradeTable = document.getElementById('gradeTable');
+    if (gradeTable) {
+        new DataTable(gradeTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[3, 'desc']]
+        });
+    }
+
+    // Top Students Table
+    const topTable = document.getElementById('topStudentsTable');
+    if (topTable) {
+        new DataTable(topTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[3, 'desc']]
+        });
+    }
+
+    // Risk Students Table
+    const riskTable = document.getElementById('riskStudentsTable');
+    if (riskTable) {
+        new DataTable(riskTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[2, 'asc']]
+        });
+    }
+});
+</script>
+{% endblock %}

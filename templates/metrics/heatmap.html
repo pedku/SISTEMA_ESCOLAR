@@ -1,1 +1,196 @@
-{% extends "base.html" %}{% block title %}Mapa de Calor{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-grid-3x3"></i> Mapa de Calor</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Mapa de Calor - Rendimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-grid-3x3 text-warning"></i> Mapa de Calor de Rendimiento</h2>
+            <p class="text-muted mb-0">Matriz de porcentaje de perdida por grado y asignatura</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('metrics.institution_metrics') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Volver a Metricas
+            </a>
+            <a href="{{ url_for('metrics.metrics_export') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </a>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="mb-3"><i class="bi bi-info-circle me-1"></i> Leyenda - Porcentaje de Perdida</h6>
+            <div class="d-flex flex-wrap gap-3 align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #0d6efd; border-radius: 4px;"></div>
+                    <span class="small">0-10% (Excelente)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #198754; border-radius: 4px;"></div>
+                    <span class="small">10-20% (Bueno)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #ffc107; border-radius: 4px;"></div>
+                    <span class="small">20-30% (Atencion)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #fd7e14; border-radius: 4px;"></div>
+                    <span class="small">30-40% (Riesgo)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #dc3545; border-radius: 4px;"></div>
+                    <span class="small">&gt;40% (Critico)</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="me-2" style="width: 24px; height: 24px; background-color: #e9ecef; border-radius: 4px;"></div>
+                    <span class="small">Sin datos</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heatmap Matrix -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+            <h5 class="mb-0"><i class="bi bi-table text-warning me-2"></i>Matriz Grado x Asignatura</h5>
+        </div>
+        <div class="card-body">
+            {% if heatmap_data and subjects %}
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle" id="heatmapTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 150px;">Grado / Sede</th>
+                            {% for subject in subjects %}
+                            <th class="text-center" style="min-width: 120px; font-size: 0.85rem;">
+                                <div class="text-truncate" title="{{ subject.name }}">{{ subject.name }}</div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in heatmap_data %}
+                        <tr>
+                            <td>
+                                <strong>{{ row.grade_name }}</strong>
+                                <br><small class="text-muted">{{ row.campus_name }}</small>
+                            </td>
+                            {% for subject in subjects %}
+                            {% set cell = row.cells.get(subject.id) %}
+                            {% if cell %}
+                            {% set bg_color = '#0d6efd' if cell.failure_rate <= 10 else ('#198754' if cell.failure_rate <= 20 else ('#ffc107' if cell.failure_rate <= 30 else ('#fd7e14' if cell.failure_rate <= 40 else '#dc3545'))) %}
+                            {% set text_color = '#fff' if cell.failure_rate <= 10 or cell.failure_rate > 40 else '#000' %}
+                            <td class="text-center p-2" style="cursor: pointer;"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="top"
+                                title="{{ subject.name }} - {{ row.grade_name }}: {{ cell.failure_rate }}% perdida | Promedio: {{ cell.avg_score }} | Total: {{ cell.total }} | Perdidas: {{ cell.failed }}"
+                                onclick="showCellDetail('{{ row.grade_name }}', '{{ subject.name }}', {{ cell.failure_rate }}, {{ cell.avg_score }}, {{ cell.total }}, {{ cell.failed }})">
+                                <div style="background-color: {{ bg_color }}; color: {{ text_color }}; border-radius: 6px; padding: 8px 4px; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <span class="fw-bold" style="font-size: 1.1rem;">{{ cell.failure_rate }}%</span>
+                                    <small style="font-size: 0.7rem;">Prom: {{ cell.avg_score }}</small>
+                                </div>
+                            </td>
+                            {% else %}
+                            <td class="text-center p-2" style="background-color: #e9ecef;">
+                                <small class="text-muted">-</small>
+                            </td>
+                            {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <p>No hay datos disponibles para el mapa de calor.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cell Detail Modal -->
+<div class="modal fade" id="cellDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-info-circle me-1"></i> Detalle de Celda</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Grado:</strong> <span id="modalGrade"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Asignatura:</strong> <span id="modalSubject"></span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <small class="text-muted d-block">% Perdida</small>
+                                <h4 class="mb-0 fw-bold" id="modalFailureRate"></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <small class="text-muted d-block">Promedio</small>
+                                <h4 class="mb-0 fw-bold" id="modalAvg"></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <small class="text-muted d-block">Total Notas</small>
+                                <h4 class="mb-0 fw-bold" id="modalTotal"></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <small class="text-muted d-block">Perdidas</small>
+                                <h4 class="mb-0 fw-bold text-danger" id="modalFailed"></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+});
+
+function showCellDetail(grade, subject, failureRate, avg, total, failed) {
+    document.getElementById('modalGrade').textContent = grade;
+    document.getElementById('modalSubject').textContent = subject;
+    document.getElementById('modalFailureRate').textContent = failureRate + '%';
+    document.getElementById('modalAvg').textContent = avg;
+    document.getElementById('modalTotal').textContent = total;
+    document.getElementById('modalFailed').textContent = failed;
+
+    const modal = new bootstrap.Modal(document.getElementById('cellDetailModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

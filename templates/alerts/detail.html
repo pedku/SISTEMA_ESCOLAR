@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Alerta #{{ alert.id }} - SIGE{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-{{ alert.alert_type_icon }} text-{{ alert.severity_color }}"></i>
+        Alerta #{{ alert.id }}
+    </h2>
+    <a href="{{ url_for('alerts.alerts_list') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver al listado
+    </a>
+</div>
+
+<div class="row">
+    <!-- Alert Details -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white d-flex align-items-center">
+                <span class="badge bg-{{ alert.severity_color }} me-2">
+                    <i class="bi bi-{{ alert.severity_icon }}"></i>
+                    {{ alert.severity|title }}
+                </span>
+                <span class="badge bg-info me-2">
+                    <i class="bi bi-{{ alert.alert_type_icon }}"></i>
+                    {{ alert.alert_type_label }}
+                </span>
+                {% if alert.resolved %}
+                <span class="badge bg-success ms-auto">
+                    <i class="bi bi-check-circle"></i> Resuelta
+                </span>
+                {% else %}
+                <span class="badge bg-warning text-dark ms-auto">
+                    <i class="bi bi-exclamation-circle"></i> Activa
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <h5 class="card-title fw-bold">{{ alert.title }}</h5>
+                <p class="card-text mt-3">{{ alert.description }}</p>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-info-circle"></i> Informacion</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th scope="row" style="width: 40%;">Fecha Deteccion</th>
+                                <td>{{ alert.triggered_at.strftime('%d/%m/%Y %H:%M') if alert.triggered_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Tipo</th>
+                                <td>
+                                    <span class="badge bg-info">{{ alert.alert_type_label }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Severidad</th>
+                                <td>
+                                    <span class="badge bg-{{ alert.severity_color }}">{{ alert.severity|title }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        {% if alert.resolved %}
+                        <h6><i class="bi bi-check-circle-fill text-success"></i> Resolucion</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th scope="row" style="width: 40%;">Fecha Resolucion</th>
+                                <td>{{ alert.resolved_at.strftime('%d/%m/%Y %H:%M') if alert.resolved_at else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Resuelto Por</th>
+                                <td>
+                                    {% if alert.resolver %}
+                                    {{ alert.resolver.get_full_name() }}
+                                    {% else %}
+                                    Desconocido
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if alert.notes %}
+                            <tr>
+                                <th scope="row">Notas</th>
+                                <td>{{ alert.notes }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Info & Resolve Form -->
+    <div class="col-lg-4">
+        <!-- Student Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-person-fill"></i> Estudiante</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                    <i class="bi bi-person-circle text-primary fs-2"></i>
+                </div>
+                {% if alert.student and alert.student.user %}
+                <h6 class="fw-bold">{{ alert.student.user.get_full_name() }}</h6>
+                <p class="text-muted small mb-1">{{ alert.student.document_number }}</p>
+                {% if alert.student.grade %}
+                <p class="text-muted small mb-0">Grado: {{ alert.student.grade.name }}</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Resolve Form -->
+        {% if not alert.resolved %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-check-circle-fill text-success"></i> Resolver Alerta</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('alerts.resolve_alert_route', alert_id=alert.id) }}">
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notas de Resolucion</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="4" placeholder="Describe las acciones tomadas para resolver esta alerta..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100" onclick="return confirmConfirmResolution();">
+                        <i class="bi bi-check-lg"></i> Marcar como Resuelta
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmConfirmResolution() {
+    const notes = document.getElementById('notes').value.trim();
+    if (!notes) {
+        if (!confirm('No has agregado notas de resolucion. Deseas continuar de todas formas?')) {
+            return false;
+        }
+    }
+    return true;
+}
+</script>
+{% endblock %}

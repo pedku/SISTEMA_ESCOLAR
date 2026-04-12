@@ -8,6 +8,7 @@ from models.attendance import Attendance
 from models.observation import Observation
 from models.report import ReportCard, ReportCardObservation
 from models.achievement import Achievement, StudentAchievement
+from models.alert import Alert
 
 __all__ = [
     'User',
@@ -28,5 +29,6 @@ __all__ = [
     'ReportCard',
     'ReportCardObservation',
     'Achievement',
-    'StudentAchievement'
+    'StudentAchievement',
+    'Alert'
 ]

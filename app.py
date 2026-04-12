@@ -56,7 +56,8 @@ def create_app(config_name=None):
     from routes.achievements import achievements_bp
     from routes.parent import parent_bp
     from routes.qr import qr_bp
-    
+    from routes.alerts import alerts_bp
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(institution_bp, url_prefix='/institution')
@@ -70,6 +71,7 @@ def create_app(config_name=None):
     app.register_blueprint(achievements_bp, url_prefix='/achievements')
     app.register_blueprint(parent_bp, url_prefix='/parent')
     app.register_blueprint(qr_bp, url_prefix='/qr')
+    app.register_blueprint(alerts_bp)
     
     # Error handlers
     from utils.error_handlers import register_error_handlers

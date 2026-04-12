@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Comparativa Anonima de Docentes{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-people text-warning"></i> Comparativa Anonima de Docentes</h2>
+            <p class="text-muted mb-0">Rendimiento anonimizado por profesor (A, B, C...)</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('metrics.institution_metrics') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Volver a Metricas
+            </a>
+            <a href="{{ url_for('metrics.metrics_export') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </a>
+        </div>
+    </div>
+
+    {% if teacher_data %}
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto" style="width: 48px; height: 48px;">
+                            <i class="bi bi-people text-primary fs-4"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-1 small">Total Docentes</p>
+                    <h4 class="mb-0 fw-bold">{{ teacher_data|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto" style="width: 48px; height: 48px;">
+                            <i class="bi bi-calculator text-success fs-4"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-1 small">Promedio General</p>
+                    <h4 class="mb-0 fw-bold">{{ global_avg }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto" style="width: 48px; height: 48px;">
+                            <i class="bi bi-trophy text-info fs-4"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-1 small">Mejor Percentil</p>
+                    <h4 class="mb-0 fw-bold">{{ teacher_data[0].percentile }}%</h4>
+                    <small class="text-muted">Profesor A</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto" style="width: 48px; height: 48px;">
+                            <i class="bi bi-check-circle text-warning fs-4"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-1 small">Mejor % Aprobacion</p>
+                    <h4 class="mb-0 fw-bold">{{ best_pass_rate }}%</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-table text-warning me-2"></i>Tabla Comparativa Anonima</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="comparisonTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Profesor</th>
+                                    <th class="text-center">Grupos</th>
+                                    <th class="text-center">Estudiantes</th>
+                                    <th class="text-center">Promedio</th>
+                                    <th class="text-center">% Aprobacion</th>
+                                    <th class="text-center">Percentil</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in teacher_data %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle {% if loop.index <= 3 %}bg-warning{% else %}bg-secondary{% endif %} bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                                <i class="bi bi-person {% if loop.index <= 3 %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                            </div>
+                                            <strong>Profesor {{ t.letter }}</strong>
+                                            {% if t.is_best %}
+                                            <span class="badge bg-success ms-2"><i class="bi bi-trophy"></i></span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ t.group_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold">{{ t.student_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold {% if t.avg_score >= 4.0 %}text-success{% elif t.avg_score >= 3.0 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ t.avg_score }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1" style="max-width: 100px; height: 8px;">
+                                                <div class="progress-bar {% if t.pass_rate >= 80 %}bg-success{% elif t.pass_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     role="progressbar" style="width: {{ t.pass_rate }}%">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold">{{ t.pass_rate }}%</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if t.percentile >= 75 %}
+                                        <span class="badge bg-success">{{ t.percentile }}%</span>
+                                        {% elif t.percentile >= 50 %}
+                                        <span class="badge bg-warning">{{ t.percentile }}%</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ t.percentile }}%</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-line text-warning me-2"></i>Comparativa de Promedios</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="barChart" height="350"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart text-warning me-2"></i>Distribucion de Aprobacion</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="passRateChart" height="350"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            <h5>No hay datos de docentes disponibles</h5>
+            <p>Se necesitan docentes con grupos y calificaciones asignadas.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Comparison Table
+    const comparisonTable = document.getElementById('comparisonTable');
+    if (comparisonTable) {
+        new DataTable(comparisonTable, {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
+            },
+            pageLength: 10,
+            order: [[3, 'desc']]
+        });
+    }
+
+    const teacherData = {{ teacher_data | tojson if teacher_data else '[]' }};
+
+    // Bar Chart
+    const barCanvas = document.getElementById('barChart');
+    if (barCanvas && teacherData.length > 0) {
+        const labels = teacherData.map(function(t) { return 'Profesor ' + t.letter; });
+        const avgs = teacherData.map(function(t) { return t.avg_score; });
+        const colors = teacherData.map(function(t) {
+            if (t.avg_score >= 4.0) return 'rgba(22, 163, 74, 0.7)';
+            if (t.avg_score >= 3.0) return 'rgba(234, 179, 8, 0.7)';
+            return 'rgba(239, 68, 68, 0.7)';
+        });
+
+        new Chart(barCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Promedio',
+                    data: avgs,
+                    backgroundColor: colors,
+                    borderColor: colors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return 'Promedio: ' + item.raw; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 1.0,
+                        max: 5.0,
+                        title: { display: true, text: 'Promedio' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Pass Rate Doughnut
+    const passCanvas = document.getElementById('passRateChart');
+    if (passCanvas && teacherData.length > 0) {
+        const passLabels = teacherData.map(function(t) { return 'Profesor ' + t.letter; });
+        const passRates = teacherData.map(function(t) { return t.pass_rate; });
+        const passColors = teacherData.map(function(t) {
+            if (t.pass_rate >= 80) return 'rgba(22, 163, 74, 0.8)';
+            if (t.pass_rate >= 60) return 'rgba(234, 179, 8, 0.8)';
+            return 'rgba(239, 68, 68, 0.8)';
+        });
+
+        new Chart(passCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: passLabels,
+                datasets: [{
+                    data: passRates,
+                    backgroundColor: passColors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(item) { return item.label + ': ' + item.raw + '% aprobacion'; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

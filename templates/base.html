@@ -146,6 +146,17 @@
                         </a>
                     </li>
 
+                    <!-- Alertas Tempranas -->
+                    {% if user_has_any_role('root', 'admin', 'coordinator') %}
+                    <li class="{% if is_active_route('/alerts') %}active{% endif %}">
+                        <a href="{{ url_for('alerts.alerts_list') }}">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>Alertas Tempranas</span>
+                            <span class="badge bg-danger ms-auto" id="sidebarAlertBadge">!</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
                     <!-- Portal Padres -->
                     {% if user_has_role('parent') %}
                     <li class="{% if is_active_route('/parent') %}active{% endif %}">
@@ -282,6 +293,22 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
+    {% if current_user.has_any_role('root', 'admin', 'coordinator') %}
+    <script>
+    // Load alert count for sidebar badge
+    fetch("{{ url_for('alerts.alert_count') }}")
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('sidebarAlertBadge');
+            if (badge && data.count > 0) {
+                badge.textContent = data.count > 99 ? '99+' : data.count;
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(() => {});
+    </script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>
