@@ -12,7 +12,7 @@ from extensions import db
 from models.user import User
 from models.institution import Institution, Campus
 from models.academic import Grade, Subject, SubjectGrade, AcademicStudent
-from models.grading import AcademicPeriod, GradeCriteria, GradeRecord, FinalGrade
+from models.grading import AcademicPeriod, GradeCriteria, GradeRecord, FinalGrade, AnnualGrade
 from utils.decorators import login_required, role_required
 from utils.institution_resolver import get_current_institution, get_institution_grades, get_institution_subjects
 
@@ -195,6 +195,18 @@ def grade_input_form(sg_id, period_id):
         saved_count = 0
         error_count = 0
 
+        # Check if period is locked before saving
+        locked_count = GradeRecord.query.filter_by(
+            subject_grade_id=sg_id,
+            period_id=period_id,
+            locked=True
+        ).count()
+        total_existing = GradeRecord.query.filter_by(
+            subject_grade_id=sg_id,
+            period_id=period_id
+        ).count()
+        period_is_locked = total_existing > 0 and locked_count == total_existing
+
         for student in students:
             for criterion in criteria:
                 field_name = f"grade_{student.id}_{criterion.id}"
@@ -233,6 +245,10 @@ def grade_input_form(sg_id, period_id):
                             existing.observation = observation
                         existing.updated_at = datetime.utcnow()
                     else:
+                        # If period is fully locked, don't allow new records
+                        if period_is_locked:
+                            error_count += 1
+                            continue
                         new_record = GradeRecord(
                             student_id=student.id,
                             subject_grade_id=sg_id,
@@ -575,7 +591,309 @@ def grade_upload():
 
 
 # ============================================
-# 4. Student Grades View
+# 6. Lock/Unlock Panel
+# ============================================
+
+@grades_bp.route('/lock', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def lock_panel():
+    """
+    Admin panel to lock/unlock periods for subject-grades.
+    """
+    institution = get_current_institution()
+    if not institution:
+        institution = Institution.query.first()
+        if not institution:
+            flash('No se ha configurado la institucion.', 'warning')
+            return redirect(url_for('dashboard.index'))
+
+    grades_list = Grade.query.join(Campus).filter(
+        Campus.institution_id == institution.id,
+        Grade.academic_year == institution.academic_year
+    ).order_by(Grade.name).all()
+
+    all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+        Campus.institution_id == institution.id,
+        Grade.academic_year == institution.academic_year
+    ).order_by(Grade.name, Subject.name).all()
+
+    periods = AcademicPeriod.query.filter_by(
+        institution_id=institution.id,
+        academic_year=institution.academic_year
+    ).order_by(AcademicPeriod.order).all()
+
+    if request.method == 'POST':
+        sg_id = request.form.get('subject_grade_id', type=int)
+        period_id = request.form.get('period_id', type=int)
+        action = request.form.get('action')
+
+        if not sg_id or not period_id:
+            flash('Seleccione una asignatura-grado y un periodo.', 'warning')
+            return redirect(url_for('grades.lock_panel'))
+
+        subject_grade = db.session.get(SubjectGrade, sg_id)
+        if not subject_grade:
+            flash('Asignatura-grado no encontrada.', 'error')
+            return redirect(url_for('grades.lock_panel'))
+
+        period = db.session.get(AcademicPeriod, period_id)
+        if not period:
+            flash('Periodo academico no encontrado.', 'error')
+            return redirect(url_for('grades.lock_panel'))
+
+        if action == 'lock':
+            GradeRecord.query.filter_by(
+                subject_grade_id=sg_id,
+                period_id=period_id
+            ).update({'locked': True})
+            db.session.commit()
+            flash(f'Periodo {period.name} bloqueado para {subject_grade.subject.name} - {subject_grade.grade.name}.', 'success')
+        elif action == 'unlock':
+            GradeRecord.query.filter_by(
+                subject_grade_id=sg_id,
+                period_id=period_id
+            ).update({'locked': False})
+            db.session.commit()
+            flash(f'Periodo {period.name} desbloqueado para {subject_grade.subject.name} - {subject_grade.grade.name}.', 'success')
+
+        return redirect(url_for('grades.lock_panel'))
+
+    # Build lock status for each combination
+    lock_status = []
+    for sg in all_subject_grades:
+        for period in periods:
+            total = GradeRecord.query.filter_by(
+                subject_grade_id=sg.id,
+                period_id=period.id
+            ).count()
+            locked = GradeRecord.query.filter_by(
+                subject_grade_id=sg.id,
+                period_id=period.id,
+                locked=True
+            ).count()
+            is_locked = total > 0 and locked == total
+            lock_status.append({
+                'sg': sg,
+                'period': period,
+                'total_records': total,
+                'is_locked': is_locked
+            })
+
+    return render_template(
+        'grades/lock_panel.html',
+        grades=grades_list,
+        subject_grades=all_subject_grades,
+        periods=periods,
+        lock_status=lock_status
+    )
+
+
+# ============================================
+# 7. Final Grades by Period
+# ============================================
+
+@grades_bp.route('/final/<int:sg_id>/<int:period_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin', 'teacher', 'coordinator')
+def final_grades_view(sg_id, period_id):
+    """
+    View and calculate final grades for all students in a subject-grade/period.
+    Shows table with all criteria scores and the weighted final.
+    """
+    subject_grade = db.session.get(SubjectGrade, sg_id)
+    if not subject_grade:
+        flash('Asignatura-grado no encontrada.', 'error')
+        return redirect(url_for('grades.grade_input'))
+
+    if current_user.has_role('teacher') and subject_grade.teacher_id != current_user.id:
+        if not current_user.has_any_role('root', 'admin', 'coordinator'):
+            flash('No tienes permiso para ver estas notas.', 'error')
+            return redirect(url_for('grades.grade_input'))
+
+    period = db.session.get(AcademicPeriod, period_id)
+    if not period:
+        flash('Periodo academico no encontrado.', 'error')
+        return redirect(url_for('grades.grade_input'))
+
+    grade = subject_grade.grade
+    subject = subject_grade.subject
+
+    students = AcademicStudent.query.filter_by(
+        grade_id=grade.id,
+        status='activo'
+    ).join(User).order_by(User.last_name, User.first_name).all()
+
+    criteria = GradeCriteria.query.order_by(GradeCriteria.order).all()
+
+    if request.method == 'POST':
+        # Recalculate all final grades
+        calculated = 0
+        for student in students:
+            final_score = _calculate_final_grade(student.id, sg_id, period_id, criteria)
+            if final_score is not None:
+                _save_final_grade(student.id, sg_id, period_id, final_score)
+                calculated += 1
+
+        db.session.commit()
+        flash(f'{calculated} notas finales calculadas y guardadas.', 'success')
+        return redirect(url_for('grades.final_grades_view', sg_id=sg_id, period_id=period_id))
+
+    # Build data table
+    student_data = []
+    for student in students:
+        record_lookup = {}
+        records = GradeRecord.query.filter_by(
+            student_id=student.id,
+            subject_grade_id=sg_id,
+            period_id=period_id
+        ).all()
+        for r in records:
+            record_lookup[r.criterion_id] = r
+
+        final = FinalGrade.query.filter_by(
+            student_id=student.id,
+            subject_grade_id=sg_id,
+            period_id=period_id
+        ).first()
+
+        student_data.append({
+            'student': student,
+            'user': student.user,
+            'records': record_lookup,
+            'final': final
+        })
+
+    return render_template(
+        'grades/final_view.html',
+        subject_grade=subject_grade,
+        grade=grade,
+        subject=subject,
+        period=period,
+        students=students,
+        criteria=criteria,
+        student_data=student_data,
+        MIN_GRADE=MIN_GRADE,
+        MAX_GRADE=MAX_GRADE,
+        PASSING_GRADE=PASSING_GRADE
+    )
+
+
+# ============================================
+# 8. Annual Grades
+# ============================================
+
+@grades_bp.route('/annual/<int:sg_id>')
+@login_required
+@role_required('root', 'admin', 'teacher', 'coordinator')
+def annual_grades_view(sg_id):
+    """
+    View annual grades (average of 4 periods) for a subject-grade.
+    """
+    subject_grade = db.session.get(SubjectGrade, sg_id)
+    if not subject_grade:
+        flash('Asignatura-grado no encontrada.', 'error')
+        return redirect(url_for('grades.grade_input'))
+
+    if current_user.has_role('teacher') and subject_grade.teacher_id != current_user.id:
+        if not current_user.has_any_role('root', 'admin', 'coordinator'):
+            flash('No tienes permiso para ver estas notas.', 'error')
+            return redirect(url_for('grades.grade_input'))
+
+    institution = get_current_institution()
+    if not institution:
+        institution = Institution.query.first()
+
+    grade = subject_grade.grade
+    subject = subject_grade.subject
+
+    periods = AcademicPeriod.query.filter_by(
+        institution_id=institution.id,
+        academic_year=institution.academic_year
+    ).order_by(AcademicPeriod.order).all()
+
+    students = AcademicStudent.query.filter_by(
+        grade_id=grade.id,
+        status='activo'
+    ).join(User).order_by(User.last_name, User.first_name).all()
+
+    # Calculate and save annual grades
+    for student in students:
+        period_scores = []
+        for period in periods:
+            final = FinalGrade.query.filter_by(
+                student_id=student.id,
+                subject_grade_id=sg_id,
+                period_id=period.id
+            ).first()
+            if final and final.final_score:
+                period_scores.append(final.final_score)
+
+        if period_scores:
+            annual_score = round(sum(period_scores) / len(period_scores), 2)
+            status = 'aprobado' if annual_score >= PASSING_GRADE else 'reprobado'
+
+            existing = AnnualGrade.query.filter_by(
+                student_id=student.id,
+                subject_grade_id=sg_id,
+                academic_year=institution.academic_year
+            ).first()
+
+            if existing:
+                existing.annual_score = annual_score
+                existing.status = status
+            else:
+                new_annual = AnnualGrade(
+                    student_id=student.id,
+                    subject_grade_id=sg_id,
+                    academic_year=institution.academic_year,
+                    annual_score=annual_score,
+                    status=status
+                )
+                db.session.add(new_annual)
+
+    db.session.commit()
+
+    # Build data for display
+    student_data = []
+    for student in students:
+        annual = AnnualGrade.query.filter_by(
+            student_id=student.id,
+            subject_grade_id=sg_id,
+            academic_year=institution.academic_year
+        ).first()
+
+        period_grades = {}
+        for period in periods:
+            final = FinalGrade.query.filter_by(
+                student_id=student.id,
+                subject_grade_id=sg_id,
+                period_id=period.id
+            ).first()
+            period_grades[period.id] = final
+
+        student_data.append({
+            'student': student,
+            'user': student.user,
+            'annual': annual,
+            'period_grades': period_grades
+        })
+
+    return render_template(
+        'grades/annual_view.html',
+        subject_grade=subject_grade,
+        grade=grade,
+        subject=subject,
+        periods=periods,
+        student_data=student_data,
+        MIN_GRADE=MIN_GRADE,
+        MAX_GRADE=MAX_GRADE,
+        PASSING_GRADE=PASSING_GRADE
+    )
+
+
+# ============================================
+# 9. Student Full Grades View (Enhanced)
 # ============================================
 
 @grades_bp.route('/student/<int:student_id>')

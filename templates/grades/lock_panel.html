@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Bloqueo de Periodos - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-lock"></i> Panel de Bloqueo de Periodos</h2>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Cuando un periodo esta <strong>bloqueado</strong>, no se pueden editar ni agregar notas.
+        Solo los administradores pueden bloquear o desbloquear periodos.
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Bloquear/Desbloquear Periodo</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="subject_grade_id" class="form-label">Asignatura - Grado</label>
+                    <select name="subject_grade_id" id="subject_grade_id" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        {% for sg in subject_grades %}
+                        <option value="{{ sg.id }}">{{ sg.subject.name }} - {{ sg.grade.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="period_id" class="form-label">Periodo</label>
+                    <select name="period_id" id="period_id" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        {% for period in periods %}
+                        <option value="{{ period.id }}">{{ period.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" name="action" value="lock" class="btn btn-danger w-100">
+                        <i class="bi bi-lock"></i> Bloquear
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" name="action" value="unlock" class="btn btn-success w-100">
+                        <i class="bi bi-unlock"></i> Desbloquear
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lock Status Table -->
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Estado de Periodos</h5>
+        </div>
+        <div class="card-body">
+            {% if lock_status %}
+            <div class="table-responsive">
+                <table id="lockTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Grado</th>
+                            <th>Asignatura</th>
+                            <th>Periodo</th>
+                            <th>Registros</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in lock_status %}
+                        <tr>
+                            <td>{{ item.sg.grade.name }}</td>
+                            <td>{{ item.sg.subject.name }}</td>
+                            <td>{{ item.period.name }}</td>
+                            <td>{{ item.total_records }}</td>
+                            <td>
+                                {% if item.is_locked %}
+                                <span class="badge bg-danger"><i class="bi bi-lock"></i> Cerrado</span>
+                                {% elif item.total_records > 0 %}
+                                <span class="badge bg-warning"><i class="bi bi-unlock"></i> Abierto</span>
+                                {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-dash-circle"></i> Sin datos</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="subject_grade_id" value="{{ item.sg.id }}">
+                                    <input type="hidden" name="period_id" value="{{ item.period.id }}">
+                                    {% if item.is_locked %}
+                                    <button type="submit" name="action" value="unlock" class="btn btn-sm btn-success">
+                                        <i class="bi bi-unlock"></i> Desbloquear
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" name="action" value="lock" class="btn btn-sm btn-danger"
+                                            {% if item.total_records == 0 %}disabled{% endif %}>
+                                        <i class="bi bi-lock"></i> Bloquear
+                                    </button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> No hay combinaciones de asignatura-grado y periodo disponibles.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#lockTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        pageLength: 25,
+        order: [[0, 'asc'], [2, 'asc']]
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

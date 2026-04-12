@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Notas Anuales - {{ subject.name }} - {{ grade.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-calendar-range"></i> Notas Anuales</h2>
+        <a href="{{ url_for('grades.grade_input') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <!-- Info Header -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong><i class="bi bi-journal"></i> Grado:</strong> {{ grade.name }}
+                </div>
+                <div class="col-md-4">
+                    <strong><i class="bi bi-book"></i> Asignatura:</strong> {{ subject.name }}
+                </div>
+                <div class="col-md-4">
+                    <strong><i class="bi bi-person"></i> Docente:</strong>
+                    {{ subject_grade.teacher_user.get_full_name() if subject_grade.teacher_user else 'N/A' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Annual Grades Table -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Tabla de Notas por Periodo y Definitiva</h5>
+        </div>
+        <div class="card-body">
+            {% if student_data %}
+            <div class="table-responsive">
+                <table id="annualTable" class="table table-striped table-hover table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width: 50px;">#</th>
+                            <th>Estudiante</th>
+                            {% for period in periods %}
+                            <th style="min-width: 100px;">{{ period.short_name }}</th>
+                            {% endfor %}
+                            <th style="min-width: 100px;">DEF</th>
+                            <th style="min-width: 120px;">Estado Anual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in student_data %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a href="{{ url_for('grades.student_grades', student_id=item.student.id) }}">
+                                    {{ item.user.get_full_name() }}
+                                </a>
+                            </td>
+                            {% for period in periods %}
+                            <td class="text-center">
+                                {% set final = item.period_grades.get(period.id) %}
+                                {% if final and final.final_score %}
+                                    {% if final.status == 'ganada' %}
+                                    <span class="text-success fw-bold">{{ final.final_score }}</span>
+                                    {% elif final.status == 'perdida' %}
+                                    <span class="text-danger fw-bold">{{ final.final_score }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td class="text-center">
+                                {% if item.annual %}
+                                    <span class="fw-bold fs-6">{{ item.annual.annual_score }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.annual %}
+                                    {% if item.annual.status == 'aprobado' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprobado</span>
+                                    {% elif item.annual.status == 'reprobado' %}
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Reprobado</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No evaluado</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Sin nota</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if student_data | selectattr('annual', 'defined') | selectattr('annual') | list %}
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="2">PROMEDIO GENERAL</td>
+                            {% for period in periods %}
+                            <td class="text-center">
+                                {% set ns = namespace(sum=0, count=0) %}
+                                {% for item in student_data %}
+                                    {% set final = item.period_grades.get(period.id) %}
+                                    {% if final and final.final_score %}
+                                        {% set ns.sum = ns.sum + final.final_score %}
+                                        {% set ns.count = ns.count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if ns.count > 0 %}
+                                    {{ "%.2f" | format(ns.sum / ns.count) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td class="text-center">
+                                {% set ns = namespace(sum=0, count=0) %}
+                                {% for item in student_data %}
+                                    {% if item.annual and item.annual.annual_score %}
+                                        {% set ns.sum = ns.sum + item.annual.annual_score %}
+                                        {% set ns.count = ns.count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if ns.count > 0 %}
+                                    {{ "%.2f" | format(ns.sum / ns.count) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> No hay estudiantes activos en este grado.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#annualTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        pageLength: 25,
+        order: [[0, 'asc']]
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

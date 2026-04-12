@@ -5,24 +5,45 @@ PDF generator utility using WeasyPrint.
 import os
 from datetime import datetime
 from flask import render_template, current_app
-from weasyprint import HTML
+
+# Try to import WeasyPrint, but handle missing dependencies gracefully
+try:
+    from weasyprint import HTML
+    WEASYPRINT_AVAILABLE = True
+except (OSError, ImportError):
+    WEASYPRINT_AVAILABLE = False
+    HTML = None
 
 
-def generate_report_card_pdf(report_card, student, institution, period, grades_data, observations):
+def _check_weasyprint():
+    """Check if WeasyPrint is available."""
+    if not WEASYPRINT_AVAILABLE:
+        raise RuntimeError(
+            'WeasyPrint no esta disponible. Instale las dependencias requeridas: '
+            'pip install weasyprint. En Windows, consulte la documentacion de instalacion.'
+        )
+
+
+def generate_report_card_pdf(report_card, student, institution, period, grades_data,
+                              observations=None, attendance=None, campus=None):
     """
     Generate a PDF report card.
-    
+
     Args:
         report_card: ReportCard instance
         student: AcademicStudent instance
         institution: Institution instance
         period: AcademicPeriod instance
         grades_data: List of dicts with subject grades
-        observations: Dict with subject observations
-    
+        observations: Dict with subject observations (legacy, kept for compatibility)
+        attendance: Dict with attendance summary (presentes, ausentes, justificados, total)
+        campus: Campus instance
+
     Returns:
         tuple: (pdf_bytes, filename)
     """
+    _check_weasyprint()
+
     # Render template to HTML
     html_content = render_template(
         'report_cards/pdf_template.html',
@@ -32,15 +53,17 @@ def generate_report_card_pdf(report_card, student, institution, period, grades_d
         period=period,
         grades_data=grades_data,
         observations=observations,
+        attendance=attendance,
+        campus=campus,
         generated_date=datetime.now()
     )
-    
+
     # Generate PDF
     pdf_bytes = HTML(string=html_content).write_pdf()
-    
+
     # Create filename
     filename = f"boletin_{student.user.username}_{period.short_name}.pdf"
-    
+
     return pdf_bytes, filename
 
 
