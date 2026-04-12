@@ -1,1 +1,230 @@
-{% extends "base.html" %}{% block title %}Ranking{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-bar-chart"></i> Ranking Estudiantil</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Ranking Estudiantil{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>&#127942; Ranking Estudiantil</h2>
+    </div>
+
+    <!-- Podium: Top 3 -->
+    {% if leaderboard|length >= 3 %}
+    <div class="row justify-content-center mb-5">
+        <!-- 2nd Place -->
+        <div class="col-md-3 order-md-1 order-2">
+            <div class="card text-center border-secondary podium-card">
+                <div class="card-body">
+                    <div class="medal">&#129352;</div>
+                    <h5 class="mt-2">{{ leaderboard[1].student_name }}</h5>
+                    <p class="text-muted mb-1">{{ leaderboard[1].grade_name }}</p>
+                    <div class="fs-2 fw-bold text-secondary">{{ leaderboard[1].achievement_count }}</div>
+                    <small class="text-muted">logros</small>
+                    <div class="mt-3">
+                        <a href="{{ url_for('achievements.student_achievements_view', student_id=leaderboard[1].student_id) }}"
+                           class="btn btn-sm btn-outline-secondary">Ver Logros</a>
+                    </div>
+                </div>
+                <div class="card-footer bg-secondary text-white">
+                    2&#176; Lugar
+                </div>
+            </div>
+        </div>
+        <!-- 1st Place -->
+        <div class="col-md-4 order-md-2 order-1">
+            <div class="card text-center border-warning podium-card podium-first">
+                <div class="card-body">
+                    <div class="medal">&#127942;</div>
+                    <h4 class="mt-2 fw-bold">{{ leaderboard[0].student_name }}</h4>
+                    <p class="text-muted mb-1">{{ leaderboard[0].grade_name }}</p>
+                    <div class="fs-1 fw-bold text-warning">{{ leaderboard[0].achievement_count }}</div>
+                    <small class="text-muted">logros</small>
+                    <div class="mt-3">
+                        <a href="{{ url_for('achievements.student_achievements_view', student_id=leaderboard[0].student_id) }}"
+                           class="btn btn-sm btn-warning">Ver Logros</a>
+                    </div>
+                </div>
+                <div class="card-footer bg-warning text-dark">
+                    &#128081; 1&#176; Lugar
+                </div>
+            </div>
+        </div>
+        <!-- 3rd Place -->
+        <div class="col-md-3 order-md-3 order-3">
+            <div class="card text-center podium-card">
+                <div class="card-body" style="border-top: 3px solid #cd7f32;">
+                    <div class="medal">&#129353;</div>
+                    <h5 class="mt-2">{{ leaderboard[2].student_name }}</h5>
+                    <p class="text-muted mb-1">{{ leaderboard[2].grade_name }}</p>
+                    <div class="fs-2 fw-bold" style="color: #cd7f32;">{{ leaderboard[2].achievement_count }}</div>
+                    <small class="text-muted">logros</small>
+                    <div class="mt-3">
+                        <a href="{{ url_for('achievements.student_achievements_view', student_id=leaderboard[2].student_id) }}"
+                           class="btn btn-sm btn-outline-secondary">Ver Logros</a>
+                    </div>
+                </div>
+                <div class="card-footer text-white" style="background-color: #cd7f32;">
+                    3&#176; Lugar
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                {% if grades %}
+                <div class="col-md-4">
+                    <label for="grade-filter" class="form-label">Grado:</label>
+                    <select class="form-select" name="grade" id="grade-filter">
+                        <option value="">-- Todos los grados --</option>
+                        {% for g in grades %}
+                        <option value="{{ g.id }}" {% if selected_grade == g.id|string %}selected{% endif %}>
+                            {{ g.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-md-3">
+                    <label for="limit-select" class="form-label">Mostrar:</label>
+                    <select class="form-select" name="limit" id="limit-select">
+                        <option value="10" {% if request.args.get('limit') == '10' %}selected{% endif %}>Top 10</option>
+                        <option value="25" {% if request.args.get('limit') == '25' %}selected{% endif %}>Top 25</option>
+                        <option value="50" {% if not request.args.get('limit') or request.args.get('limit') == '50' %}selected{% endif %}>Top 50</option>
+                        <option value="100">Top 100</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full Leaderboard Table -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0">Ranking Completo</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if leaderboard %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" id="leaderboard-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th>Medalla</th>
+                            <th>Estudiante</th>
+                            <th>Grado</th>
+                            <th class="text-center">Logros</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in leaderboard %}
+                        <tr {% if loop.index <= 3 %}class="table-{% if loop.index == 1 %}warning{% elif loop.index == 2 %}secondary{% elif loop.index == 3 %}light{% endif %}"{% endif %}>
+                            <td class="fw-bold">{{ loop.index }}</td>
+                            <td>
+                                {% if loop.index == 1 %}
+                                <span class="fs-4">&#127942;</span>
+                                {% elif loop.index == 2 %}
+                                <span class="fs-4">&#129352;</span>
+                                {% elif loop.index == 3 %}
+                                <span class="fs-4">&#129353;</span>
+                                {% else %}
+                                <span class="text-muted">&#9734;</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if entry.photo %}
+                                    <img src="{{ url_for('static', filename='uploads/photos/' + entry.photo) }}"
+                                         class="rounded-circle" width="32" height="32" alt="Foto">
+                                    {% endif %}
+                                    <span class="fw-semibold">{{ entry.student_name }}</span>
+                                </div>
+                            </td>
+                            <td>{{ entry.grade_name }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary fs-6">{{ entry.achievement_count }}</span>
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ url_for('achievements.student_achievements_view', student_id=entry.student_id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver Logros
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info m-3">
+                <h5>&#128203; Sin datos de ranking</h5>
+                <p>A&#250;n no hay estudiantes con logros. Ejecuta el motor autom&#225;tico para generar logros.</p>
+                {% if current_user.role in ['root', 'admin', 'coordinator'] %}
+                <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline mt-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        &#9881;&#65039; Ejecutar Motor Autom&#225;tico
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.podium-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.podium-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+.podium-first {
+    transform: scale(1.05);
+}
+.podium-first:hover {
+    transform: scale(1.05) translateY(-10px);
+}
+.medal {
+    font-size: 4rem;
+    line-height: 1;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var gradeFilter = document.getElementById('grade-filter');
+    if (gradeFilter) {
+        gradeFilter.addEventListener('change', function() {
+            var selectedGrade = this.value;
+            var rows = document.querySelectorAll('#leaderboard-table tbody tr');
+            rows.forEach(function(row) {
+                var gradeCell = row.querySelector('td:nth-child(3)');
+                if (gradeCell) {
+                    var gradeText = gradeCell.textContent.trim();
+                    if (!selectedGrade || gradeText.includes(selectedGrade)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

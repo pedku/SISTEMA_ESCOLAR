@@ -1,1 +1,182 @@
-{% extends "base.html" %}{% block title %}Notas del Acudido{% endblock %}{% block content %}<div class="container mt-5"><h1>Notas del Acudido</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Notas - {{ student_user.get_full_name() if student_user else 'Estudiante' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-cell { font-weight: 700; text-align: center; padding: 8px; border-radius: 8px; }
+    .grade-good { background-color: rgba(25, 135, 84, 0.1); color: #198754; }
+    .grade-fair { background-color: rgba(255, 193, 7, 0.1); color: #856404; }
+    .grade-poor { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .arrow-up { color: #198754; }
+    .arrow-down { color: #dc3545; }
+    .arrow-same { color: #6c757d; }
+    .summary-card { border-radius: 12px; border: none; }
+    .table thead th { border-bottom: 2px solid #dee2e6; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .avg-row { background-color: rgba(13, 110, 253, 0.05); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-door"></i> Portal</a></li>
+                    <li class="breadcrumb-item active">Notas</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Notas de {{ student_user.get_full_name() if student_user else 'Estudiante' }}</h1>
+            {% if student.grade %}
+            <p class="text-muted mb-0">{{ student.grade.name }}{% if student.campus %} - Sede: {{ student.campus.name }}{% endif %}</p>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('parent.parent_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card summary-card shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="display-4 fw-bold {% if overall_avg >= 3.0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ "%.2f"|format(overall_avg) if overall_avg > 0 else 'N/A' }}
+                    </div>
+                    <p class="text-muted mb-0">Promedio General</p>
+                    {% if overall_avg >= 3.0 %}
+                        <span class="badge bg-success mt-2"><i class="bi bi-check-circle me-1"></i>Aprobado</span>
+                    {% elif overall_avg > 0 %}
+                        <span class="badge bg-danger mt-2"><i class="bi bi-x-circle me-1"></i>Reprobado</span>
+                    {% else %}
+                        <span class="badge bg-secondary mt-2">Sin notas</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card summary-card shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Escala de Calificacion</h6>
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="p-2 rounded grade-good">4.6 - 5.0</div>
+                            <small class="text-muted">Superior</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="p-2 rounded grade-fair" style="background-color: rgba(255,193,7,0.1); color: #856404;">4.0 - 4.5</div>
+                            <small class="text-muted">Alto</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="p-2 rounded" style="background-color: rgba(13,110,253,0.1); color: #0d6efd;">3.0 - 3.9</div>
+                            <small class="text-muted">Basico</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="p-2 rounded grade-poor">1.0 - 2.9</div>
+                            <small class="text-muted">Bajo</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grades Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-4"><i class="bi bi-table me-2"></i>Calificaciones por Periodo</h5>
+
+            {% if periods and grade_matrix %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="gradesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width:200px;">Materia</th>
+                            {% for period in periods %}
+                            <th class="text-center">{{ period.short_name }}</th>
+                            {% endfor %}
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in grade_matrix %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.subject_name }}</td>
+                            {% for period in periods %}
+                                {% set fg = row.periods.get(period.id) %}
+                                <td class="text-center">
+                                    {% if fg and fg.final_score > 0 %}
+                                        {% set score = fg.final_score %}
+                                        {% if score >= 4.0 %}
+                                            <span class="grade-cell grade-good">{{ "%.1f"|format(score) }}</span>
+                                        {% elif score >= 3.0 %}
+                                            <span class="grade-cell" style="background-color: rgba(13,110,253,0.1); color: #0d6efd;">{{ "%.1f"|format(score) }}</span>
+                                        {% else %}
+                                            <span class="grade-cell grade-poor">{{ "%.1f"|format(score) }}</span>
+                                        {% endif %}
+
+                                        <!-- Comparison with previous period -->
+                                        {% if row.previous_avg is not none %}
+                                            {% if score > row.previous_avg %}
+                                                <br><small class="arrow-up"><i class="bi bi-arrow-up"></i></small>
+                                            {% elif score < row.previous_avg %}
+                                                <br><small class="arrow-down"><i class="bi bi-arrow-down"></i></small>
+                                            {% else %}
+                                                <br><small class="arrow-same"><i class="bi bi-dash"></i></small>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center">
+                                {% set last_fg = row.periods.values() | selectattr('final_score', 'defined') | selectattr('final_score', 'gt', 0) | list | last if row.periods.values() | selectattr('final_score', 'defined') | selectattr('final_score', 'gt', 0) | list else none %}
+                                {% if last_fg %}
+                                    {% if last_fg.status == 'ganada' or last_fg.final_score >= 3.0 %}
+                                        <span class="badge bg-success">Aprobado</span>
+                                    {% elif last_fg.status == 'perdida' or last_fg.final_score < 3.0 %}
+                                        <span class="badge bg-danger">Reprobado</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No evaluado</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-light text-muted">Sin notas</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No hay notas registradas</h5>
+                <p class="text-muted">Las notas apareceran cuando los profesores las registren.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#gradesTable').DataTable({
+        language: {
+            "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json"
+        },
+        paging: true,
+        searching: true,
+        ordering: true,
+        info: false,
+        pageLength: 15
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

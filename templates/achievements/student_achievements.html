@@ -1,1 +1,216 @@
-{% extends "base.html" %}{% block title %}Logros del Estudiante{% endblock %}{% block content %}<div class="container mt-5"><h1>Logros del Estudiante</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Logros de {{ user.get_full_name() if user else 'Estudiante' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>&#127942; Logros de {{ user.get_full_name() if user else 'Estudiante' }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('students.student_detail', id=student.id) }}" class="btn btn-outline-secondary">
+                &#8592; Volver al Estudiante
+            </a>
+            {% if current_user.role in ['root', 'admin', 'coordinator'] %}
+            <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline">
+                <input type="hidden" name="student_id" value="{{ student.id }}">
+                <button type="submit" class="btn btn-primary">
+                    &#9881;&#65039; Ejecutar Motor
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Student Info Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    {% if student.photo %}
+                    <img src="{{ url_for('static', filename='uploads/photos/' + student.photo) }}"
+                         class="rounded-circle" width="80" height="80" alt="Foto">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto"
+                         style="width: 80px; height: 80px;">
+                        <span class="text-white fs-3">&#128100;</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <h5 class="mb-1">{{ user.get_full_name() if user else 'Estudiante' }}</h5>
+                    <p class="text-muted mb-0">
+                        {% if student.grade %}
+                        Grado: {{ student.grade.name }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fs-4 fw-bold text-primary">{{ achievements|length }}</div>
+                                <small class="text-muted">Logros</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fs-4 fw-bold text-success">
+                                    {{ achievements|selectattr('achievement.category', 'equalto', 'acad&#233;mico')|list|length }}
+                                </div>
+                                <small class="text-muted">Acad&#233;micos</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fs-4 fw-bold text-warning">
+                                    {{ achievements|selectattr('achievement.category', 'equalto', 'mejora')|list|length }}
+                                </div>
+                                <small class="text-muted">Mejora</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="row">
+        <div class="col-lg-8">
+            {% if achievements %}
+            <div class="timeline">
+                {% for sa in achievements %}
+                <div class="timeline-item">
+                    <div class="timeline-marker" style="background-color: {% if sa.achievement.category == 'acad&#233;mico' %}#0d6efd{% elif sa.achievement.category == 'asistencia' %}#198754{% elif sa.achievement.category == 'comportamiento' %}#ffc107{% elif sa.achievement.category == 'mejora' %}#dc3545{% else %}#6c757d{% endif %};">
+                    </div>
+                    <div class="timeline-content">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span style="font-size: 2.5rem;">{{ sa.achievement.icon }}</span>
+                                        <div>
+                                            <h5 class="mb-1">{{ sa.achievement.name }}</h5>
+                                            <p class="text-muted mb-1 small">{{ sa.achievement.description }}</p>
+                                            <span class="badge bg-secondary">{{ sa.achievement.category }}</span>
+                                            {% if sa.period_id %}
+                                            <span class="badge bg-info">Periodo #{{ sa.period_id }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">{{ sa.earned_at.strftime('%d/%m/%Y') if sa.earned_at else 'N/A' }}</small>
+                                        <br>
+                                        <small class="text-muted">{{ sa.earned_at.strftime('%H:%M') if sa.earned_at else '' }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <h5>&#128203; Sin logros a&#250;n</h5>
+                <p>Este estudiante a&#250;n no ha obtenido logros. Ejecuta el motor autom&#225;tico o otorga logros manualmente.</p>
+                {% if current_user.role in ['root', 'admin', 'coordinator'] %}
+                <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline mt-2">
+                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        &#9881;&#65039; Ejecutar Motor para este Estudiante
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar: Quick Award -->
+        <div class="col-lg-4">
+            {% if current_user.role in ['root', 'admin', 'coordinator'] %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">&#127942; Otorgar Logro R&#225;pido</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('achievements.award_achievement_manual') }}">
+                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                        <div class="mb-3">
+                            <label for="quick-achievement" class="form-label">Logro:</label>
+                            <select class="form-select" name="achievement_id" id="quick-achievement" required>
+                                <option value="">-- Seleccionar --</option>
+                                <!-- Achievements loaded via JS or pre-populated -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Otorgar</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load achievements into quick award select
+    var select = document.getElementById('quick-achievement');
+    if (select) {
+        fetch('{{ url_for("achievements.api_achievements_list") }}')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var achs = data.achievements || [];
+                achs.forEach(function(a) {
+                    var opt = document.createElement('option');
+                    opt.value = a.id;
+                    opt.textContent = a.icon + ' ' + a.name;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(function() { /* ignore */ });
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #dee2e6;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -33px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+    z-index: 1;
+}
+.timeline-content .card {
+    border: 1px solid #dee2e6;
+    transition: box-shadow 0.2s;
+}
+.timeline-content .card:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

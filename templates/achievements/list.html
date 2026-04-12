@@ -1,1 +1,188 @@
-{% extends "base.html" %}{% block title %}Logros{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-trophy"></i> Logros y Gamificación</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5><p>El sistema de logros estará disponible próximamente.</p></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Logros{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><span class="trophy-icon">&#127942;</span> Logros y Gamificaci&#243;n</h2>
+        <div>
+            <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('&#191;Ejecutar el motor de logros para todos los estudiantes?')">
+                    <span class="spinner-border spinner-border-sm d-none" id="engine-spinner"></span>
+                    &#9881;&#65039; Ejecutar Motor Autom&#225;tico
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <strong>Filtrar por categor&#237;a:</strong>
+                <a href="{{ url_for('achievements.achievements_list') }}"
+                   class="btn btn-sm {% if not selected_category %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Todos
+                </a>
+                {% for cat in categories %}
+                <a href="{{ url_for('achievements.achievements_list', category=cat) }}"
+                   class="btn btn-sm {% if selected_category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    {{ cat }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievements Grid -->
+    {% if achievements %}
+    <div class="row g-4">
+        {% for achievement in achievements %}
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 achievement-card text-center">
+                <div class="card-body">
+                    <div class="achievement-icon mb-3" style="font-size: 3rem;">
+                        {{ achievement.icon }}
+                    </div>
+                    <h5 class="card-title">{{ achievement.name }}</h5>
+                    <p class="card-text text-muted small">{{ achievement.description }}</p>
+                    <span class="badge bg-secondary">{{ achievement.category }}</span>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Otorgado {{ achievement_counts.get(achievement.id, 0) }} veces
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                            data-bs-toggle="modal" data-bs-target="#awardModal"
+                            data-achievement-id="{{ achievement.id }}"
+                            data-achievement-name="{{ achievement.name }}">
+                        &#127942; Otorgar Manualmente
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <h5><i class="bi bi-info-circle"></i> Sin logros disponibles</h5>
+        <p>No hay logros configurados para esta instituci&#243;n.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Award Modal -->
+<div class="modal fade" id="awardModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('achievements.award_achievement_manual') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">&#127942; Otorgar Logro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="achievement_id" id="modal-achievement-id">
+                    <div class="mb-3">
+                        <label class="form-label">Logro a otorgar:</label>
+                        <input type="text" class="form-control" id="modal-achievement-name" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-student-id" class="form-label">Estudiante:</label>
+                        <select class="form-select" name="student_id" id="modal-student-id" required>
+                            <option value="">-- Seleccionar estudiante --</option>
+                            <!-- Students would be loaded via AJAX or pre-populated -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-period-id" class="form-label">Periodo (opcional):</label>
+                        <select class="form-select" name="period_id" id="modal-period-id">
+                            <option value="">-- Sin periodo espec&#237;fico --</option>
+                            <!-- Periods would be loaded -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Otorgar Logro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var awardModal = document.getElementById('awardModal');
+    if (awardModal) {
+        awardModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var achievementId = button.getAttribute('data-achievement-id');
+            var achievementName = button.getAttribute('data-achievement-name');
+
+            document.getElementById('modal-achievement-id').value = achievementId;
+            document.getElementById('modal-achievement-name').value = achievementName;
+        });
+    }
+
+    // Load students into modal via fetch
+    var studentSelect = document.getElementById('modal-student-id');
+    if (studentSelect) {
+        fetch('/students/api/students?limit=500')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var students = data.students || [];
+                students.forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name || s.full_name || ('Estudiante #' + s.id);
+                    studentSelect.appendChild(opt);
+                });
+            })
+            .catch(function() { /* ignore */ });
+    }
+
+    // Load periods into modal
+    var periodSelect = document.getElementById('modal-period-id');
+    if (periodSelect) {
+        // Try to load periods from grades API
+        fetch('/grades/api/periods')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var periods = data.periods || [];
+                periods.forEach(function(p) {
+                    var opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name || p.short_name || ('Periodo #' + p.id);
+                    periodSelect.appendChild(opt);
+                });
+            })
+            .catch(function() { /* ignore */ });
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.achievement-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+}
+.achievement-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: #ffc107;
+}
+.achievement-icon {
+    transition: transform 0.3s;
+}
+.achievement-card:hover .achievement-icon {
+    transform: scale(1.15);
+}
+</style>
+{% endblock %}

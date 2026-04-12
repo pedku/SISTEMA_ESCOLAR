@@ -1,1 +1,325 @@
-{% extends "base.html" %}{% block title %}Asistencia del Acudido{% endblock %}{% block content %}<div class="container mt-5"><h1>Asistencia del Acudido</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Asistencia - {{ student.user.get_full_name() if student.user else 'Estudiante' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-day { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: 600; font-size: 0.95rem; }
+    .calendar-presente { background-color: rgba(25, 135, 84, 0.15); color: #198754; }
+    .calendar-ausente { background-color: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .calendar-justificado { background-color: rgba(255, 193, 7, 0.15); color: #856404; }
+    .calendar-empty { background-color: #f8f9fa; color: #adb5bd; }
+    .calendar-today { outline: 2px solid #0d6efd; }
+    .stat-box { border-radius: 12px; border: none; text-align: center; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+    .month-nav-btn { transition: all 0.2s; }
+    .month-nav-btn:hover { transform: scale(1.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-door"></i> Portal</a></li>
+                    <li class="breadcrumb-item active">Asistencia</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-calendar-check text-success me-2"></i>Asistencia de {{ student.user.get_full_name() if student.user else 'Estudiante' }}</h1>
+        </div>
+        <a href="{{ url_for('parent.parent_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Month Navigation -->
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        <a href="{{ url_for('parent.parent_view_attendance', student_id=student.id, month=prev_month, year=prev_year) }}"
+           class="btn btn-outline-primary month-nav-btn me-3">
+            <i class="bi bi-chevron-left"></i> Anterior
+        </a>
+        <h4 class="mb-0 fw-bold">{{ month_name }} {{ selected_year }}</h4>
+        <a href="{{ url_for('parent.parent_view_attendance', student_id=student.id, month=next_month, year=next_year) }}"
+           class="btn btn-outline-primary month-nav-btn ms-3">
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-4 mb-4">
+        <!-- Month Stats -->
+        <div class="col-md-6">
+            <div class="card shadow-sm stat-box h-100">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-muted mb-3"><i class="bi bi-calendar-month me-2"></i>Estadisticas del Mes</h6>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <div class="p-3 bg-success bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-success mb-0">{{ month_stats.presentes }}</div>
+                                <small class="text-success">Presentes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-danger bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-danger mb-0">{{ month_stats.ausentes }}</div>
+                                <small class="text-danger">Ausentes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-warning bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-warning mb-0">{{ month_stats.justificados }}</div>
+                                <small class="text-warning">Justificados</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>% Asistencia</small>
+                            <small class="fw-bold">{{ month_stats.attendance_pct }}%</small>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ month_stats.attendance_pct }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Year Stats -->
+        <div class="col-md-6">
+            <div class="card shadow-sm stat-box h-100">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-muted mb-3"><i class="bi bi-calendar-year me-2"></i>Estadisticas del Ano ({{ selected_year }})</h6>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <div class="p-3 bg-success bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-success mb-0">{{ year_stats.presentes }}</div>
+                                <small class="text-success">Presentes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-danger bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-danger mb-0">{{ year_stats.ausentes }}</div>
+                                <small class="text-danger">Ausentes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-warning bg-opacity-10 rounded">
+                                <div class="h4 fw-bold text-warning mb-0">{{ year_stats.justificados }}</div>
+                                <small class="text-warning">Justificados</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>% Asistencia Anual</small>
+                            <small class="fw-bold">{{ year_stats.attendance_pct }}%</small>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ year_stats.attendance_pct }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar & Chart -->
+    <div class="row g-4 mb-4">
+        <!-- Calendar -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-calendar3 me-2"></i>Calendario - {{ month_name }}</h6>
+                    <!-- Day headers -->
+                    <div class="row g-1 mb-2 text-center text-muted small fw-bold">
+                        <div class="col">Lun</div>
+                        <div class="col">Mar</div>
+                        <div class="col">Mie</div>
+                        <div class="col">Jue</div>
+                        <div class="col">Vie</div>
+                        <div class="col">Sab</div>
+                        <div class="col">Dom</div>
+                    </div>
+                    <!-- Calendar grid -->
+                    {% for i in range(0, calendar_days|length, 7) %}
+                    <div class="row g-1 mb-1">
+                        {% for j in range(7) %}
+                            {% set idx = i + j %}
+                            {% if idx < calendar_days|length %}
+                                {% set day = calendar_days[idx] %}
+                                {% if day is none %}
+                                <div class="col"></div>
+                                {% else %}
+                                    {% set status = attendance_map.get(day) %}
+                                    {% set day_class = 'calendar-empty' %}
+                                    {% if status == 'presente' %}
+                                        {% set day_class = 'calendar-presente' %}
+                                    {% elif status == 'ausente' %}
+                                        {% set day_class = 'calendar-ausente' %}
+                                    {% elif status in ['justificado', 'excusado'] %}
+                                        {% set day_class = 'calendar-justificado' %}
+                                    {% endif %}
+                                <div class="col">
+                                    <div class="calendar-day {{ day_class }}" title="{{ day }}/{{ selected_month }}: {{ status or 'Sin registro' }}">
+                                        {{ day }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="col"></div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    <!-- Legend -->
+                    <div class="d-flex gap-3 mt-3 justify-content-center">
+                        <span><span class="legend-dot bg-success me-1"></span>Presente</span>
+                        <span><span class="legend-dot bg-danger me-1"></span>Ausente</span>
+                        <span><span class="legend-dot bg-warning me-1"></span>Justificado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie Chart -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2"></i>Distribucion del Mes</h6>
+                    <canvas id="attendancePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line me-2"></i>Asistencia Mensual - {{ selected_year }}</h6>
+            <canvas id="attendanceBarChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Detailed History Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-2"></i>Historial Detallado</h6>
+            <div class="table-responsive">
+                <table class="table table-hover" id="attendanceHistoryTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Observacion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in history %}
+                        <tr>
+                            <td>{{ record.date.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {% if record.status == 'presente' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Presente</span>
+                                {% elif record.status == 'ausente' %}
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Ausente</span>
+                                {% elif record.status == 'justificado' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-bookmark-check me-1"></i>Justificado</span>
+                                {% elif record.status == 'excusado' %}
+                                    <span class="badge bg-info"><i class="bi bi-info-circle me-1"></i>Excusado</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ record.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ record.observation or '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center text-muted">No hay registros de asistencia</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Pie Chart
+    const pieCtx = document.getElementById('attendancePieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Presentes', 'Ausentes', 'Justificados'],
+            datasets: [{
+                data: [{{ month_stats.presentes }}, {{ month_stats.ausentes }}, {{ month_stats.justificados }}],
+                backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Bar Chart
+    const barCtx = document.getElementById('attendanceBarChart').getContext('2d');
+    const barData = {{ monthly_data | tojson }};
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: barData.map(d => d.month),
+            datasets: [
+                {
+                    label: 'Presentes',
+                    data: barData.map(d => d.presentes),
+                    backgroundColor: '#198754',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Ausentes',
+                    data: barData.map(d => d.ausentes),
+                    backgroundColor: '#dc3545',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Justificados',
+                    data: barData.map(d => d.justificados),
+                    backgroundColor: '#ffc107',
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true }
+            },
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // DataTable
+    $('#attendanceHistoryTable').DataTable({
+        language: {
+            "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json"
+        },
+        paging: true,
+        searching: true,
+        ordering: true,
+        order: [[0, 'desc']],
+        info: false,
+        pageLength: 10
+    });
+});
+</script>
+{% endblock %}
