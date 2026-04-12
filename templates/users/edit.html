@@ -2,16 +2,67 @@
 
 {% block title %}Editar Usuario - {{ user.username }}{% endblock %}
 
-{% block content %}
-<div class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Editar Usuario: {{ user.username }}</h1>
-            <a href="{{ url_for('users.users_list') }}" class="text-gray-600 hover:text-gray-800">← Volver</a>
-        </div>
+{% block extra_css %}
+<style>
+    .form-section { border-bottom: 1px solid #e9ecef; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    .section-number { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; }
+</style>
+{% endblock %}
 
-        <!-- Reuse create form -->
-        {% include 'users/create.html' %}
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div><h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-person-gear text-primary me-2"></i>Editar Usuario: {{ user.username }}</h1><p class="text-muted mb-0">Modifica los datos del usuario</p></div>
+        <a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card card-modern shadow-sm animate-in delay-1">
+                <div class="card-body p-4">
+                    <form method="POST" id="userForm">
+                        <div class="form-section">
+                            <h5 class="fw-bold mb-3"><span class="section-number bg-primary bg-opacity-10 text-primary me-2">1</span>📋 Información Personal</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label fw-semibold">Nombres</label><input type="text" name="first_name" required value="{{ user.first_name }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-6"><label class="form-label fw-semibold">Apellidos</label><input type="text" name="last_name" required value="{{ user.last_name }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Tipo Documento</label><select name="document_type" required class="form-select form-select-lg"><option value="CC" {% if user.document_type == 'CC' %}selected{% endif %}>CC</option><option value="TI" {% if user.document_type == 'TI' %}selected{% endif %}>TI</option><option value="RC" {% if user.document_type == 'RC' %}selected{% endif %}>RC</option><option value="CE" {% if user.document_type == 'CE' %}selected{% endif %}>CE</option></select></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Nº Documento</label><input type="text" name="document_number" value="{{ user.document_number or '' }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Fecha Nacimiento</label><input type="date" name="birth_date" value="{{ user.birth_date.strftime('%Y-%m-%d') if user.birth_date else '' }}" class="form-control form-control-lg"></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h5 class="fw-bold mb-3"><span class="section-number bg-success bg-opacity-10 text-success me-2">2</span>📞 Información de Contacto</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label fw-semibold">Email</label><input type="email" name="email" required value="{{ user.email }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-6"><label class="form-label fw-semibold">Teléfono</label><input type="tel" name="phone" value="{{ user.phone or '' }}" class="form-control form-control-lg"></div>
+                                <div class="col-12"><label class="form-label fw-semibold">Dirección</label><input type="text" name="address" value="{{ user.address or '' }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">País</label><select name="country" class="form-select form-select-lg"><option value="Colombia" {% if user.country == 'Colombia' %}selected{% endif %}>🇨🇴 Colombia</option><option value="México" {% if user.country == 'México' %}selected{% endif %}>🇲🇽 México</option><option value="Venezuela" {% if user.country == 'Venezuela' %}selected{% endif %}>🇻🇪 Venezuela</option><option value="Ecuador" {% if user.country == 'Ecuador' %}selected{% endif %}>🇪🇨 Ecuador</option><option value="Perú" {% if user.country == 'Perú' %}selected{% endif %}>🇵🇪 Perú</option><option value="Otro" {% if user.country not in ['Colombia','México','Venezuela','Ecuador','Perú'] %}selected{% endif %}>Otro</option></select></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Departamento</label><input type="text" name="department" value="{{ user.department or '' }}" class="form-control form-control-lg"></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Municipio</label><input type="text" name="municipality" value="{{ user.municipality or '' }}" class="form-control form-control-lg"></div>
+                            </div>
+                        </div>
+                        <div class="form-section border-0 pb-0 mb-0">
+                            <h5 class="fw-bold mb-3"><span class="section-number bg-warning bg-opacity-10 text-warning me-2">3</span>🔑 Cuenta</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label fw-semibold">Rol</label>{% if current_user.is_root() %}<select name="role" required class="form-select form-select-lg"><option value="root" {% if user.role == 'root' %}selected{% endif %}>🔴 Root</option><option value="admin" {% if user.role == 'admin' %}selected{% endif %}>🔵 Admin</option><option value="coordinator" {% if user.role == 'coordinator' %}selected{% endif %}>🟣 Coordinador</option><option value="teacher" {% if user.role == 'teacher' %}selected{% endif %}>🟡 Profesor</option><option value="student" {% if user.role == 'student' %}selected{% endif %}>🟢 Estudiante</option><option value="parent" {% if user.role == 'parent' %}selected{% endif %}>🔵 Acudiente</option><option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>⚪ Viewer</option></select>{% else %}<input type="text" class="form-control form-control-lg" value="{{ user.role }}" disabled><input type="hidden" name="role" value="{{ user.role }}">{% endif %}</div>
+                                {% if current_user.is_root() %}
+                                <div class="col-md-6"><label class="form-label fw-semibold">Institución</label><select name="institution_id" class="form-select form-select-lg"><option value="">Sin institución</option>{% for inst in institutions %}<option value="{{ inst.id }}" {% if user.institution_id == inst.id %}selected{% endif %}>{{ inst.name }}</option>{% endfor %}</select></div>
+                                {% endif %}
+                                <div class="col-12"><label class="form-label fw-semibold">Nueva Contraseña (opcional)</label><input type="password" name="new_password" minlength="6" class="form-control form-control-lg"><div class="form-text">Dejar vacío para mantener la actual</div></div>
+                            </div>
+                        </div>
+                        {% if user.role != 'root' %}
+                        <div class="form-check mb-3"><input type="checkbox" name="is_active" id="is_active" {% if user.is_active %}checked{% endif %} class="form-check-input"><label for="is_active" class="form-check-label">Usuario activo</label></div>
+                        {% endif %}
+                        <div class="d-flex gap-2 pt-3 border-top"><button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-circle me-1"></i>💾 Actualizar</button><a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary btn-lg">Cancelar</a></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-modern shadow-sm animate-in delay-2"><div class="card-body p-4"><h6 class="fw-bold mb-3"><i class="bi bi-person-badge text-info me-2"></i>Usuario Actual</h6><table class="table table-sm mb-0"><tr><td class="text-muted">Username:</td><td class="fw-semibold">{{ user.username }}</td></tr><tr><td class="text-muted">Email:</td><td class="fw-semibold">{{ user.email }}</td></tr><tr><td class="text-muted">Rol:</td><td class="fw-semibold">{{ user.role }}</td></tr><tr><td class="text-muted">Creado:</td><td class="fw-semibold">{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else '-' }}</td></tr></table></div></div>
+        </div>
     </div>
 </div>
 {% endblock %}

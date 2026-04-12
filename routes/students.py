@@ -100,7 +100,7 @@ def profile(id):
 
 @students_bp.route('/new', methods=['GET', 'POST'])
 @login_required
-@role_required('root', 'admin')
+@role_required('root', 'admin', 'coordinator')
 def new():
     """Create a new student."""
     institution = get_current_institution()
@@ -221,7 +221,7 @@ def new():
 
 @students_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('root', 'admin')
+@role_required('root', 'admin', 'coordinator')
 def edit(id):
     """Edit an existing student."""
     student = db.session.get(AcademicStudent, id)
@@ -279,7 +279,7 @@ def edit(id):
 
 @students_bp.route('/<int:id>/delete', methods=['POST'])
 @login_required
-@role_required('root', 'admin')
+@role_required('root', 'admin', 'coordinator')
 def delete(id):
     """Delete a student."""
     student = db.session.get(AcademicStudent, id)
@@ -309,7 +309,7 @@ def delete(id):
 
 @students_bp.route('/upload', methods=['GET', 'POST'])
 @login_required
-@role_required('root', 'admin')
+@role_required('root', 'admin', 'coordinator')
 def upload():
     """Upload students from Excel file."""
     institution = get_current_institution()
