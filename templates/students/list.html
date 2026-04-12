@@ -112,12 +112,11 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('students.profile', id=s.user_id) }}" class="btn btn-sm btn-outline-primary" title="Ver perfil"><i class="bi bi-eye"></i></a>
+                                    <a href="{{ url_for('students.profile', id=s.id) }}" class="btn btn-sm btn-outline-primary" title="Ver perfil"><i class="bi bi-eye"></i></a>
                                     <a href="{{ url_for('students.edit', id=s.id) }}" class="btn btn-sm btn-outline-warning" title="Editar"><i class="bi bi-pencil"></i></a>
                                     <a href="{{ url_for('observations.quick_observation', student_id=s.id) }}" class="btn btn-sm btn-outline-info" title="Observación"><i class="bi bi-chat-left-text"></i></a>
-                                    <form method="POST" action="{{ url_for('students.delete', id=s.id) }}" class="d-inline" onsubmit="return confirm('¿Eliminar este estudiante?')">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                            onclick="confirmDelete('{{ url_for('students.delete', id=s.id) }}')"><i class="bi bi-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -201,6 +200,16 @@
 
 {% block extra_js %}
 <script>
+function confirmDelete(url) {
+    if (confirm('¿Eliminar este estudiante? Esta acción no se puede deshacer.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
 $(document).ready(function() {
     $('#studentsTable').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },

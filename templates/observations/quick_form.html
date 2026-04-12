@@ -7,7 +7,7 @@
     <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800">Observación Rápida</h1>
-            <a href="{{ url_for('students.student_profile', id=student.user_id) }}" 
+            <a href="{{ url_for('students.profile', id=student.user_id) }}" 
                class="text-gray-600 hover:text-gray-800">
                 ← Volver al perfil
             </a>
@@ -83,7 +83,7 @@
                         class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium">
                     Crear Observación
                 </button>
-                <a href="{{ url_for('students.student_profile', id=student.user_id) }}" 
+                <a href="{{ url_for('students.profile', id=student.user_id) }}" 
                    class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
                     Cancelar
                 </a>

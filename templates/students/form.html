@@ -1,20 +1,66 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Editar' if student else 'Nuevo' }} Estudiante{% endblock %}
+{% block title %}{{ 'Editar' if student else (existing_user and 'Completar Perfil' or 'Nuevo') }} Estudiante{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in flex-wrap gap-2">
         <div>
-            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-person-plus text-primary me-2"></i>{{ 'Editar' if student else 'Nuevo' }} Estudiante</h1>
-            <p class="text-muted mb-0">{{ 'Modifica los datos del estudiante' if student else 'Complete los datos para matricular un nuevo estudiante' }}</p>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-mortarboard-fill text-primary me-2"></i>
+                {% if student %}Editar Estudiante
+                {% elif existing_user %}Completar Perfil Académico
+                {% else %}Nuevo Estudiante{% endif %}
+            </h1>
+            <p class="text-muted mb-0">
+                {% if student %}Modifica los datos del estudiante
+                {% elif existing_user %}Complete la información académica de {{ existing_user.get_full_name() }}
+                {% else %}Complete los datos para matricular un nuevo estudiante{% endif %}
+            </p>
         </div>
-        <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+        <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
     </div>
+
+    {% if existing_user %}
+    <!-- Existing User Banner -->
+    <div class="card border-start border-4 border-success mb-4 animate-in">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="bi bi-person-check text-success fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-bold">{{ existing_user.get_full_name() }}</h6>
+                    <small class="text-muted">
+                        <i class="bi bi-person-badge me-1"></i>{{ existing_user.username }}
+                        | <i class="bi bi-card-text me-1"></i>{{ existing_user.document_type }}: {{ existing_user.document_number }}
+                        | <i class="bi bi-envelope me-1"></i>{{ existing_user.email }}
+                    </small>
+                </div>
+                <span class="badge bg-success fs-6 px-3 py-2">
+                    <i class="bi bi-check-circle me-1"></i>Usuario Creado
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info mb-4 animate-in">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-5 me-2 flex-shrink-0"></i>
+            <div>
+                <strong>Información personal ya registrada:</strong> Nombre, documento, email y teléfono fueron creados. 
+                Ahora solo necesita completar la información académica y del acudiente.
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if not institution and institutions %}
     <!-- Institution Selector for Root -->
-    <div class="card card-modern shadow-sm mb-4 animate-in" style="border-radius:15px;">
+    <div class="card shadow-sm mb-4 animate-in" style="border-radius:15px;">
         <div class="card-header bg-warning bg-opacity-10 border-bottom">
             <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Seleccionar Institución</h5>
         </div>
@@ -39,92 +85,84 @@
     {% else %}
 
     {% if institution %}
-    <div class="alert alert-info alert-dismissible fade show mb-4 animate-in" role="alert">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Institución seleccionada:</strong> {{ institution.name }}
-        {% if current_user.is_root() %}
-        <span class="ms-2">|</span>
-        <a href="{{ url_for('students.new', change_institution=1) }}" class="alert-link ms-2">
-            <i class="bi bi-arrow-repeat me-1"></i>Cambiar institución
-        </a>
-        {% endif %}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    
-    <div class="card shadow-sm border-0 border-start border-4 border-info mb-4 animate-in" style="border-radius:15px;">
-        <div class="card-body py-3 px-4">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-building text-info fs-4 me-3"></i>
-                    <div>
-                        <h5 class="mb-0 fw-bold">{{ institution.name }}</h5>
-                        {% if institution.municipality %}
-                        <p class="text-muted mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}, {{ institution.department }}</p>
-                        {% endif %}
-                    </div>
+    <div class="card border-start border-4 border-primary mb-4 animate-in">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="bi bi-building text-primary fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold">{{ institution.name }}</h6>
+                    <small class="text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}{% if institution.department %}, {{ institution.department }}{% endif %}
+                    </small>
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
-    
+
     <form method="POST" class="needs-validation" novalidate>
         <div class="row">
-            <!-- User Information -->
+            {% if not existing_user %}
+            <!-- Full Creation: User Information -->
             <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-person"></i> Información del Usuario</h5>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-person-fill text-primary me-2"></i>Información del Usuario
+                        </h6>
                     </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Nombre *</label>
-                                <input type="text" name="first_name" class="form-control" 
-                                       value="{{ student.user.first_name if student else '' }}" required>
+                                <label class="form-label fw-semibold">Nombre *</label>
+                                <input type="text" name="first_name" class="form-control" required
+                                       value="{{ student.user.first_name if student else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Apellido *</label>
-                                <input type="text" name="last_name" class="form-control" 
-                                       value="{{ student.user.last_name if student else '' }}" required>
+                                <label class="form-label fw-semibold">Apellido *</label>
+                                <input type="text" name="last_name" class="form-control" required
+                                       value="{{ student.user.last_name if student else '' }}">
                             </div>
                         </div>
-                        
-                        <div class="row mb-3">
+
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Tipo de Documento</label>
+                                <label class="form-label fw-semibold">Tipo de Documento</label>
                                 <select name="document_type" class="form-select" {% if student %}disabled{% endif %}>
                                     <option value="TI" {% if student and student.document_type == 'TI' %}selected{% endif %}>TI</option>
                                     <option value="RC" {% if student and student.document_type == 'RC' %}selected{% endif %}>RC</option>
                                     <option value="CC" {% if student and student.document_type == 'CC' %}selected{% endif %}>CC</option>
                                 </select>
-                                {% if not student %}
+                                {% if student %}
+                                <input type="hidden" name="document_type" value="{{ student.document_type }}">
                                 <small class="text-muted">No editable después de crear</small>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Número de Documento *</label>
-                                <input type="text" name="document_number" class="form-control" 
-                                       value="{{ student.document_number if student else '' }}" 
-                                       {% if student %}readonly{% endif %} required>
+                                <label class="form-label fw-semibold">Número de Documento *</label>
+                                <input type="text" name="document_number" class="form-control" required
+                                       value="{{ student.document_number if student else '' }}"
+                                       {% if student %}readonly{% endif %}>
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" name="phone" class="form-control" 
-                                   value="{{ student.user.phone if student else '' }}">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" name="phone" class="form-control"
+                                   value="{{ student.user.phone if student and student.user else '' }}">
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <input type="text" name="address" class="form-control" 
-                                   value="{{ student.user.address if student else '' }}">
+                            <label class="form-label fw-semibold">Dirección</label>
+                            <input type="text" name="address" class="form-control"
+                                   value="{{ student.user.address if student and student.user else '' }}">
                         </div>
-                        
+
                         {% if not student %}
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> 
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
                             <strong>Usuario automático:</strong> Se generará automáticamente<br>
                             <strong>Contraseña por defecto:</strong> estudiante123
                         </div>
@@ -132,26 +170,37 @@
                     </div>
                 </div>
             </div>
-            
+            {% else %}
+            <!-- Academic Profile Only: Hidden fields for existing user -->
+            <input type="hidden" name="first_name" value="{{ existing_user.first_name }}">
+            <input type="hidden" name="last_name" value="{{ existing_user.last_name }}">
+            <input type="hidden" name="document_type" value="{{ existing_user.document_type }}">
+            <input type="hidden" name="document_number" value="{{ existing_user.document_number }}">
+            <input type="hidden" name="phone" value="{{ existing_user.phone or '' }}">
+            <input type="hidden" name="address" value="{{ existing_user.address or '' }}">
+            {% endif %}
+
             <!-- Academic Information -->
-            <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-mortarboard"></i> Información Académica</h5>
+            <div class="{% if not existing_user %}col-md-6{% else %}col-12{% endif %}">
+                <div class="card shadow-sm {% if not existing_user %}mb-4{% endif %}">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-mortarboard-fill text-success me-2"></i>Información Académica
+                        </h6>
                     </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Sede *</label>
+                                <label class="form-label fw-semibold">Sede *</label>
                                 <select name="campus_id" class="form-select" required>
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Seleccionar sede...</option>
                                     {% for campus in campuses %}
                                     <option value="{{ campus.id }}" {% if student and student.campus_id == campus.id %}selected{% endif %}>{{ campus.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Grado</label>
+                                <label class="form-label fw-semibold">Grado</label>
                                 <select name="grade_id" class="form-select">
                                     <option value="">Sin asignar</option>
                                     {% for grade in grades %}
@@ -160,15 +209,15 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <div class="row mb-3">
+
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Fecha de Nacimiento</label>
-                                <input type="date" name="birth_date" class="form-control" 
+                                <label class="form-label fw-semibold">Fecha de Nacimiento</label>
+                                <input type="date" name="birth_date" class="form-control"
                                        value="{{ student.birth_date.strftime('%Y-%m-%d') if student and student.birth_date else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Género</label>
+                                <label class="form-label fw-semibold">Género</label>
                                 <select name="gender" class="form-select">
                                     <option value="">Seleccionar...</option>
                                     <option value="M" {% if student and student.gender == 'M' %}selected{% endif %}>Masculino</option>
@@ -177,86 +226,112 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Dirección de Residencia</label>
-                            <input type="text" name="student_address" class="form-control" 
-                                   value="{{ student.address if student else '' }}">
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Barrio</label>
-                                <input type="text" name="neighborhood" class="form-control" 
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Dirección de Residencia</label>
+                                <input type="text" name="student_address" class="form-control"
+                                       value="{{ student.address if student else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Barrio</label>
+                                <input type="text" name="neighborhood" class="form-control"
                                        value="{{ student.neighborhood if student else '' }}">
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Estrato</label>
-                                <input type="number" name="stratum" class="form-control" min="1" max="6" 
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Estrato</label>
+                                <input type="number" name="stratum" class="form-control" min="1" max="6"
                                        value="{{ student.stratum if student else '' }}">
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo de Sangre</label>
-                                <input type="text" name="blood_type" class="form-control" 
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Tipo de Sangre</label>
+                                <input type="text" name="blood_type" class="form-control" placeholder="Ej: O+"
                                        value="{{ student.blood_type if student else '' }}">
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">EPS</label>
+                                <input type="text" name="eps" class="form-control" placeholder="Ej: Sanitas"
+                                       value="{{ student.eps if student else '' }}">
+                            </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">EPS</label>
-                            <input type="text" name="eps" class="form-control" 
-                                   value="{{ student.eps if student else '' }}">
-                        </div>
-                        
-                        {% if student %}
-                        <div class="mb-3">
-                            <label class="form-label">Estado</label>
-                            <select name="status" class="form-select">
-                                <option value="activo" {% if student.status == 'activo' %}selected{% endif %}>Activo</option>
-                                <option value="retirado" {% if student.status == 'retirado' %}selected{% endif %}>Retirado</option>
-                                <option value="graduado" {% if student.status == 'graduado' %}selected{% endif %}>Graduado</option>
-                            </select>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Guardian Information -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-people"></i> Información del Acudiente</h5>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-people text-info me-2"></i>Información del Acudiente
+                </h6>
             </div>
-            <div class="card-body">
-                <div class="row">
+            <div class="card-body p-4">
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Nombre del Acudiente</label>
-                        <input type="text" name="guardian_name" class="form-control" 
+                        <label class="form-label fw-semibold">Nombre del Acudiente</label>
+                        <input type="text" name="guardian_name" class="form-control"
                                value="{{ student.guardian_name if student else '' }}">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Teléfono del Acudiente</label>
-                        <input type="text" name="guardian_phone" class="form-control" 
+                        <label class="form-label fw-semibold">Teléfono del Acudiente</label>
+                        <input type="text" name="guardian_phone" class="form-control"
                                value="{{ student.guardian_phone if student else '' }}">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Email del Acudiente</label>
-                        <input type="email" name="guardian_email" class="form-control" 
+                        <label class="form-label fw-semibold">Email del Acudiente</label>
+                        <input type="email" name="guardian_email" class="form-control"
                                value="{{ student.guardian_email if student else '' }}">
                     </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Action Buttons -->
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary btn-lg px-4">
-                <i class="bi bi-check-circle me-1"></i> {{ 'Actualizar' if student else 'Crear' }} Estudiante
+                <i class="bi bi-check-circle me-2"></i>{{ 'Actualizar' if student else '✅ Completar Matrícula' }}
             </button>
-            <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary btn-lg">
-                <i class="bi bi-x-circle me-1"></i> Cancelar
+            {% if existing_user %}
+            <a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-x-circle me-2"></i>Cancelar
             </a>
+            {% elif student %}
+            <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-x-circle me-2"></i>Cancelar
+            </a>
+            {% else %}
+            <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-x-circle me-2"></i>Cancelar
+            </a>
+            {% endif %}
         </div>
+
+        {% if student %}
+        <!-- Status selector for edit mode -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-flag text-secondary me-2"></i>Estado del Estudiante
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <div class="row align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Estado</label>
+                        <select name="status" class="form-select">
+                            <option value="activo" {% if student.status == 'activo' %}selected{% endif %}>Activo</option>
+                            <option value="retirado" {% if student.status == 'retirado' %}selected{% endif %}>Retirado</option>
+                            <option value="graduado" {% if student.status == 'graduado' %}selected{% endif %}>Graduado</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </form>
     {% endif %}
 </div>
