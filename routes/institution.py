@@ -1296,24 +1296,26 @@ def change_user_password(user_id):
     user = db.session.get(User, user_id)
     if not user:
         flash('Usuario no encontrado.', 'error')
-        return redirect(url_for('users.users_list'))
-    
+        return redirect(url_for('institution.institutions_list'))
+
     new_password = request.form.get('new_password', '').strip()
     if not new_password or len(new_password) < 6:
         flash('La contraseña debe tener al menos 6 caracteres.', 'error')
         return redirect(url_for('users.user_edit', id=user_id))
-    
+
     from werkzeug.security import generate_password_hash
     user.password_hash = generate_password_hash(new_password)
+    user.must_change_password = True
 
     try:
         db.session.commit()
-        flash(f'Contraseña de {user.username} actualizada exitosamente.', 'success')
+        flash(f'✅ Contraseña de {user.username} actualizada exitosamente.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al actualizar: {str(e)}', 'error')
 
-    return redirect(url_for('users.user_edit', id=user_id))
+    # Redirect back to institution users page
+    return redirect(url_for('institution.institution_users', id=user.institution_id))
 
 
 # ============================================

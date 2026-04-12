@@ -1,27 +1,73 @@
 # 📊 SIGE - Progreso del Proyecto
 
-## ✅ VALIDACIÓN DE FORMULARIOS + GESTIÓN DE GRADOS CON SELECTOR + CORRECCIONES FLUJO ROOT
+## ✅ SIDEBAR RESPONSIVE + GESTIÓN DE USUARIOS + UI/UX PROFESIONAL
 
 **Fecha**: 2026-04-12
 **Estado**: ✅ COMPLETADO
-**Versión**: ~88% Implementado
+**Versión**: ~90% Implementado
 
 ---
 
 ## 🔥 ÚLTIMAS MEJORAS IMPLEMENTADAS
 
-### 1. Corrección de Flujo "Datos Institución" para Root
-- ✅ **Bug identificado**: Root veía datos de una institución por defecto en "Datos Institución"
-- ✅ **Corrección**: Removido enlace "Datos Institución" del sidebar para root
-- ✅ **Corrección**: Ruta `config()` ahora redirige root a `institutions_list`
-- ✅ **Mejora**: Agregado botón "Ver" (ojo) en lista de instituciones para ver datos completos
-- ✅ **Modal profesional**: Datos de institución con logo, estadísticas y acción de editar
+### 1. Sidebar Responsive y Funcional
+- ✅ **Sidebar completamente reescrito**: Con estructura flex y footer integrado
+- ✅ **Submenús funcionales**: Con flechas animadas que rotan al expandirse
+- ✅ **Responsive completo**: Desktop (slide), Mobile (overlay con backdrop blur)
+- ✅ **Botón de inicio**: En navbar y dropdown de usuario para volver al dashboard
+- ✅ **Overlay en móvil**: Se cierra al hacer clic fuera o presionar ESC
+- ✅ **Auto-cierre en móvil**: Al navegar a un enlace del submenú
+- ✅ **Resize handler**: Limpia clases incorrectas al cambiar tamaño de ventana
 - ✅ **Archivos modificados**:
-  - `templates/base.html`: Condicional para mostrar "Datos Institución" solo a admin
-  - `routes/institution.py`: Ruta `config()` redirige root a lista de instituciones
-  - `templates/institution/institutions_list.html`: Modal de detalles profesional
+  - `templates/base.html`: Sidebar reestructurado con navbar mejorado
+  - `static/css/main.css`: Estilos responsive completos del sidebar
+  - `static/js/main.js`: Lógica de toggle, submenús y responsive
 
-### 2. Rediseño Profesional de Gestión de Instituciones
+### 2. Gestión de Usuarios - Institución
+- ✅ **Template `institution_users.html` reescrito**: De Tailwind a Bootstrap 5
+- ✅ **Banner de institución**: Con información visual clara
+- ✅ **Stat cards relevantes**: Admins, Coordinadores, Profesores, Estudiantes
+- ✅ **DataTables funcional**: Con búsqueda, ordenamiento y paginación en español
+- ✅ **SweetAlert2**: Para confirmación de eliminación
+- ✅ **Modal de cambio de contraseña**: Profesional y funcional
+- ✅ **Event delegation**: Para botones en DataTables dinámicos
+- ✅ **Ruta `change_user_password` corregida**: Redirige a `institution_users`
+- ✅ **Template `add_admin_form.html` reescrito**: De Tailwind a Bootstrap 5
+- ✅ **Preview de username**: En tiempo real con formato incremental
+- ✅ **Archivos modificados**:
+  - `templates/institution/institution_users.html`: Bootstrap 5 completo
+  - `templates/institution/add_admin_form.html`: Bootstrap 5 completo
+  - `routes/institution.py`: Ruta de cambio de contraseña corregida
+
+### 3. Gestión de Usuarios - General
+- ✅ **Template `list.html` mejorado**: Con banner de institución para admin
+- ✅ **Stat cards relevantes**: Total, Profesores, Estudiantes, Activos
+- ✅ **Filtros mejorados**: Con iconos y diseño profesional
+- ✅ **Tabla responsive**: Columnas se ocultan apropiadamente en móvil
+- ✅ **Iconos por rol**: Con avatares circulares coloridos
+- ✅ **Template `create.html` mejorado**: Preview de username en tiempo real
+- ✅ **Template `edit.html` mejorado**: Card de info del usuario actual
+- ✅ **Backend corregido**: Admin usa `current_user.institution` directamente
+- ✅ **Stats mejorados**: Agregados `active` e `inactive`
+- ✅ **Archivos modificados**:
+  - `templates/users/list.html`: Rediseñado completamente
+  - `templates/users/create.html`: Rediseñado completamente
+  - `templates/users/edit.html`: Rediseñado completamente
+  - `routes/users.py`: Lógica de filtrado institucional corregida
+
+### 4. Generador de Usernames - Formato Incremental
+- ✅ **Formato consistente**: `pcastro1`, `pcastro2`, `pcastro3`, etc.
+- ✅ **Lógica**: Primera inicial del nombre + primer apellido + número incremental
+- ✅ **NO usa documento**: El número es secuencial, NO los últimos 4 dígitos del documento
+- ✅ **Función principal**: `generate_username_from_db()` consulta BD para evitar duplicados
+- ✅ **Función base**: `generate_username_base()` limpia y formatea nombre
+- ✅ **Preview en tiempo real**: JavaScript genera preview mientras usuario escribe
+- ✅ **Mismo algoritmo**: Preview JS coincide con lógica Python
+- ✅ **Archivos**:
+  - `utils/username_generator.py`: Generador incremental (formato correcto)
+  - Preview en: `create.html`, `add_admin_form.html`
+
+### 5. Rediseño Profesional de Gestión de Instituciones
 - ✅ **Stat Cards animados**: Total Instituciones, Sedes, Estudiantes, Admins
 - ✅ **Tabla moderna**: Con hover effects, badges de colores, DataTables en español
 - ✅ **Botones de acción**: Ver (ojo), Editar (lápiz), Eliminar (basura)
@@ -30,7 +76,7 @@
 - ✅ **Archivos modificados**:
   - `templates/institution/institutions_list.html`: Rediseñado completamente
 
-### 3. Gestión de Sedes Integrada en Instituciones
+### 6. Gestión de Sedes Integrada en Instituciones
 - ✅ **Botón "Gestionar Sedes"** (ícono verde) en tabla de instituciones
 - ✅ **Modal profesional de gestión de sedes**:
   - Header con nombre de institución
@@ -46,7 +92,7 @@
 - ✅ **Modelo actualizado**: Agregado `created_at` a modelo Campus
 - ✅ **Migración ejecutada**: `migrate_add_campus_created_at.py`
 
-### 4. Estilos Globales Profesionales
+### 7. Estilos Globales Profesionales
 - ✅ **Modales**: Bordes redondeados 20px, sombras, backdrop blur, animaciones
 - ✅ **Botones**: Gradientes modernos, efectos hover con translateY y shadow
 - ✅ **Formularios**: Inputs con bordes 2px, focus shadows, transiciones suaves
@@ -58,7 +104,7 @@
 - ✅ **Archivo modificado**:
   - `static/css/sige-styles.css`: +550 líneas de estilos profesionales
 
-### 5. Corrección de Flujo de Sedes - Selector Integrado
+### 8. Corrección de Flujo de Sedes - Selector Integrado
 - ✅ **Error de método corregido**: Ruta `switch_institution` ahora solo acepta POST
 - ✅ **Nueva ruta `select_and_manage_institution(id)`**: Selecciona institución y va a sedes
 - ✅ **Selector integrado en `campuses.html`**: Cuando root no tiene institución activa
@@ -71,14 +117,14 @@
   - `templates/dashboard/root.html`: Botón "Gestionar Sedes" usa nueva ruta
   - `templates/institution/select_institution.html`: Rediseñado profesionalmente
 
-### 6. Formulario de Sedes - Checkbox Principal Visible
+### 9. Formulario de Sedes - Checkbox Principal Visible
 - ✅ **Checkbox "Sede Principal" mejorado**: Fondo amarillo, borde amarillo, ícono estrella
 - ✅ **Switch moderno**: `form-switch` de Bootstrap 5
 - ✅ **Texto explicativo claro**: Sobre unicidad de sede principal
 - ✅ **Archivo modificado**:
   - `templates/institution/campus_form.html`: Checkbox rediseñado
 
-### 7. Sistema de Validación de Formularios en Tiempo Real
+### 10. Sistema de Validación de Formularios en Tiempo Real
 - ✅ **JavaScript de validación**: `static/js/form-validation.js`
   - Validación on blur (al salir del campo)
   - Validación on input (si ya tiene estado)
@@ -109,7 +155,7 @@
   - `routes/institution.py`: Validación en `campus_new` y `campus_edit`
   - `templates/institution/campus_form.html`: Integración de errores y form_data
 
-### 8. Validación de Código Único de Sede
+### 11. Validación de Código Único de Sede
 - ✅ **Creación**: Valida que código no exista en institución
 - ✅ **Edición**: Valida código excluyendo sede actual
 - ✅ **Mensaje descriptivo**: Muestra nombre de sede existente
@@ -119,7 +165,7 @@
   - `routes/institution.py`: Validación en `campus_new` y `campus_edit`
   - `templates/institution/campus_form.html`: Muestra error en campo código
 
-### 9. Gestión de Grados con Selector de Institución
+### 12. Gestión de Grados con Selector de Institución
 - ✅ **Selector integrado en `grades.html`**: Como en sedes
 - ✅ **Root debe seleccionar institución**: Antes de gestionar grados
 - ✅ **Admin ve grados directamente**: De su institución asignada
@@ -187,7 +233,7 @@
 | `migrate_multi_institution.py` | Migración multi-institucional | ✅ Ejecutado |
 | `migrate_add_is_main_campus.py` | Agregar is_main_campus | ✅ Ejecutado |
 | `migrate_add_campus_created_at.py` | Agregar created_at a campuses | ✅ Ejecutado |
-| `test_username_generator.py` | Test de usernames dinámicos | ✅ Pasando |
+| `test_username_generator.py` | Test de generador incremental | ✅ Pasando |
 
 ---
 
@@ -207,7 +253,7 @@
 - [x] Extensions centralizadas (`extensions.py`)
 - [x] 9 modelos completamente implementados
 - [x] Configuración multi-entorno (SQLite + PostgreSQL)
-- [x] **Generador de usernames dinámico** (pcastro1, pcastro2...)
+- [x] **Generador de usernames incremental** (pcastro1, pcastro2, pcastro3...)
 - [x] Flask-Limiter, Flask-Mail, CORS
 
 ### 3. ✅ Templates Base (100%)
@@ -229,7 +275,7 @@
 ### 5. ✅ Gestión de Usuarios (100%)
 - [x] Lista con filtros
 - [x] Crear/Editar/Eliminar
-- [x] Username auto-generado dinámico
+- [x] Username auto-generado incremental
 - [x] Importación masiva desde Excel
 - [x] **Validación en tiempo real de formularios**
 
@@ -310,7 +356,7 @@
 | 1-12 | Errores anteriores | Varios | Solucionados en sesiones previas | ✅ |
 | 13 | Selector institución no funciona | Form GET vs POST mismatch | `students.py` acepta GET/POST | ✅ |
 | 14 | Institución "pegada" en sesión | Sin opción de cambio | Botón `?change_institution=1` | ✅ |
-| 15 | Usernames no dinámicos | Formato estático | `generate_username_from_db()` | ✅ |
+| 15 | Usernames no incrementales | Formato estático | `generate_username_from_db()` | ✅ |
 | 16 | Múltiples sedes principales | Sin validación | Validación de unicidad | ✅ |
 | 17 | DataTables error "Cannot reinitialise" | Doble inicialización | Removida clase `datatable`, mejorado `main.js` | ✅ |
 | 18 | `filter_by` en InstrumentedList | Lista no query | Bucle manual en template | ✅ |
@@ -405,7 +451,7 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 | Autenticación | ✅ Completo | 100% | Photo upload |
 | Dashboard | ✅ Completo | 100% | - |
 | Institución | ✅ Completo + UX mejorada | 100% | - |
-| Usuarios | ✅ Completo + Usernames dinámicos | 100% | - |
+| Usuarios | ✅ Completo + Usernames incrementales | 100% | - |
 | Estudiantes | ✅ Completo + Selector institución | 100% | - |
 | Sedes | ✅ Completo + API RESTful + Selector integrado | 100% | - |
 | Grados | ✅ Completo + Selector integrado + Validación | 100% | - |
@@ -419,30 +465,30 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 | Logros | ⏳ Placeholder | 10% | Auto-award |
 | Portal Padres | ⏳ Placeholder | 10% | Dashboards |
 | QR Access | ⏳ Placeholder | 10% | Integración LAB |
-| **TOTAL** | | **~88%** | |
+| **TOTAL** | | **~90%** | |
 
 ---
 
-**Última actualización**: 2026-04-12 - **Validación de Formularios + Gestión de Grados con Selector + Correcciones de Flujo Root**
-**Estado**: Arquitectura sólida, ~88% implementado
+**Última actualización**: 2026-04-12 - **Sidebar Responsive + Gestión de Usuarios + UI/UX Profesional + Generador de Usernames Incremental**
+**Estado**: Arquitectura sólida, ~90% implementado
 **Pendientes principales**: Notas (parcial), Boletines, Métricas, Logros, Portal Padres, Integración Lab
 **Tests**: 20/20 pasando ✅
 
 **Commits recientes**:
+- Sidebar responsive con overlay en móvil y slide en desktop
+- Botón de inicio (home) en navbar y dropdown de usuario
+- Submenús funcionales con flechas animadas
+- Gestión de usuarios institucional rediseñada (Bootstrap 5)
+- Template `institution_users.html` de Tailwind a Bootstrap 5
+- Template `add_admin_form.html` de Tailwind a Bootstrap 5
+- Templates de usuarios (list, create, edit) rediseñados
+- Preview de username en tiempo real con formato incremental (pcastro1, pcastro2...)
+- Generador de usernames incremental (NO usa documento)
+- DataTables con event delegation para botones dinámicos
+- Ruta `change_user_password` corregida para redirigir a institución
+- Stats de usuarios activos/inactivos agregados
 - Validación de formularios en tiempo real con JavaScript
 - Sistema de errores por campo con mensajes descriptivos
-- Backend mantiene datos al retornar con errores (form_data)
-- Validación de código único de sede en creación y edición
-- Checkbox de sede principal rediseñado (visible y profesional)
-- Selector de institución integrado en gestión de sedes
-- Selector de institución integrado en gestión de grados
-- API RESTful para CRUD de sedes (AJAX)
-- Estilos globales profesionales (+550 líneas de CSS)
-- Corrección de error de método en dashboard root
-- Corrección de import faltante de `session`
-- Rediseño de lista de instituciones con stat cards y modal de detalles
-- Migración de created_at a tabla campuses
-- Corrección de doble inicialización de DataTables
 
 ---
 

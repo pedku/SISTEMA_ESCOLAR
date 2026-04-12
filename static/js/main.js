@@ -4,14 +4,101 @@
    ============================================ */
 
 $(document).ready(function() {
-    
+
     // ============================================
-    // Sidebar Toggle
+    // Sidebar Toggle - Fixed & Responsive
     // ============================================
+    const $sidebar = $('#sidebar');
+    const $overlay = $('#sidebarOverlay');
+    const isMobile = () => window.innerWidth < 992;
+
+    // Toggle sidebar visibility
     $('#sidebarCollapse').on('click', function() {
-        $('#sidebar, #content').toggleClass('active');
+        if (isMobile()) {
+            // Mobile: show/hide as overlay
+            $sidebar.toggleClass('show');
+            $overlay.toggleClass('show');
+            $('body').toggleClass('sidebar-open');
+        } else {
+            // Desktop: slide in/out
+            $sidebar.toggleClass('hide');
+            $('#content').toggleClass('expanded');
+        }
     });
-    
+
+    // Close sidebar on mobile (X button)
+    $('#sidebarCloseBtn').on('click', function() {
+        closeSidebar();
+    });
+
+    // Close sidebar when clicking overlay
+    $overlay.on('click', function() {
+        closeSidebar();
+    });
+
+    // Close sidebar function
+    function closeSidebar() {
+        $sidebar.removeClass('show');
+        $overlay.removeClass('show');
+        $('body').removeClass('sidebar-open');
+    }
+
+    // Close sidebar on ESC key
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $sidebar.hasClass('show')) {
+            closeSidebar();
+        }
+    });
+
+    // Close sidebar when clicking a submenu link (mobile only)
+    $sidebar.on('click', 'ul.submenu li a', function() {
+        if (isMobile()) {
+            // Small delay to allow link navigation
+            setTimeout(closeSidebar, 150);
+        }
+    });
+
+    // Handle window resize
+    let resizeTimer;
+    $(window).on('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (!isMobile()) {
+                // Reset mobile classes when switching to desktop
+                $sidebar.removeClass('show');
+                $overlay.removeClass('show');
+                $('body').removeClass('sidebar-open');
+            } else {
+                // Reset desktop classes when switching to mobile
+                $sidebar.removeClass('hide');
+                $('#content').removeClass('expanded');
+            }
+        }, 250);
+    });
+
+    // ============================================
+    // Submenu Toggle - Enhanced
+    // ============================================
+    $('.submenu-toggle').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const $parent = $(this).closest('li.has-submenu');
+        const $submenu = $parent.find('.submenu');
+        const isExpanded = $(this).attr('aria-expanded') === 'true';
+
+        // Toggle current submenu
+        $(this).attr('aria-expanded', !isExpanded);
+        $parent.toggleClass('open');
+
+        // Bootstrap collapse
+        if (isExpanded) {
+            $submenu.collapse('hide');
+        } else {
+            $submenu.collapse('show');
+        }
+    });
+
     // ============================================
     // Initialize DataTables
     // ============================================
@@ -20,7 +107,7 @@ $(document).ready(function() {
         if ($.fn.DataTable.isDataTable(this)) {
             return;
         }
-        
+
         $(this).DataTable({
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
@@ -41,14 +128,14 @@ $(document).ready(function() {
             order: [[0, 'desc']]
         });
     });
-    
+
     // ============================================
     // Auto-hide alerts after 5 seconds
     // ============================================
     setTimeout(function() {
         $('.alert').fadeOut('slow');
     }, 5000);
-    
+
     // ============================================
     // Initialize Tooltips
     // ============================================
@@ -56,7 +143,7 @@ $(document).ready(function() {
     var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    
+
     // ============================================
     // Initialize Popovers
     // ============================================
@@ -64,7 +151,17 @@ $(document).ready(function() {
     var popoverList = popoverTriggerList.map(function(popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl);
     });
-    
+
+    // ============================================
+    // Close dropdowns on mobile after selection
+    // ============================================
+    $('.dropdown-menu a').on('click', function() {
+        if (isMobile()) {
+            const dropdown = bootstrap.Dropdown.getInstance(this.closest('.dropdown'));
+            if (dropdown) dropdown.hide();
+        }
+    });
+
 });
 
 // ============================================

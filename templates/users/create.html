@@ -1,127 +1,372 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Editar' if user else 'Nuevo' }} Usuario{% endblock %}
-
-{% block extra_css %}
-<style>
-    .form-section { border-bottom: 1px solid #e9ecef; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
-    .section-number { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; }
-</style>
-{% endblock %}
+{% block title %}Crear Usuario{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
-        <div><h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-person-plus text-primary me-2"></i>{{ 'Editar Usuario' if user else 'Crear Nuevo Usuario' }}</h1><p class="text-muted mb-0">{{ 'Modifica los datos del usuario' if user else 'Complete los datos para crear un nuevo usuario' }}</p></div>
-        <a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in flex-wrap gap-2">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-person-plus-fill text-primary me-2"></i>Crear Nuevo Usuario
+            </h1>
+            <p class="text-muted mb-0">Complete los datos para registrar un nuevo usuario en el sistema</p>
+        </div>
+        <a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver a la Lista
+        </a>
     </div>
 
-    {% if not user %}
-    <div class="card shadow-sm border-0 border-start border-4 border-info mb-4 animate-in" style="border-radius:15px;"><div class="card-body py-3 px-4"><div class="d-flex align-items-center"><i class="bi bi-info-circle text-info fs-4 me-3"></i><p class="mb-0 text-dark"><strong>Automático:</strong> El nombre de usuario se genera automáticamente y la contraseña inicial será el número de documento.</p></div></div></div>
-    {% endif %}
-
-    <!-- Username Preview (new users) -->
-    {% if not user %}
-    <div id="usernamePreviewBox" class="card shadow-sm border-0 border-2 border-success mb-4 animate-in" style="border-radius:15px; display:none;">
-        <div class="card-body p-4"><div class="row align-items-center"><div class="col-md-8"><p class="text-muted mb-0 small text-uppercase fw-semibold">👤 Username auto-generado:</p><p id="generatedUsername" class="mb-0 h3 font-monospace text-success fw-bold"></p></div><div class="col-md-4 text-md-end"><p class="text-muted mb-0 small">🔑 Contraseña inicial:</p><p class="mb-0 h5 text-primary fw-semibold">Nº de documento</p></div></div></div>
+    <!-- Info Alert -->
+    <div class="alert alert-info border-0 shadow-sm mb-4 animate-in">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-4 me-3 flex-shrink-0"></i>
+            <div>
+                <strong>Automático:</strong> El nombre de usuario se genera automáticamente. 
+                La contraseña inicial será el número de documento de identidad.
+            </div>
+        </div>
     </div>
-    {% endif %}
 
-    <div class="row g-4">
-        <!-- Form -->
-        <div class="col-lg-8">
-            <div class="card card-modern shadow-sm animate-in delay-1">
-                <div class="card-body p-4">
-                    <form method="POST" id="userForm">
-                        <!-- Personal Info -->
-                        <div class="form-section">
-                            <h5 class="fw-bold mb-3"><span class="section-number bg-primary bg-opacity-10 text-primary me-2">1</span>📋 Información Personal</h5>
-                            <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label><input type="text" id="firstName" name="first_name" required value="{{ form_data.first_name if form_data else (user.first_name if user else '') }}" class="form-control form-control-lg" placeholder="Ej: Juan Carlos">{% if form_data and not form_data.first_name %}<div class="text-danger small mt-1">Este campo es obligatorio</div>{% endif %}</div>
-                                <div class="col-md-6"><label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label><input type="text" id="lastName" name="last_name" required value="{{ form_data.last_name if form_data else (user.last_name if user else '') }}" class="form-control form-control-lg" placeholder="Ej: Pérez García">{% if form_data and not form_data.last_name %}<div class="text-danger small mt-1">Este campo es obligatorio</div>{% endif %}</div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">Tipo Documento <span class="text-danger">*</span></label><select name="document_type" required class="form-select form-select-lg"><option value="CC" {% if form_data and form_data.document_type == 'CC' %}selected{% elif user and user.document_type == 'CC' %}selected{% endif %}>CC</option><option value="TI" {% if form_data and form_data.document_type == 'TI' %}selected{% elif user and user.document_type == 'TI' %}selected{% endif %}>TI</option><option value="RC" {% if form_data and form_data.document_type == 'RC' %}selected{% elif user and user.document_type == 'RC' %}selected{% endif %}>RC</option><option value="CE" {% if form_data and form_data.document_type == 'CE' %}selected{% elif user and user.document_type == 'CE' %}selected{% endif %}>CE</option></select></div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">Nº Documento <span class="text-danger">*</span></label><input type="text" id="documentNumber" name="document_number" required value="{{ form_data.document_number if form_data else (user.document_number if user else '') }}" class="form-control form-control-lg" placeholder="1234567890">{% if not user %}<div class="form-text">🔑 Se usará como contraseña inicial</div>{% endif %}{% if form_data and not form_data.document_number %}<div class="text-danger small mt-1">Obligatorio para generar contraseña</div>{% endif %}</div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">Fecha Nacimiento</label><input type="date" name="birth_date" value="{{ form_data.birth_date if form_data else (user.birth_date.strftime('%Y-%m-%d') if user and user.birth_date else '') }}" class="form-control form-control-lg"></div>
-                            </div>
-                        </div>
-
-                        <!-- Contact Info -->
-                        <div class="form-section">
-                            <h5 class="fw-bold mb-3"><span class="section-number bg-success bg-opacity-10 text-success me-2">2</span>📞 Información de Contacto</h5>
-                            <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label fw-semibold">Correo Electrónico <span class="text-danger">*</span></label><input type="email" name="email" required value="{{ form_data.email if form_data else (user.email if user else '') }}" class="form-control form-control-lg" placeholder="usuario@ejemplo.com">{% if form_data and not form_data.email %}<div class="text-danger small mt-1">Este campo es obligatorio</div>{% endif %}</div>
-                                <div class="col-md-6"><label class="form-label fw-semibold">Teléfono / Celular</label><input type="tel" name="phone" value="{{ form_data.phone if form_data else (user.phone if user else '') }}" class="form-control form-control-lg" placeholder="3001234567"></div>
-                                <div class="col-12"><label class="form-label fw-semibold">Dirección</label><input type="text" name="address" value="{{ form_data.address if form_data else (user.address if user else '') }}" class="form-control form-control-lg" placeholder="Calle, Carrera, Número, Barrio"></div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">País</label><select name="country" class="form-select form-select-lg"><option value="Colombia" {% if not form_data and not user %}selected{% elif form_data and form_data.country == 'Colombia' %}selected{% elif user and user.country == 'Colombia' %}selected{% endif %}>🇨🇴 Colombia</option><option value="México" {% if form_data and form_data.country == 'México' %}selected{% elif user and user.country == 'México' %}selected{% endif %}>🇲🇽 México</option><option value="Venezuela" {% if form_data and form_data.country == 'Venezuela' %}selected{% elif user and user.country == 'Venezuela' %}selected{% endif %}>🇻🇪 Venezuela</option><option value="Ecuador" {% if form_data and form_data.country == 'Ecuador' %}selected{% elif user and user.country == 'Ecuador' %}selected{% endif %}>🇪🇨 Ecuador</option><option value="Perú" {% if form_data and form_data.country == 'Perú' %}selected{% elif user and user.country == 'Perú' %}selected{% endif %}>🇵🇪 Perú</option><option value="Otro" {% if form_data and form_data.country == 'Otro' %}selected{% elif user and user.country == 'Otro' %}selected{% endif %}>Otro</option></select></div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">Departamento</label><input type="text" name="department" value="{{ form_data.department if form_data else (user.department if user else '') }}" class="form-control form-control-lg" placeholder="Ej: Cundinamarca"></div>
-                                <div class="col-md-4"><label class="form-label fw-semibold">Municipio</label><input type="text" name="municipality" value="{{ form_data.municipality if form_data else (user.municipality if user else '') }}" class="form-control form-control-lg" placeholder="Ej: Bogotá"></div>
-                            </div>
-                        </div>
-
-                        <!-- Account Info -->
-                        <div class="form-section border-0 pb-0 mb-0">
-                            <h5 class="fw-bold mb-3"><span class="section-number bg-warning bg-opacity-10 text-warning me-2">3</span>🔑 Información de la Cuenta</h5>
-                            {% if not user %}
-                            <div class="bg-light rounded-3 p-3 mb-3 border border-dashed"><p class="text-muted mb-1 small">Nombre de Usuario:</p><p class="mb-0 h5 font-monospace text-primary fw-bold" id="usernamePreviewText">Complete nombre y documento para generar...</p></div>
-                            {% endif %}
-                            <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label fw-semibold">Rol <span class="text-danger">*</span></label><select name="role" required class="form-select form-select-lg" {% if not current_user.is_root() %}disabled{% endif %}><option value="root" {% if form_data and form_data.role == 'root' %}selected{% elif user and user.role == 'root' %}selected{% endif %}>🔴 Root</option><option value="admin" {% if form_data and form_data.role == 'admin' %}selected{% elif user and user.role == 'admin' %}selected{% endif %}>🔵 Admin</option><option value="coordinator" {% if form_data and form_data.role == 'coordinator' %}selected{% elif user and user.role == 'coordinator' %}selected{% endif %}>🟣 Coordinador</option><option value="teacher" {% if form_data and form_data.role == 'teacher' %}selected{% elif user and user.role == 'teacher' %}selected{% endif %}>🟡 Profesor</option><option value="student" {% if form_data and form_data.role == 'student' %}selected{% elif user and user.role == 'student' %}selected{% endif %}>🟢 Estudiante</option><option value="parent" {% if form_data and form_data.role == 'parent' %}selected{% elif user and user.role == 'parent' %}selected{% endif %}>🔵 Acudiente</option><option value="viewer" {% if form_data and form_data.role == 'viewer' %}selected{% elif user and user.role == 'viewer' %}selected{% endif %}>⚪ Viewer</option></select>{% if not current_user.is_root() %}<input type="hidden" name="role" value="{{ user.role if user else 'teacher' }}"><div class="form-text">Solo root puede cambiar roles</div>{% endif %}</div>
-                                {% if current_user.is_root() %}
-                                <div class="col-md-6"><label class="form-label fw-semibold">Institución</label><select name="institution_id" class="form-select form-select-lg"><option value="">Sin institución</option>{% for inst in institutions %}<option value="{{ inst.id }}" {% if form_data and form_data.institution_id == inst.id|string %}selected{% elif user and user.institution_id == inst.id %}selected{% endif %}>{{ inst.name }}</option>{% endfor %}</select></div>
-                                {% endif %}
-                                {% if not user %}
-                                <div class="col-12"><div class="alert alert-success mb-0"><i class="bi bi-shield-check me-2"></i><strong>Seguridad:</strong> La contraseña inicial será el número de documento. El usuario deberá cambiarla obligatoriamente en su primer inicio de sesión.</div></div>
-                                {% else %}
-                                <div class="col-12"><label class="form-label fw-semibold">Nueva Contraseña (opcional)</label><input type="password" name="new_password" minlength="6" class="form-control form-control-lg"><div class="form-text">Dejar vacío para mantener la actual</div></div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        {% if user and user.role != 'root' %}
-                        <div class="form-check mb-3"><input type="checkbox" name="is_active" id="is_active" {% if not user or user.is_active %}checked{% endif %} class="form-check-input"><label for="is_active" class="form-check-label">Usuario activo</label></div>
-                        {% endif %}
-
-                        <div class="d-flex gap-2 pt-3 border-top"><button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-check-circle me-1"></i>{{ '💾 Actualizar' if user else '✅ Crear' }}</button><a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary btn-lg">Cancelar</a></div>
-                    </form>
+    <!-- Username Preview -->
+    <div id="usernamePreviewBox" class="card shadow-sm border-0 border-start border-4 border-success mb-4 animate-in" style="display:none;">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <p class="text-muted mb-1 small text-uppercase fw-semibold">
+                        <i class="bi bi-person-badge me-1"></i>Username auto-generado
+                    </p>
+                    <p id="generatedUsername" class="mb-0 h4 font-monospace text-success fw-bold"></p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <p class="text-muted mb-1 small">
+                        <i class="bi bi-key me-1"></i>Contraseña inicial
+                    </p>
+                    <p class="mb-0 h6 text-primary fw-semibold">Nº de documento</p>
                 </div>
             </div>
         </div>
-
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            {% if not user %}
-            <div class="card card-modern shadow-sm mb-4 animate-in delay-2"><div class="card-body p-4"><h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>¿Cómo funciona?</h6><ul class="list-unstyled mb-0"><li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Username se genera automáticamente</li><li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Contraseña inicial = Nº documento</li><li><i class="bi bi-check-circle text-success me-2"></i>Debe cambiar contraseña al primer login</li></ul></div></div>
-            {% endif %}
-            <div class="card card-modern shadow-sm animate-in delay-3"><div class="card-body p-4"><h6 class="fw-bold mb-3"><i class="bi bi-shield-lock text-danger me-2"></i>Roles del Sistema</h6><ul class="list-unstyled mb-0 small"><li class="mb-2"><strong class="text-danger">Root:</strong> Super-admin, acceso total</li><li class="mb-2"><strong class="text-primary">Admin:</strong> Gestiona su institución</li><li class="mb-2"><strong class="text-info">Coordinador:</strong> Supervisión académica</li><li class="mb-2"><strong class="text-warning">Profesor:</strong> Notas, asistencia, observaciones</li><li class="mb-2"><strong class="text-success">Estudiante:</strong> Consulta sus datos</li><li class="mb-2"><strong class="text-secondary">Acudiente:</strong> Portal de padres</li><li><strong class="text-muted">Viewer:</strong> Solo lectura</li></ul></div></div>
-        </div>
     </div>
+
+    <form method="POST" id="userForm" novalidate>
+        <div class="row g-4">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Personal Information -->
+                <div class="card shadow-sm mb-4 animate-in delay-1">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <span class="badge bg-primary me-2">1</span>
+                            <i class="bi bi-person-fill text-primary me-2"></i>Información Personal
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1 text-primary"></i>Nombres <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="firstName" name="first_name" required 
+                                       value="{{ form_data.first_name if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: Juan Carlos">
+                                <div class="form-text">Nombre completo del usuario</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1 text-primary"></i>Apellidos <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="lastName" name="last_name" required 
+                                       value="{{ form_data.last_name if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: Pérez García">
+                                <div class="form-text">Apellidos completos</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-card-text me-1 text-primary"></i>Tipo Documento <span class="text-danger">*</span>
+                                </label>
+                                <select name="document_type" required class="form-select">
+                                    <option value="TI">TI - Tarjeta de Identidad</option>
+                                    <option value="CC" selected>CC - Cédula de Ciudadanía</option>
+                                    <option value="RC">RC - Registro Civil</option>
+                                    <option value="CE">CE - Cédula de Extranjería</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-hash me-1 text-primary"></i>Nº Documento <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="documentNumber" name="document_number" required 
+                                       value="{{ form_data.document_number if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: 1234567890">
+                                <div class="form-text">
+                                    <i class="bi bi-key-fill text-warning me-1"></i>
+                                    Se usará como contraseña inicial
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>Fecha Nacimiento
+                                </label>
+                                <input type="date" name="birth_date" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="card shadow-sm mb-4 animate-in delay-2">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <span class="badge bg-success me-2">2</span>
+                            <i class="bi bi-envelope-fill text-success me-2"></i>Información de Contacto
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-envelope me-1 text-success"></i>Correo Electrónico <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" name="email" required 
+                                       value="{{ form_data.email if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="usuario@ejemplo.com">
+                                <div class="form-text">Correo válido para notificaciones</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-phone me-1 text-success"></i>Teléfono / Celular
+                                </label>
+                                <input type="tel" name="phone" 
+                                       value="{{ form_data.phone if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: 3001234567">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-geo-alt me-1 text-success"></i>Dirección
+                                </label>
+                                <input type="text" name="address" 
+                                       value="{{ form_data.address if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Calle, Carrera, Número, Barrio">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">País</label>
+                                <select name="country" class="form-select">
+                                    <option value="Colombia" selected>🇨🇴 Colombia</option>
+                                    <option value="México">🇲🇽 México</option>
+                                    <option value="Venezuela">🇻🇪 Venezuela</option>
+                                    <option value="Ecuador">🇪🇨 Ecuador</option>
+                                    <option value="Perú">🇵🇪 Perú</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Departamento</label>
+                                <input type="text" name="department" 
+                                       value="{{ form_data.department if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: Cundinamarca">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Municipio</label>
+                                <input type="text" name="municipality" 
+                                       value="{{ form_data.municipality if form_data else '' }}" 
+                                       class="form-control" 
+                                       placeholder="Ej: Bogotá">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Information -->
+                <div class="card shadow-sm mb-4 animate-in delay-3">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <span class="badge bg-warning text-dark me-2">3</span>
+                            <i class="bi bi-shield-lock-fill text-warning me-2"></i>Información de la Cuenta
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person-badge me-1 text-warning"></i>Rol <span class="text-danger">*</span>
+                                </label>
+                                <select name="role" required class="form-select" {% if not current_user.is_root() %}disabled{% endif %}>
+                                    <option value="teacher" selected>🟡 Profesor</option>
+                                    <option value="admin">🔵 Administrador</option>
+                                    <option value="coordinator">🟣 Coordinador</option>
+                                    <option value="student">🟢 Estudiante</option>
+                                    <option value="parent">🔵 Acudiente</option>
+                                    <option value="viewer">⚪ Viewer</option>
+                                    {% if current_user.is_root() %}
+                                    <option value="root">🔴 Root</option>
+                                    {% endif %}
+                                </select>
+                                {% if not current_user.is_root() %}
+                                <input type="hidden" name="role" value="teacher">
+                                <div class="form-text">Solo el usuario root puede asignar roles</div>
+                                {% endif %}
+                            </div>
+                            {% if current_user.is_root() %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-building me-1 text-warning"></i>Institución
+                                </label>
+                                <select name="institution_id" class="form-select">
+                                    <option value="">Sin institución asignada</option>
+                                    {% for inst in institutions %}
+                                    <option value="{{ inst.id }}">{{ inst.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            <div class="col-12">
+                                <div class="alert alert-success mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-check-circle-fill fs-5 me-2 flex-shrink-0"></i>
+                                        <div>
+                                            <strong>Seguridad:</strong> La contraseña inicial será el número de documento. 
+                                            El usuario deberá cambiarla obligatoriamente en su primer inicio de sesión.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card shadow-sm animate-in delay-3">
+                    <div class="card-body p-4">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-check-circle me-2"></i>✅ Crear Usuario
+                            </button>
+                            <a href="{{ url_for('users.users_list') }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Help Card -->
+                <div class="card shadow-sm mb-4 animate-in delay-2">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-lightbulb-fill text-warning me-2"></i>¿Cómo funciona?
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                                <span>El username se genera automáticamente con la inicial del nombre + apellido</span>
+                            </li>
+                            <li class="mb-3 d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                                <span>La contraseña inicial es el número de documento de identidad</span>
+                            </li>
+                            <li class="d-flex align-items-start">
+                                <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                                <span>El usuario debe cambiar la contraseña en el primer inicio de sesión</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Roles Info -->
+                <div class="card shadow-sm mb-4 animate-in delay-3">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-shield-fill-check text-danger me-2"></i>Roles del Sistema
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush small">
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-danger me-2">Root</span>
+                                <span class="text-muted">Super-administrador, acceso total</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-primary me-2">Admin</span>
+                                <span class="text-muted">Gestiona su institución</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-info me-2">Coordinador</span>
+                                <span class="text-muted">Supervisión académica</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-warning text-dark me-2">Profesor</span>
+                                <span class="text-muted">Notas, asistencia, observaciones</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-success me-2">Estudiante</span>
+                                <span class="text-muted">Consulta sus datos</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-secondary me-2">Acudiente</span>
+                                <span class="text-muted">Portal de padres</span>
+                            </div>
+                            <div class="list-group-item border-0 px-0">
+                                <span class="badge bg-light text-dark me-2">Viewer</span>
+                                <span class="text-muted">Solo lectura</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
-{% if not user %}
 <script>
+function generateUsernamePreview() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    
+    if (firstName && lastName) {
+        // Same logic as generate_username_base() in Python
+        const firstInitial = firstName.charAt(0).toLowerCase();
+        
+        // Clean last name: lowercase, remove accents and special chars
+        const cleanLastName = lastName.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // Remove accents
+            .replace(/[^a-z\s]/g, '')  // Remove special chars
+            .split(/\s+/)[0];  // Get first word only
+        
+        if (cleanLastName) {
+            return `${firstInitial}${cleanLastName}#`;  // # = incremental number
+        }
+    }
+    return null;
+}
+
 function updateUsernamePreview() {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
-    const doc = document.getElementById('documentNumber').value.trim();
     const box = document.getElementById('usernamePreviewBox');
     const preview = document.getElementById('generatedUsername');
-    const textPreview = document.getElementById('usernamePreviewText');
-    if (firstName && lastName) {
-        const firstInitial = firstName.charAt(0).toLowerCase();
-        const cleanLastName = lastName.toLowerCase().replace(/[^a-z]/g, '');
-        const docSuffix = doc ? doc.slice(-4) : '';
-        let username = `@${firstInitial}${cleanLastName}`;
-        if (docSuffix) username += docSuffix;
-        preview.textContent = username;
-        textPreview.textContent = username;
+    
+    const baseUsername = generateUsernamePreview();
+    
+    if (baseUsername) {
+        preview.textContent = baseUsername + '1, ' + baseUsername.replace('#', '') + '2...';
         box.style.display = 'block';
-    } else { box.style.display = 'none'; textPreview.textContent = 'Complete nombre y apellido...'; }
+    } else {
+        box.style.display = 'none';
+    }
 }
+
 document.getElementById('firstName').addEventListener('input', updateUsernamePreview);
 document.getElementById('lastName').addEventListener('input', updateUsernamePreview);
-document.getElementById('documentNumber').addEventListener('input', updateUsernamePreview);
-updateUsernamePreview();
 </script>
-{% endif %}
 {% endblock %}

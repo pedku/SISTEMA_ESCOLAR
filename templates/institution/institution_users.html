@@ -3,130 +3,338 @@
 {% block title %}Usuarios - {{ institution.name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in flex-wrap gap-2">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">Usuarios de {{ institution.name }}</h1>
-            <p class="text-gray-600 mt-1">Gestión de usuarios asignados a esta institución</p>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-people-fill text-primary me-2"></i>Usuarios de {{ institution.name }}
+            </h1>
+            <p class="text-muted mb-0">Gestión de usuarios asignados a esta institución</p>
         </div>
-        <div class="flex gap-2">
-            <a href="{{ url_for('institution.institution_add_admin', id=institution.id) }}" 
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                + Nuevo Admin
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('institution.institution_add_admin', id=institution.id) }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-person-plus me-1"></i>
+                <span class="d-none d-md-inline">Nuevo Admin</span>
             </a>
-            <a href="{{ url_for('institution.institutions_list') }}" 
-               class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                ← Volver
+            <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Volver
             </a>
         </div>
     </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-            <p class="text-sm text-gray-600">Admins</p>
-            <p class="text-2xl font-bold text-blue-600">{{ stats.admin }}</p>
+    <!-- Institution Banner -->
+    <div class="card border-start border-4 border-primary mb-4 animate-in">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="bi bi-building text-primary fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-bold">{{ institution.name }}</h6>
+                    <small class="text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}{% if institution.department %}, {{ institution.department }}{% endif %}
+                        {% if institution.nit %} | NIT: {{ institution.nit }}{% endif %}
+                    </small>
+                </div>
+                <div class="d-none d-md-block">
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        <i class="bi bi-shield-check me-1"></i>Root Admin
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-            <p class="text-sm text-gray-600">Coordinadores</p>
-            <p class="text-2xl font-bold text-purple-600">{{ stats.coordinator }}</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6 animate-in delay-1">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Administradores</p>
+                        <p class="counter text-primary mb-0">{{ stats.admin }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-            <p class="text-sm text-gray-600">Profesores</p>
-            <p class="text-2xl font-bold text-yellow-600">{{ stats.teacher }}</p>
+        <div class="col-xl-3 col-md-6 animate-in delay-1">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
+                        <i class="bi bi-person-workspace"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Coordinadores</p>
+                        <p class="counter text-info mb-0">{{ stats.coordinator }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-            <p class="text-sm text-gray-600">Estudiantes</p>
-            <p class="text-2xl font-bold text-green-600">{{ stats.student }}</p>
+        <div class="col-xl-3 col-md-6 animate-in delay-2">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                        <i class="bi bi-person-video3"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Profesores</p>
+                        <p class="counter text-warning mb-0">{{ stats.teacher }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 animate-in delay-2">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Estudiantes</p>
+                        <p class="counter text-success mb-0">{{ stats.student }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        {% if users %}
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rol</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for user in users %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm font-medium">{{ user.username }}</td>
-                    <td class="px-4 py-3 text-sm">{{ user.get_full_name() }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
-                    <td class="px-4 py-3 text-center">
-                        {% if user.role == 'admin' %}
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Admin</span>
-                        {% elif user.role == 'coordinator' %}
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Coordinador</span>
-                        {% elif user.role == 'teacher' %}
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Profesor</span>
-                        {% elif user.role == 'student' %}
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Estudiante</span>
-                        {% else %}
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{{ user.role }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-center text-sm space-x-2">
-                        <a href="{{ url_for('users.user_edit', id=user.id) }}" class="text-yellow-600 hover:text-yellow-900">Editar</a>
-                        <button onclick="showChangePasswordModal({{ user.id }}, '{{ user.username }}')" 
-                                class="text-blue-600 hover:text-blue-900">Cambiar Clave</button>
-                        {% if user.role != 'root' %}
-                        <form method="POST" action="{{ url_for('users.user_delete', id=user.id) }}" 
-                              class="inline" onsubmit="return confirm('¿Eliminar {{ user.username }}?')">
-                            <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="text-center py-12">
-            <p class="text-gray-500">No hay usuarios asignados a esta institución.</p>
+    <div class="card shadow-sm animate-in delay-2">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">
+                <i class="bi bi-table text-primary me-2"></i>
+                Lista de Usuarios
+            </h6>
+            <span class="badge bg-primary px-3 py-2">
+                <i class="bi bi-people me-1"></i>{{ stats.total }} usuarios
+            </span>
         </div>
-        {% endif %}
+        <div class="card-body p-0">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-modern table-hover align-middle mb-0 datatable" id="institutionUsersTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Usuario</th>
+                            <th>Nombre Completo</th>
+                            <th class="d-none d-md-table-cell">Email</th>
+                            <th class="text-center">Rol</th>
+                            <th class="text-center d-none d-sm-table-cell">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                        {% if user.role == 'admin' %}
+                                            <i class="bi bi-person-badge text-primary"></i>
+                                        {% elif user.role == 'coordinator' %}
+                                            <i class="bi bi-person-workspace text-info"></i>
+                                        {% elif user.role == 'teacher' %}
+                                            <i class="bi bi-person-video3 text-warning"></i>
+                                        {% elif user.role == 'student' %}
+                                            <i class="bi bi-mortarboard text-success"></i>
+                                        {% elif user.role == 'parent' %}
+                                            <i class="bi bi-people text-secondary"></i>
+                                        {% else %}
+                                            <i class="bi bi-person text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ user.username }}</div>
+                                        <small class="text-muted d-md-none">{{ user.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ user.get_full_name() }}</td>
+                            <td class="text-muted d-none d-md-table-cell">{{ user.email }}</td>
+                            <td class="text-center">
+                                {% if user.role == 'admin' %}
+                                    <span class="badge bg-primary badge-pill"><i class="bi bi-person-badge me-1"></i>Admin</span>
+                                {% elif user.role == 'coordinator' %}
+                                    <span class="badge bg-info badge-pill"><i class="bi bi-person-workspace me-1"></i>Coordinador</span>
+                                {% elif user.role == 'teacher' %}
+                                    <span class="badge bg-warning badge-pill text-dark"><i class="bi bi-person-video3 me-1"></i>Profesor</span>
+                                {% elif user.role == 'student' %}
+                                    <span class="badge bg-success badge-pill"><i class="bi bi-mortarboard me-1"></i>Estudiante</span>
+                                {% elif user.role == 'parent' %}
+                                    <span class="badge bg-secondary badge-pill"><i class="bi bi-people me-1"></i>Acudiente</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark badge-pill"><i class="bi bi-eye me-1"></i>Viewer</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center d-none d-sm-table-cell">
+                                {% if user.is_active %}
+                                    <span class="badge bg-success badge-pill">
+                                        <i class="bi bi-check-circle me-1"></i>Activo
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger badge-pill">
+                                        <i class="bi bi-x-circle me-1"></i>Inactivo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('users.user_edit', id=user.id) }}" 
+                                       class="btn btn-sm btn-outline-primary action-btn" 
+                                       title="Editar usuario"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-warning action-btn" 
+                                            title="Cambiar contraseña"
+                                            data-user-id="{{ user.id }}"
+                                            data-user-name="{{ user.username }}"
+                                            data-bs-toggle="tooltip"
+                                            onclick="showChangePasswordModal({{ user.id }}, '{{ user.username }}')">
+                                        <i class="bi bi-key-fill"></i>
+                                    </button>
+                                    {% if user.role != 'root' %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger action-btn delete-btn" 
+                                            title="Eliminar usuario"
+                                            data-user-id="{{ user.id }}"
+                                            data-user-name="{{ user.username }}"
+                                            data-bs-toggle="tooltip">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="empty-state py-5 text-center">
+                <div class="py-5">
+                    <i class="bi bi-people" style="font-size: 5rem; color: #dee2e6;"></i>
+                    <h4 class="text-muted mt-3">No hay usuarios en esta institución</h4>
+                    <p class="text-muted mb-4">Comienza creando un administrador para esta institución</p>
+                    <a href="{{ url_for('institution.institution_add_admin', id=institution.id) }}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-person-plus me-2"></i>Crear Primer Admin
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <!-- Change Password Modal -->
-<div id="changePasswordModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">Cambiar Contraseña</h3>
-        <p class="text-sm text-gray-600 mb-4">Usuario: <span id="modalUsername"></span></p>
-        <form id="changePasswordForm" method="POST">
-            <input type="password" name="new_password" required minlength="6" 
-                   placeholder="Nueva contraseña (mín. 6 caracteres)"
-                   class="w-full px-3 py-2 border rounded-lg mb-4">
-            <div class="flex gap-2">
-                <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                    Actualizar
-                </button>
-                <button type="button" onclick="closeChangePasswordModal()" 
-                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
-                    Cancelar
-                </button>
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-key-fill me-2"></i>Cambiar Contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-        </form>
+            <form id="changePasswordForm" method="POST" action="">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Usuario</label>
+                        <input type="text" id="modalUsername" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-key me-1 text-warning"></i>Nueva Contraseña <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" name="new_password" required minlength="6" class="form-control" placeholder="Mínimo 6 caracteres">
+                        <div class="form-text">La contraseña debe tener al menos 6 caracteres</div>
+                    </div>
+                    <div class="alert alert-info small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        El usuario deberá cambiar esta contraseña en su próximo inicio de sesión.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-circle me-1"></i>Actualizar Contraseña
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
+$(document).ready(function() {
+    // Initialize DataTable
+    if (!$.fn.DataTable.isDataTable('#institutionUsersTable')) {
+        $('#institutionUsersTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ - _END_ de _TOTAL_ registros",
+                infoEmpty: "No hay registros disponibles",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 15,
+            order: [[0, 'asc']],
+            columnDefs: [
+                { orderable: false, targets: [-1] }
+            ],
+            responsive: true
+        });
+    }
+
+    // Delete confirmation with SweetAlert2 (using event delegation for DataTables)
+    $('#institutionUsersTable').on('click', '.delete-btn', function() {
+        const userId = $(this).data('user-id');
+        const userName = $(this).data('user-name');
+        const deleteUrl = "{{ url_for('users.user_delete', id=999999) }}".replace('999999', userId);
+        
+        Swal.fire({
+            title: '¿Eliminar usuario?',
+            html: `<p class="mb-2">Estás por eliminar al usuario:</p><p class="fw-bold fs-4">${userName}</p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('<form>').attr({
+                    method: 'POST',
+                    action: deleteUrl
+                }).appendTo('body').submit();
+            }
+        });
+    });
+});
+
+// Change Password Modal
 function showChangePasswordModal(userId, username) {
     document.getElementById('modalUsername').textContent = username;
-    document.getElementById('changePasswordForm').action = `/users/${userId}/change-password`;
-    document.getElementById('changePasswordModal').classList.remove('hidden');
-}
-
-function closeChangePasswordModal() {
-    document.getElementById('changePasswordModal').classList.add('hidden');
+    document.getElementById('changePasswordForm').action = "{{ url_for('institution.change_user_password', user_id=999999) }}".replace('999999', userId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+    modal.show();
 }
 </script>
 {% endblock %}

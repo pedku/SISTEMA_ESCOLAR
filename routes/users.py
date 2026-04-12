@@ -29,26 +29,31 @@ users_bp = Blueprint('users', __name__)
 @role_required('root', 'admin')
 def users_list():
     """List users - root sees all, admin sees only their institution."""
-    institution = get_current_institution()
     
+    # For admin, get their assigned institution (not from session)
+    if not current_user.is_root():
+        institution = current_user.institution
+        if not institution:
+            flash('No tiene una institución asignada. Contacte al administrador.', 'error')
+            return redirect(url_for('dashboard.index'))
+    else:
+        # Root can see all users
+        institution = None
+
     # Base query
     query = User.query
-    
-    # Admin can only see users from their institution
-    if not current_user.is_root():
-        if institution:
-            query = query.filter(User.institution_id == institution.id)
-        else:
-            flash('No tiene una institución asignada.', 'error')
-            return redirect(url_for('dashboard.index'))
-    
+
+    # Admin can only see users from their assigned institution
+    if institution:
+        query = query.filter(User.institution_id == institution.id)
+
     # Apply filters
     role = request.args.get('role', '')
     search = request.args.get('search', '').strip()
-    
+
     if role:
         query = query.filter(User.role == role)
-    
+
     if search:
         query = query.filter(
             db.or_(
@@ -58,19 +63,21 @@ def users_list():
                 User.email.ilike(f'%{search}%')
             )
         )
-    
+
     # Order by role hierarchy then name
     query = query.order_by(
         User.role,
         User.first_name,
         User.last_name
     )
-    
+
     users = query.all()
-    
+
     # Statistics
     stats = {
         'total': len(users),
+        'active': sum(1 for u in users if u.is_active),
+        'inactive': sum(1 for u in users if not u.is_active),
         'root': sum(1 for u in users if u.role == 'root'),
         'admin': sum(1 for u in users if u.role == 'admin'),
         'coordinator': sum(1 for u in users if u.role == 'coordinator'),
@@ -79,7 +86,7 @@ def users_list():
         'parent': sum(1 for u in users if u.role == 'parent'),
         'viewer': sum(1 for u in users if u.role == 'viewer'),
     }
-    
+
     return render_template(
         'users/list.html',
         users=users,
