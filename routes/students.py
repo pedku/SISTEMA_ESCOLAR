@@ -100,14 +100,23 @@ def profile(id):
 # ============================================
 
 @students_bp.route('/new', methods=['GET', 'POST'])
+@students_bp.route('/new/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 @role_required('root', 'admin', 'coordinator')
-def new():
-    """Create a new student."""
+def new(user_id=None):
+    """Create a new student. If user_id is provided, only ask for academic info."""
     institution = get_current_institution()
+    existing_user = None
+    
+    # If user_id is provided, load the existing user
+    if user_id:
+        existing_user = User.query.get(user_id)
+        if not existing_user or existing_user.role != 'student':
+            flash('Usuario no encontrado o no es un estudiante.', 'error')
+            return redirect(url_for('users.users_list'))
 
     # For root users, allow switching institution via URL parameter
-    if current_user.is_root():
+    if current_user.is_root() and not existing_user:
         # Check if user wants to change institution
         change_institution = request.args.get('change_institution', type=int)
         if change_institution:
@@ -115,7 +124,7 @@ def new():
             if 'active_institution_id' in session:
                 del session['active_institution_id']
             institution = None
-        
+
         # If still no institution, show selector or handle selection
         if not institution:
             # Check for institution_id in both POST form and GET query params
@@ -124,7 +133,7 @@ def new():
                 inst_id = request.form.get('institution_id', type=int)
             else:
                 inst_id = request.args.get('institution_id', type=int)
-            
+
             if inst_id:
                 institution = Institution.query.get(inst_id)
                 # Set in session for future requests
@@ -133,13 +142,61 @@ def new():
             if not institution:
                 # Show form with institution selector for root
                 institutions = Institution.query.order_by(Institution.name).all()
-                return render_template('students/form.html', student=None, institution=None, institutions=institutions, campuses=[], grades=[])
-    elif not institution:
+                return render_template('students/form.html', student=None, institution=None, institutions=institutions, campuses=[], grades=[], existing_user=None)
+    elif not institution and not existing_user:
         # For admin/coordinator without institution assigned
         flash('Debe seleccionar una institución antes de crear estudiantes.', 'error')
         return redirect(url_for('institution.select_institution'))
 
     if request.method == 'POST':
+        # If existing_user is provided, only create academic student record
+        if existing_user:
+            # Validate academic fields only
+            campus_id = request.form.get('campus_id', type=int)
+            grade_id = request.form.get('grade_id', type=int)
+            guardian_name = request.form.get('guardian_name', '').strip()
+            
+            if not campus_id:
+                flash('Debes seleccionar una sede.', 'error')
+                campuses = Campus.query.filter_by(institution_id=institution.id if institution else existing_user.institution_id, active=True).order_by(Campus.name).all()
+                grades = Grade.query.filter_by(campus_id=campus_id).order_by(Grade.name).all() if campus_id else []
+                return render_template('students/form.html', student=None, institution=institution or existing_user.institution, campuses=campuses, grades=grades, existing_user=existing_user)
+
+            # Create AcademicStudent
+            student = AcademicStudent(
+                user_id=existing_user.id,
+                institution_id=institution.id if institution else existing_user.institution_id,
+                campus_id=campus_id,
+                grade_id=grade_id if grade_id else None,
+                document_type=existing_user.document_type,
+                document_number=existing_user.document_number,
+                birth_date=datetime.strptime(request.form.get('birth_date'), '%Y-%m-%d').date() if request.form.get('birth_date') else None,
+                address=request.form.get('student_address', '').strip(),
+                neighborhood=request.form.get('neighborhood', '').strip(),
+                stratum=int(request.form.get('stratum')) if request.form.get('stratum') else None,
+                gender=request.form.get('gender', ''),
+                blood_type=request.form.get('blood_type', '').strip(),
+                eps=request.form.get('eps', '').strip(),
+                guardian_name=guardian_name,
+                guardian_phone=request.form.get('guardian_phone', '').strip(),
+                guardian_email=request.form.get('guardian_email', '').strip(),
+                enrolled_year=(institution or existing_user.institution).academic_year if (institution or existing_user.institution) else '2026',
+                status='activo'
+            )
+            
+            try:
+                db.session.add(student)
+                db.session.commit()
+                flash(f'✅ Perfil académico creado exitosamente para {existing_user.get_full_name()}.', 'success')
+                return redirect(url_for('students.list'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'❌ Error al crear perfil académico: {str(e)}', 'error')
+                campuses = Campus.query.filter_by(institution_id=institution.id if institution else existing_user.institution_id, active=True).order_by(Campus.name).all()
+                grades = Grade.query.filter_by(campus_id=campus_id).order_by(Grade.name).all() if campus_id else []
+                return render_template('students/form.html', student=None, institution=institution or existing_user.institution, campuses=campuses, grades=grades, existing_user=existing_user)
+        
+        # Full creation flow (from Students navbar)
         # Validate document
         doc_type = request.form.get('document_type', 'TI')
         doc_number = request.form.get('document_number', '').strip()
@@ -206,6 +263,7 @@ def new():
             phone=request.form.get('phone', '').strip(),
             address=request.form.get('address', '').strip(),
             role='student',
+            institution_id=institution.id,  # Assign institution to user
             is_active=True
         )
         db.session.add(user)
@@ -242,10 +300,17 @@ def new():
             db.session.rollback()
             flash(f'Error al crear el estudiante: {str(e)}', 'error')
     
-    campuses = Campus.query.filter_by(active=True, institution_id=institution.id).all()
-    grades = Grade.query.join(Campus).filter(Campus.institution_id == institution.id).all()
+    # Determine which institution to use
+    current_inst = institution or (existing_user.institution if existing_user else None)
+    
+    if current_inst:
+        campuses = Campus.query.filter_by(active=True, institution_id=current_inst.id).all()
+        grades = Grade.query.join(Campus).filter(Campus.institution_id == current_inst.id).all()
+    else:
+        campuses = []
+        grades = []
 
-    return render_template('students/form.html', student=None, campuses=campuses, grades=grades, institution=institution)
+    return render_template('students/form.html', student=None, campuses=campuses, grades=grades, institution=current_inst, existing_user=existing_user)
 
 
 # ============================================
@@ -441,6 +506,7 @@ def upload():
                         document_type=str(row.get('tipo_documento', 'TI')).strip(),
                         document_number=doc_number,
                         role='student',
+                        institution_id=institution.id,  # Assign institution to user
                         is_active=True
                     )
                     db.session.add(user)
