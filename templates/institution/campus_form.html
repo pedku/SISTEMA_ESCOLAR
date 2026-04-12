@@ -3,59 +3,254 @@
 {% block title %}{{ 'Editar' if campus else 'Nueva' }} Sede - SIGE{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h2 class="mb-4">
-        <i class="bi bi-geo-alt"></i> {{ 'Editar' if campus else 'Nueva' }} Sede
-    </h2>
-    
-    <div class="card">
-        <div class="card-body">
-            <form method="POST">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre de la Sede *</label>
-                        <input type="text" name="name" class="form-control" 
-                               value="{{ campus.name if campus else '' }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Código</label>
-                        <input type="text" name="code" class="form-control" 
-                               value="{{ campus.code if campus else '' }}">
-                    </div>
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-geo-alt text-primary me-2"></i>{{ 'Editar' if campus else 'Nueva' }} Sede
+            </h1>
+            <p class="text-muted mb-0">{{ 'Modifica los datos de la sede' if campus else 'Complete los datos para crear una nueva sede' }}</p>
+        </div>
+        <a href="{{ url_for('institution.campuses') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    {% if not institution and institutions %}
+    <!-- Institution Selector for Root -->
+    <div class="card card-modern shadow-sm mb-4 animate-in" style="border-radius:15px;">
+        <div class="card-header bg-warning bg-opacity-10 border-bottom">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Seleccionar Institución</h5>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted mb-3">Como root, debe seleccionar la institución donde creará la sede.</p>
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Institución</label>
+                    <select name="institution_id" class="form-select form-select-lg" required>
+                        <option value="">Seleccionar institución...</option>
+                        {% for inst in institutions %}
+                        <option value="{{ inst.id }}">{{ inst.name }} {% if inst.nit %}(NIT: {{ inst.nit }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Dirección</label>
-                    <input type="text" name="address" class="form-control" 
-                           value="{{ campus.address if campus else '' }}">
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-check-circle me-1"></i>Seleccionar
+                    </button>
                 </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Jornada</label>
-                        <select name="jornada" class="form-select">
-                            <option value="mañana" {% if campus and campus.jornada == 'mañana' %}selected{% endif %}>Mañana</option>
-                            <option value="tarde" {% if campus and campus.jornada == 'tarde' %}selected{% endif %}>Tarde</option>
-                            <option value="completa" {% if not campus or campus.jornada == 'completa' %}selected{% endif %}>Completa</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" name="active" class="form-check-input" id="active"
-                                   {% if not campus or campus.active %}checked{% endif %}>
-                            <label class="form-check-label" for="active">Sede Activa</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle"></i> {{ 'Actualizar' if campus else 'Crear' }} Sede
-                </button>
-                <a href="{{ url_for('institution.campuses') }}" class="btn btn-secondary">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </a>
             </form>
         </div>
     </div>
+    {% else %}
+
+    {% if institution %}
+    <!-- Institution Banner -->
+    <div class="card shadow-sm border-0 border-start border-4 border-info mb-4 animate-in" style="border-radius:15px;">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-building text-info fs-4 me-3"></i>
+                <div>
+                    <h5 class="mb-0 fw-bold">{{ institution.name }}</h5>
+                    {% if institution.municipality %}
+                    <p class="text-muted mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}, {{ institution.department }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card card-modern shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i>Datos de la Sede</h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if errors and errors.general %}
+                    <div class="server-error mb-3">
+                        <strong><i class="bi bi-exclamation-triangle me-1"></i>Error General:</strong> {{ errors.general }}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% set data = form_data if form_data else {} %}
+                        {% set campus_data = campus if campus else {} %}
+                        
+                        <!-- Name and Code -->
+                        <div class="row mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-tag text-primary me-1"></i>Nombre de la Sede <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       name="name"
+                                       class="form-control {% if errors and errors.name %}is-invalid{% endif %}"
+                                       value="{{ data.get('name', campus_data.name if campus_data else '') }}"
+                                       placeholder="Ej: Sede Principal, Sede Norte, etc."
+                                       required>
+                                {% if errors and errors.name %}
+                                <div class="validation-message text-danger mt-1 small">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.name }}
+                                </div>
+                                {% else %}
+                                <div class="field-hint text-muted small mt-1">💡 Nombre descriptivo de la ubicación física</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-hash text-primary me-1"></i>Código
+                                </label>
+                                <input type="text"
+                                       name="code"
+                                       class="form-control {% if errors and errors.code %}is-invalid{% endif %}"
+                                       value="{{ data.get('code', campus_data.code if campus_data else '') }}"
+                                       placeholder="Ej: SEDE001">
+                                {% if errors and errors.code %}
+                                <div class="validation-message text-danger mt-1 small">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.code }}
+                                </div>
+                                {% else %}
+                                <div class="field-hint text-muted small mt-1">💡 Código único identificador (opcional)</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt text-primary me-1"></i>Dirección
+                            </label>
+                            <input type="text"
+                                   name="address"
+                                   class="form-control"
+                                   value="{{ data.get('address', campus_data.address if campus_data else '') }}"
+                                   placeholder="Calle 123 # 45-67, Barrio">
+                            <div class="field-hint text-muted small mt-1">💡 Ubicación física completa de la sede</div>
+                        </div>
+
+                        <!-- Jornada and Active -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-clock text-primary me-1"></i>Jornada
+                                </label>
+                                <select name="jornada" class="form-select">
+                                    <option value="manana" {% if data.get('jornada', campus_data.jornada if campus_data else '') == 'manana' %}selected{% endif %}>Mañana</option>
+                                    <option value="tarde" {% if data.get('jornada', campus_data.jornada if campus_data else '') == 'tarde' %}selected{% endif %}>Tarde</option>
+                                    <option value="completa" {% if not data.get('jornada') and not campus_data.jornada %}selected{% elif data.get('jornada') == 'completa' or campus_data.jornada == 'completa' %}selected{% endif %}>Completa</option>
+                                </select>
+                                <div class="field-hint text-muted small mt-1">💡 Horario de funcionamiento de la sede</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-toggle-on text-primary me-1"></i>Estado
+                                </label>
+                                <div class="form-check form-switch p-3 bg-light rounded mt-2">
+                                    <input type="checkbox"
+                                           name="active"
+                                           class="form-check-input"
+                                           id="active"
+                                           {% if data.get('active', True if not campus_data else campus_data.active) %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="active">
+                                        <i class="bi bi-check-circle text-success me-1"></i>Sede Activa
+                                    </label>
+                                    <div class="form-text mt-1">Las sedes inactivas no estarán disponibles para selección</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Campus Checkbox -->
+                        <div class="form-check form-switch p-4 bg-warning bg-opacity-10 rounded border {% if errors and errors.is_main_campus %}border-danger{% else %}border-warning{% endif %} mb-4">
+                            <input type="checkbox"
+                                   name="is_main_campus"
+                                   class="form-check-input {% if errors and errors.is_main_campus %}is-invalid{% endif %}"
+                                   id="is_main_campus"
+                                   {% if data.get('is_main_campus') or (campus_data and campus_data.is_main_campus) %}checked{% endif %}>
+                            <label class="form-check-label fw-bold fs-5" for="is_main_campus">
+                                <i class="bi bi-star-fill text-warning me-1"></i>🌟 Sede Principal
+                            </label>
+                            {% if errors and errors.is_main_campus %}
+                            <div class="validation-message text-danger mt-2 small">
+                                <i class="bi bi-exclamation-circle me-1"></i>{{ errors.is_main_campus }}
+                            </div>
+                            {% else %}
+                            <div class="form-text mt-2">
+                                <i class="bi bi-info-circle me-1"></i>Solo puede haber una sede principal por institución
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ 'Actualizar' if campus else 'Crear' }} Sede
+                            </button>
+                            <a href="{{ url_for('institution.campuses') }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-1"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Help -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4 animate-in" style="border-radius:15px;">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Información</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2"><strong>¿Qué es una sede?</strong></p>
+                    <p class="small">Una sede es una ubicación física donde funciona la institución. Puede tener múltiples sedes.</p>
+                    
+                    <hr>
+                    
+                    <p class="small text-muted mb-2"><i class="bi bi-star-fill text-warning me-1"></i><strong>Sede Principal</strong></p>
+                    <ul class="small text-muted mb-0">
+                        <li>Solo puede haber una sede principal por institución</li>
+                        <li>Generalmente es la sede administrativa</li>
+                        <li>Se destaca visualmente en el listado</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Consejos</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small text-muted mb-0">
+                        <li>Asigne un código único a cada sede para fácil identificación</li>
+                        <li>Use nombres descriptivos (Sede Principal, Sede Norte, etc.)</li>
+                        <li>La jornada determina los horarios de clase</li>
+                        <li>Desactive sedes que ya no están en uso en lugar de eliminarlas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.card-modern {
+    border-radius: 15px;
+    border: none;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.alert {
+    border-radius: 10px;
+}
+</style>
 {% endblock %}

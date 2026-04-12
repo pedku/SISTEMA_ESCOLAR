@@ -1,8 +1,8 @@
 """
 Username generator utility.
-Generates unique usernames from user's name and document number.
-Format: @firstinitiallastname + last4digits_of_document
-Example: Juan Pérez with document 1234567890 → @jperez7890
+Generates unique usernames from user's name with incremental numbering.
+Format: first_initial + lastname + incremental_number
+Example: Pedro Luis Castro Franco → pcastro1, pcastro2, pcastro3, etc.
 """
 
 import re
@@ -28,74 +28,122 @@ def clean_name(name):
     return name
 
 
+def generate_username_base(first_name, last_name):
+    """
+    Generate base username from name.
+    Format: first_initial + first_lastname
+    Example: Pedro Luis Castro Franco → pcastro
+    """
+    first = clean_name(first_name)
+    last = clean_name(last_name)
+
+    if not first and not last:
+        return None
+
+    if first and last:
+        # Extract first word of last name (first lastname)
+        first_lastname = last.split()[0]  # Get first lastname only
+        # Use first initial + first lastname
+        return f"{first[0]}{first_lastname}"
+    elif last:
+        # Just first word of lastname
+        return last.split()[0]
+    elif first:
+        # Just firstname
+        return first
+    
+    return None
+
+
 def generate_username(first_name, last_name, document_number=None, existing_usernames=None):
     """
-    Generate a unique username from name and optionally document number.
-    
-    Format options (in order of preference):
-    1. @firstinitiallastname + last 4 doc (if doc provided): @jperez7890
-    2. @firstinitiallastname: @jperez
-    3. @firstname_lastname: @juan_perez
-    4. Add number if duplicate: @jperez1, @jperez2, etc.
-    
+    Generate a unique username from name with incremental numbering.
+
+    Format: first_initial + lastname + number (if needed)
+    Example: Pedro Luis Castro Franco → pcastro1, pcastro2, pcastro3...
+
+    If document_number is provided and no conflicts, can use format:
+    first_initial + lastname + last4digits (fallback)
+
     Args:
         first_name: User's first name
         last_name: User's last name
-        document_number: Optional document number
+        document_number: Optional document number (for fallback format)
         existing_usernames: List of already taken usernames
-        
+
     Returns:
         Generated unique username
     """
     if existing_usernames is None:
         existing_usernames = []
+
+    # Generate base username (e.g., pcastro)
+    base_username = generate_username_base(first_name, last_name)
     
-    first = clean_name(first_name)
-    last = clean_name(last_name)
-    
-    if not first and not last:
+    if not base_username:
         return None
-    
-    # Build base username options
-    options = []
-    
-    # Option 1: First initial + lastname + last 4 of document
-    if first and last and document_number:
-        doc_suffix = str(document_number).strip()[-4:]
-        doc_suffix = re.sub(r'[^0-9]', '', doc_suffix)
-        if doc_suffix:
-            options.append(f"@{first[0]}{last}{doc_suffix}")
-    
-    # Option 2: First initial + lastname
-    if first and last:
-        options.append(f"@{first[0]}{last}")
-    
-    # Option 3: Firstname_lastname
-    if first and last:
-        options.append(f"@{first}_{last}")
-    
-    # Option 4: Just lastname (if no firstname)
-    if last and not first:
-        options.append(f"@{last}")
-    
-    # Option 5: Just firstname
-    if first and not last:
-        options.append(f"@{first}")
-    
-    # Find first available option
-    for base_username in options:
-        if base_username not in existing_usernames:
-            return base_username
-    
-    # All base options taken, add numbers
-    base = options[0] if options else f"@user"
+
+    # If base username is not taken, use it with number 1
+    # This ensures consistency: everyone gets a number
     counter = 1
     while True:
-        candidate = f"{base}{counter}"
+        candidate = f"{base_username}{counter}"
         if candidate not in existing_usernames:
             return candidate
         counter += 1
         
-        # Safety limit
-        if counter > 1000:
-            return f"{base}{counter}_{hash(first + last) % 1000}"
+        # Safety limit to prevent infinite loops
+        if counter > 10000:
+            # Add hash suffix as last resort
+            import hashlib
+            hash_suffix = hashlib.md5(f"{first_name}{last_name}{counter}".encode()).hexdigest()[:4]
+            return f"{base_username}{counter}_{hash_suffix}"
+
+
+def generate_username_from_db(first_name, last_name, query_func=None):
+    """
+    Generate username by querying database for existing usernames.
+    
+    This is the preferred method when creating users in routes.
+    
+    Args:
+        first_name: User's first name
+        last_name: User's last name
+        query_func: Function that takes a username pattern and returns list of matching usernames
+                   Example: lambda pattern: [u.username for u in User.query.filter(User.username.like(f'{pattern}%')).all()]
+    
+    Returns:
+        Generated unique username
+    """
+    base_username = generate_username_base(first_name, last_name)
+    
+    if not base_username:
+        return None
+    
+    # If no query function, just return base with 1
+    if query_func is None:
+        return f"{base_username}1"
+    
+    # Get all usernames that start with base pattern
+    existing = query_func(base_username)
+    
+    if not existing:
+        # No conflicts, start with 1
+        return f"{base_username}1"
+    
+    # Extract numbers from existing usernames
+    # Pattern: base_username + number
+    numbers = []
+    pattern = re.compile(rf'^{re.escape(base_username)}(\d+)$')
+    
+    for username in existing:
+        match = pattern.match(username)
+        if match:
+            numbers.append(int(match.group(1)))
+    
+    # Find the next available number
+    if not numbers:
+        return f"{base_username}1"
+    
+    next_number = max(numbers) + 1
+    return f"{base_username}{next_number}"

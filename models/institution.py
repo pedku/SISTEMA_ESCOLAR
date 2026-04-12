@@ -54,23 +54,25 @@ class Institution(db.Model):
 
 class Campus(db.Model):
     """Campus/Sede of an institution."""
-    
+
     __tablename__ = 'campuses'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=False, index=True)
     name = db.Column(db.String(150), nullable=False)
     code = db.Column(db.String(20), index=True)
     address = db.Column(db.String(200))
     jornada = db.Column(db.String(50), default='completa')  # mañana, tarde, completa
+    is_main_campus = db.Column(db.Boolean, default=False)  # Solo una sede principal por institución
     active = db.Column(db.Boolean, default=True)
-    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     # Relationships
     grades = db.relationship('Grade', backref='campus', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Campus {self.name}>'
-    
+
     def to_dict(self):
         """Convert campus to dictionary."""
         return {
@@ -80,5 +82,7 @@ class Campus(db.Model):
             'code': self.code,
             'address': self.address,
             'jornada': self.jornada,
-            'active': self.active
+            'is_main_campus': self.is_main_campus,
+            'active': self.active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }

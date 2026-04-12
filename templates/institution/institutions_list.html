@@ -2,75 +2,664 @@
 
 {% block title %}Gestión de Instituciones - SIGE{% endblock %}
 
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    }
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+    .institution-card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .institution-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    .institution-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+    }
+    .institution-header::after {
+        content: '';
+        position: absolute;
+        bottom: -20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .counter {
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    
+    /* Table Styles */
+    .modern-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .modern-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .modern-table thead th {
+        font-weight: 600;
+        padding: 1rem;
+        border: none;
+    }
+    .modern-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    .modern-table tbody tr:hover {
+        background-color: #f8f9ff;
+        transform: scale(1.01);
+    }
+    .modern-table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: #f0f0f0;
+    }
+    
+    /* Action Buttons */
+    .action-btn {
+        width: 35px;
+        height: 35px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    .empty-state i {
+        font-size: 5rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-buildings"></i> Gestión de Instituciones</h2>
-        <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Nueva Institución
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-buildings text-primary me-2"></i>Gestión de Instituciones
+            </h1>
+            <p class="text-muted mb-0">Administra todas las instituciones educativas del sistema</p>
+        </div>
+        <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary btn-lg shadow-sm">
+            <i class="bi bi-plus-circle me-2"></i>Nueva Institución
         </a>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover datatable" id="institutionsTable">
-                    <thead>
-                        <tr>
-                            <th>Logo</th>
-                            <th>Nombre</th>
-                            <th>NIT</th>
-                            <th>Departamento</th>
-                            <th>Municipio</th>
-                            <th>Año Lectivo</th>
-                            <th>Sedes</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inst in institutions %}
-                        <tr>
-                            <td class="text-center">
-                                {% if inst.logo %}
-                                <img src="{{ url_for('static', filename='uploads/' + inst.logo) }}"
-                                     alt="Logo" class="rounded" style="max-width: 50px; max-height: 50px;"
-                                     onerror="this.style.display='none'">
-                                {% else %}
-                                <span class="text-muted"><i class="bi bi-building" style="font-size: 1.5rem;"></i></span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <strong>{{ inst.name }}</strong>
-                                {% if inst.email %}
-                                <br><small class="text-muted"><i class="bi bi-envelope"></i> {{ inst.email }}</small>
-                                {% endif %}
-                            </td>
-                            <td>{{ inst.nit if inst.nit else '-' }}</td>
-                            <td>{{ inst.department if inst.department else '-' }}</td>
-                            <td>{{ inst.municipality if inst.municipality else '-' }}</td>
-                            <td>
-                                <span class="badge bg-info">{{ inst.academic_year }}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-secondary">{{ inst.campuses.count() }}</span>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ url_for('institution.institution_edit', id=inst.id) }}"
-                                       class="btn btn-warning" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form method="POST" action="{{ url_for('institution.institution_delete', id=inst.id) }}" style="display:inline" onsubmit="return confirm('¿Eliminar institución {{ inst.name }}?')">
-                                        <button type="submit" class="btn btn-danger" title="Eliminar">
-                                            <i class="bi bi-trash"></i>
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6 animate-in delay-1">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="bi bi-buildings"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Total Instituciones</p>
+                        <p class="counter text-primary mb-0">{{ institutions|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% set total_campuses = namespace(count=0) %}
+        {% for inst in institutions %}
+            {% set total_campuses.count = total_campuses.count + inst.campuses.count() %}
+        {% endfor %}
+        
+        <div class="col-xl-3 col-md-6 animate-in delay-2">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                        <i class="bi bi-geo-alt"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Total Sedes</p>
+                        <p class="counter text-success mb-0">{{ total_campuses.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% set total_students = namespace(count=0) %}
+        {% for inst in institutions %}
+            {% set total_students.count = total_students.count + inst.academic_students.count() %}
+        {% endfor %}
+        
+        <div class="col-xl-3 col-md-6 animate-in delay-3">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Total Estudiantes</p>
+                        <p class="counter text-info mb-0">{{ total_students.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% set total_admins = namespace(count=0) %}
+        {% for inst in institutions %}
+            {% for user in inst.users %}
+                {% if user.role == 'admin' %}
+                    {% set total_admins.count = total_admins.count + 1 %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+        
+        <div class="col-xl-3 col-md-6 animate-in delay-4">
+            <div class="card stat-card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-semibold">Total Admins</p>
+                        <p class="counter text-warning mb-0">{{ total_admins.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Institutions Table -->
+    <div class="animate-in delay-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-table text-primary me-2"></i>Listado de Instituciones
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if institutions %}
+                <div class="table-responsive">
+                    <table class="table modern-table mb-0" id="institutionsTable">
+                        <thead>
+                            <tr>
+                                <th>Logo</th>
+                                <th>Nombre</th>
+                                <th>NIT</th>
+                                <th>Ubicación</th>
+                                <th>Año Lectivo</th>
+                                <th class="text-center">Sedes</th>
+                                <th class="text-center">Estudiantes</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inst in institutions %}
+                            <tr>
+                                <td class="text-center">
+                                    {% if inst.logo %}
+                                    <img src="{{ url_for('static', filename='uploads/' + inst.logo) }}"
+                                         alt="Logo" class="rounded shadow-sm" style="max-width: 50px; max-height: 50px;"
+                                         onerror="this.outerHTML='<i class=\'bi bi-building text-muted\' style=\'font-size: 2rem;\'></i>'">
+                                    {% else %}
+                                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-building text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong class="d-block">{{ inst.name }}</strong>
+                                    {% if inst.email %}
+                                    <small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ inst.email }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if inst.nit %}
+                                    <span class="badge bg-light text-dark">{{ inst.nit }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if inst.municipality or inst.department %}
+                                    <div><i class="bi bi-geo-alt text-danger me-1"></i>{{ inst.municipality }}{% if inst.municipality and inst.department %}, {% endif %}{{ inst.department }}</div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ inst.academic_year }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success rounded-pill">{{ inst.campuses.count() }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill">{{ inst.academic_students.count() }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button type="button" class="btn btn-info text-white action-btn" 
+                                                title="Ver datos completos"
+                                                data-bs-toggle="modal" data-bs-target="#institutionDetailModal" 
+                                                data-institution-id="{{ inst.id }}"
+                                                data-institution-name="{{ inst.name }}"
+                                                data-institution-nit="{{ inst.nit or '-' }}"
+                                                data-institution-address="{{ inst.address or '-' }}"
+                                                data-institution-phone="{{ inst.phone or '-' }}"
+                                                data-institution-email="{{ inst.email or '-' }}"
+                                                data-institution-department="{{ inst.department or '-' }}"
+                                                data-institution-municipality="{{ inst.municipality or '-' }}"
+                                                data-institution-year="{{ inst.academic_year }}"
+                                                data-institution-resolution="{{ inst.resolution or '-' }}"
+                                                data-institution-campuses="{{ inst.campuses.count() }}"
+                                                data-institution-students="{{ inst.academic_students.count() }}"
+                                                data-institution-logo="{{ inst.logo or '' }}">
+                                            <i class="bi bi-eye"></i>
                                         </button>
-                                    </form>
+                                        <button type="button" class="btn btn-success text-white action-btn" 
+                                                title="Gestionar sedes"
+                                                onclick="openCampusModal({{ inst.id }}, '{{ inst.name }}')">
+                                            <i class="bi bi-geo-alt"></i>
+                                        </button>
+                                        <a href="{{ url_for('institution.institution_edit', id=inst.id) }}"
+                                           class="btn btn-warning action-btn" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="POST" action="{{ url_for('institution.institution_delete', id=inst.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-danger action-btn" title="Eliminar"
+                                                    onclick="return confirm('¿Estás seguro de eliminar la institución {{ inst.name }}? Esta acción no se puede deshacer.')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-buildings"></i>
+                    <h3 class="h4 text-muted mb-3">No hay instituciones creadas</h3>
+                    <p class="text-muted mb-4">Comienza creando la primera institución educativa del sistema.</p>
+                    <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-plus-circle me-2"></i>Crear Primera Institución
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campus Management Modal -->
+<div class="modal fade" id="campusManagementModal" tabindex="-1" aria-labelledby="campusManagementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="campusManagementModalLabel">
+                    <i class="bi bi-geo-alt me-2"></i>Gestión de Sedes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Institution Header -->
+                <div class="bg-light p-4 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-geo-alt text-success" style="font-size: 1.8rem;"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 fw-bold" id="campus-inst-name"></h4>
+                            <p class="text-muted mb-0 small">Gestiona las sedes de esta institución</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="bg-white border-bottom py-3 px-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-geo text-primary"></i>
                                 </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <div>
+                                    <div class="text-muted small">Total Sedes</div>
+                                    <div class="fw-bold h5 mb-0" id="campus-total">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Activas</div>
+                                    <div class="fw-bold h5 mb-0 text-success" id="campus-active">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-star text-warning"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Principal</div>
+                                    <div class="fw-bold h5 mb-0 text-warning" id="campus-main">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-pause-circle text-secondary"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Inactivas</div>
+                                    <div class="fw-bold h5 mb-0 text-secondary" id="campus-inactive">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content Area -->
+                <div class="p-4" id="campus-content-area">
+                    <!-- Loading state -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Cargando sedes...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cerrar
+                </button>
+                <button type="button" class="btn btn-success" onclick="openCreateCampusForm()">
+                    <i class="bi bi-plus-circle me-1"></i>Nueva Sede
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campus Create/Edit Form Modal -->
+<div class="modal fade" id="campusFormModal" tabindex="-1" aria-labelledby="campusFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="campusFormModalLabel">
+                    <i class="bi bi-plus-circle me-2"></i>Nueva Sede
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="campusForm">
+                    <input type="hidden" id="campus-id" value="">
+                    <input type="hidden" id="campus-institution-id" value="">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-tag text-primary me-1"></i>Nombre de la Sede <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="campus-name" required placeholder="Ej: Sede Principal, Sede Norte...">
+                        <div class="form-text">Nombre identificador de la sede educativa</div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-upc text-info me-1"></i>Código
+                            </label>
+                            <input type="text" class="form-control" id="campus-code" placeholder="Ej: SEDE-001">
+                            <div class="form-text">Código único identificador (opcional)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-clock text-warning me-1"></i>Jornada <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="campus-jornada" required>
+                                <option value="">Seleccionar jornada...</option>
+                                <option value="manana">Mañana</option>
+                                <option value="tarde">Tarde</option>
+                                <option value="completa" selected>Completa</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-geo-alt text-danger me-1"></i>Dirección
+                        </label>
+                        <input type="text" class="form-control" id="campus-address" placeholder="Calle, Carrera, Avenida...">
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 bg-light rounded">
+                                <input class="form-check-input" type="checkbox" id="campus-active-check" checked>
+                                <label class="form-check-label fw-semibold" for="campus-active-check">
+                                    <i class="bi bi-check-circle text-success me-1"></i>Sede Activa
+                                </label>
+                                <div class="form-text mt-1">Las sedes inactivas no aparecerán en listados</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 bg-light rounded">
+                                <input class="form-check-input" type="checkbox" id="campus-main-check">
+                                <label class="form-check-label fw-semibold" for="campus-main-check">
+                                    <i class="bi bi-star text-warning me-1"></i>Sede Principal
+                                </label>
+                                <div class="form-text mt-1">Solo puede haber una sede principal</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeCampusForm()">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveCampus()">
+                    <i class="bi bi-check-circle me-1"></i>Guardar Sede
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Institution Detail Modal -->
+<div class="modal fade" id="institutionDetailModal" tabindex="-1" aria-labelledby="institutionDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="institutionDetailModalLabel">
+                    <i class="bi bi-building me-2"></i>Datos de la Institución
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Logo and Basic Info -->
+                    <div class="col-md-4 text-center border-end">
+                        <div id="modal-logo-container" class="mb-3">
+                            <!-- Logo will be inserted here -->
+                        </div>
+                        <h4 id="modal-inst-name" class="h5 fw-bold text-primary mb-2"></h4>
+                        <div class="badge bg-info mb-2" id="modal-inst-year"></div>
+                        <div class="text-muted small" id="modal-inst-location"></div>
+                    </div>
+                    
+                    <!-- Detailed Info -->
+                    <div class="col-md-8">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-upc-scan text-primary me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.75rem;">NIT</small>
+                                                <strong id="modal-inst-nit"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-6">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-telephone text-success me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.75rem;">Teléfono</small>
+                                                <strong id="modal-inst-phone"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-6">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-envelope text-warning me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.75rem;">Email</small>
+                                                <strong id="modal-inst-email"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-geo-alt text-danger me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.75rem;">Dirección</small>
+                                                <strong id="modal-inst-address"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark-text text-info me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 0.75rem;">Resolución</small>
+                                                <strong id="modal-inst-resolution"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="row g-3 mt-3">
+                    <div class="col-md-4">
+                        <div class="card text-center border-primary">
+                            <div class="card-body">
+                                <i class="bi bi-geo-alt text-primary" style="font-size: 2rem;"></i>
+                                <h5 class="mt-2 mb-0" id="modal-inst-campuses"></h5>
+                                <small class="text-muted">Sedes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center border-success">
+                            <div class="card-body">
+                                <i class="bi bi-people text-success" style="font-size: 2rem;"></i>
+                                <h5 class="mt-2 mb-0" id="modal-inst-students"></h5>
+                                <small class="text-muted">Estudiantes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center border-info">
+                            <div class="card-body">
+                                <i class="bi bi-calendar-check text-info" style="font-size: 2rem;"></i>
+                                <h5 class="mt-2 mb-0" id="modal-inst-year-stat"></h5>
+                                <small class="text-muted">Año Lectivo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cerrar
+                </button>
+                <a id="modal-edit-btn" href="#" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i>Editar Institución
+                </a>
             </div>
         </div>
     </div>
@@ -79,17 +668,302 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    $('#institutionsTable').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+// Global variables for campus management
+let currentInstitutionId = null;
+let currentInstitutionName = '';
+
+// Open campus management modal
+function openCampusModal(institutionId, institutionName) {
+    currentInstitutionId = institutionId;
+    currentInstitutionName = institutionName;
+    
+    $('#campus-inst-name').text(institutionName);
+    $('#campusManagementModal').modal('show');
+    loadCampuses();
+}
+
+// Load campuses for current institution
+function loadCampuses() {
+    $.ajax({
+        url: `/institution/api/campuses/${currentInstitutionId}`,
+        method: 'GET',
+        success: function(response) {
+            displayCampuses(response.campuses);
+            updateCampusStats(response.stats);
         },
-        pageLength: 10,
-        order: [[1, 'asc']],
-        columnDefs: [
-            { orderable: false, targets: [0, 7] }
-        ]
+        error: function(error) {
+            $('#campus-content-area').html(`
+                <div class="text-center py-5">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-danger">Error al cargar sedes</h5>
+                    <p class="text-muted">${error.responseJSON?.error || 'Error desconocido'}</p>
+                </div>
+            `);
+        }
     });
+}
+
+// Display campuses in content area
+function displayCampuses(campuses) {
+    if (campuses.length === 0) {
+        $('#campus-content-area').html(`
+            <div class="text-center py-5">
+                <i class="bi bi-geo-alt text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">No hay sedes registradas</h4>
+                <p class="text-muted mb-4">Crea la primera sede para esta institución</p>
+                <button class="btn btn-success btn-lg" onclick="openCreateCampusForm()">
+                    <i class="bi bi-plus-circle me-2"></i>Crear Primera Sede
+                </button>
+            </div>
+        `);
+        return;
+    }
+    
+    let html = `
+        <div class="row g-3">
+    `;
+    
+    campuses.forEach(campus => {
+        const mainBadge = campus.is_main_campus ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-star-fill me-1"></i>Principal</span>' : '';
+        const statusBadge = campus.active 
+            ? '<span class="badge bg-success">Activa</span>' 
+            : '<span class="badge bg-secondary">Inactiva</span>';
+        const jornadaBadge = `<span class="badge bg-info"><i class="bi bi-clock me-1"></i>${campus.jornada}</span>`;
+        const degreesCount = campus.grades_count || 0;
+        
+        html += `
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex-grow-1">
+                                <h5 class="fw-bold mb-1">${campus.name} ${mainBadge}</h5>
+                                <div class="d-flex gap-2 mb-2">
+                                    ${statusBadge}
+                                    ${jornadaBadge}
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="editCampus(${campus.id})">
+                                        <i class="bi bi-pencil me-2"></i>Editar
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteCampus(${campus.id}, '${campus.name}')">
+                                        <i class="bi bi-trash me-2"></i>Eliminar
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        ${campus.address ? `<p class="text-muted small mb-2"><i class="bi bi-geo-alt text-danger me-1"></i>${campus.address}</p>` : ''}
+                        ${campus.code ? `<p class="text-muted small mb-2"><i class="bi bi-upc text-info me-1"></i>Código: ${campus.code}</p>` : ''}
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <span class="text-muted small">
+                                <i class="bi bi-journal me-1"></i>${degreesCount} grado(s)
+                            </span>
+                            <small class="text-muted">${campus.created_at ? new Date(campus.created_at).toLocaleDateString('es-ES') : ''}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+    `;
+    
+    $('#campus-content-area').html(html);
+}
+
+// Update campus statistics
+function updateCampusStats(stats) {
+    $('#campus-total').text(stats.total);
+    $('#campus-active').text(stats.active);
+    $('#campus-inactive').text(stats.inactive);
+    $('#campus-main').text(stats.main_name || '-');
+}
+
+// Open create campus form
+function openCreateCampusForm() {
+    $('#campusFormModalLabel').html('<i class="bi bi-plus-circle me-2"></i>Nueva Sede');
+    $('#campusForm')[0].reset();
+    $('#campus-id').val('');
+    $('#campus-institution-id').val(currentInstitutionId);
+    $('#campus-active-check').prop('checked', true);
+    $('#campus-main-check').prop('checked', false);
+    $('#campusFormModal').modal('show');
+}
+
+// Edit campus
+function editCampus(campusId) {
+    $.ajax({
+        url: `/institution/api/campuses/${currentInstitutionId}/${campusId}`,
+        method: 'GET',
+        success: function(campus) {
+            $('#campusFormModalLabel').html('<i class="bi bi-pencil me-2"></i>Editar Sede');
+            $('#campus-id').val(campus.id);
+            $('#campus-institution-id').val(campus.institution_id);
+            $('#campus-name').val(campus.name);
+            $('#campus-code').val(campus.code || '');
+            $('#campus-address').val(campus.address || '');
+            $('#campus-jornada').val(campus.jornada);
+            $('#campus-active-check').prop('checked', campus.active);
+            $('#campus-main-check').prop('checked', campus.is_main_campus);
+            $('#campusFormModal').modal('show');
+        },
+        error: function(error) {
+            alert('Error al cargar datos de la sede');
+        }
+    });
+}
+
+// Save campus
+function saveCampus() {
+    const campusId = $('#campus-id').val();
+    const institutionId = $('#campus-institution-id').val();
+    const name = $('#campus-name').val().trim();
+    const code = $('#campus-code').val().trim();
+    const address = $('#campus-address').val().trim();
+    const jornada = $('#campus-jornada').val();
+    const active = $('#campus-active-check').is(':checked');
+    const isMainCampus = $('#campus-main-check').is(':checked');
+    
+    if (!name) {
+        alert('El nombre de la sede es obligatorio');
+        return;
+    }
+    
+    if (!jornada) {
+        alert('Debes seleccionar una jornada');
+        return;
+    }
+    
+    const data = {
+        name: name,
+        code: code,
+        address: address,
+        jornada: jornada,
+        active: active,
+        is_main_campus: isMainCampus
+    };
+    
+    let url, method;
+    if (campusId) {
+        // Update
+        url = `/institution/api/campuses/${institutionId}/${campusId}`;
+        method = 'PUT';
+    } else {
+        // Create
+        url = `/institution/api/campuses/${institutionId}`;
+        method = 'POST';
+    }
+    
+    $.ajax({
+        url: url,
+        method: method,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            $('#campusFormModal').modal('hide');
+            loadCampuses();
+            alert(response.message || 'Sede guardada exitosamente');
+        },
+        error: function(error) {
+            alert(error.responseJSON?.error || 'Error al guardar la sede');
+        }
+    });
+}
+
+// Delete campus
+function deleteCampus(campusId, campusName) {
+    if (confirm(`¿Estás seguro de eliminar la sede "${campusName}"? Esta acción no se puede deshacer y no debe tener grados asociados.`)) {
+        $.ajax({
+            url: `/institution/api/campuses/${currentInstitutionId}/${campusId}`,
+            method: 'DELETE',
+            success: function(response) {
+                loadCampuses();
+                alert(response.message || 'Sede eliminada exitosamente');
+            },
+            error: function(error) {
+                alert(error.responseJSON?.error || 'Error al eliminar la sede');
+            }
+        });
+    }
+}
+
+// Close campus form
+function closeCampusForm() {
+    $('#campusForm')[0].reset();
+}
+
+$(document).ready(function() {
+    // Handle institution detail modal
+    $('#institutionDetailModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var instId = button.data('institution-id');
+        var instName = button.data('institution-name');
+        var instNit = button.data('institution-nit');
+        var instAddress = button.data('institution-address');
+        var instPhone = button.data('institution-phone');
+        var instEmail = button.data('institution-email');
+        var instDepartment = button.data('institution-department');
+        var instMunicipality = button.data('institution-municipality');
+        var instYear = button.data('institution-year');
+        var instResolution = button.data('institution-resolution');
+        var instCampuses = button.data('institution-campuses');
+        var instStudents = button.data('institution-students');
+        var instLogo = button.data('institution-logo');
+        
+        // Update modal content
+        $('#modal-inst-name').text(instName);
+        $('#modal-inst-nit').text(instNit);
+        $('#modal-inst-address').text(instAddress);
+        $('#modal-inst-phone').text(instPhone);
+        $('#modal-inst-email').text(instEmail);
+        $('#modal-inst-resolution').text(instResolution);
+        $('#modal-inst-campuses').text(instCampuses);
+        $('#modal-inst-students').text(instStudents);
+        $('#modal-inst-year').text('Año ' + instYear);
+        $('#modal-inst-year-stat').text(instYear);
+        $('#modal-edit-btn').attr('href', '/institution/' + instId + '/edit');
+        
+        // Location
+        var location = [];
+        if (instMunicipality && instMunicipality !== '-') location.push(instMunicipality);
+        if (instDepartment && instDepartment !== '-') location.push(instDepartment);
+        $('#modal-inst-location').text(location.length > 0 ? location.join(', ') : 'No especificada');
+        
+        // Logo
+        var logoContainer = $('#modal-logo-container');
+        if (instLogo && instLogo !== '') {
+            logoContainer.html('<img src="/static/uploads/' + instLogo + '" alt="Logo" class="img-fluid rounded mb-2 shadow-sm" style="max-width: 120px;" onerror="this.outerHTML=\'<i class=\\\'bi bi-building text-muted\\\' style=\\\'font-size: 5rem;\\\'></i>\'>');
+        } else {
+            logoContainer.html('<i class="bi bi-building text-muted" style="font-size: 5rem;"></i>');
+        }
+    });
+    
+    // Initialize DataTable only if it exists and not already initialized
+    if ($.fn.DataTable.isDataTable('#institutionsTable')) {
+        // Already initialized, do nothing
+    } else {
+        $('#institutionsTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+            },
+            pageLength: 10,
+            order: [[1, 'asc']],
+            columnDefs: [
+                { orderable: false, targets: [0, 7] }
+            ],
+            retrieve: true
+        });
+    }
 });
 </script>
 {% endblock %}

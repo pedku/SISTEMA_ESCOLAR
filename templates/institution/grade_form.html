@@ -3,65 +3,196 @@
 {% block title %}{{ 'Editar' if grade else 'Nuevo' }} Grado - SIGE{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h2 class="mb-4">
-        <i class="bi bi-journal"></i> {{ 'Editar' if grade else 'Nuevo' }} Grado
-    </h2>
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-journal text-primary me-2"></i>{{ 'Editar' if grade else 'Nuevo' }} Grado
+            </h1>
+            <p class="text-muted mb-0">{{ 'Modifica los datos del grado' if grade else 'Complete los datos para crear un nuevo grado' }}</p>
+        </div>
+        <a href="{{ url_for('institution.grades') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form method="POST">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre del Grado *</label>
-                        <input type="text" name="name" class="form-control"
-                               value="{{ grade.name if grade else '' }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Sede *</label>
-                        <select name="campus_id" class="form-select" required>
-                            <option value="">Seleccione una sede</option>
-                            {% for campus in campuses %}
-                            <option value="{{ campus.id }}" {% if grade and grade.campus_id == campus.id %}selected{% endif %}>
-                                {{ campus.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+    {% if institution %}
+    <!-- Institution Banner -->
+    <div class="card shadow-sm border-0 border-start border-4 border-info mb-4 animate-in" style="border-radius:15px;">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="bi bi-building text-info" style="font-size: 1.5rem;"></i>
                 </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Director de Grupo</label>
-                        <select name="director_id" class="form-select">
-                            <option value="">Sin director asignado</option>
-                            {% for teacher in teachers %}
-                            <option value="{{ teacher.id }}" {% if grade and grade.director_id == teacher.id %}selected{% endif %}>
-                                {{ teacher.get_full_name() }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Año Académico *</label>
-                        <input type="text" name="academic_year" class="form-control"
-                               value="{{ grade.academic_year if grade else '2026' }}" required>
-                    </div>
+                <div>
+                    <h5 class="mb-0 fw-bold">{{ institution.name }}</h5>
+                    {% if institution.municipality %}
+                    <p class="text-muted mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}, {{ institution.department }}</p>
+                    {% endif %}
                 </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-                <div class="mb-3">
-                    <label class="form-label">Máximo de Estudiantes</label>
-                    <input type="number" name="max_students" class="form-control" min="1"
-                           value="{{ grade.max_students if grade else 40 }}">
+    <!-- Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-journal me-2"></i>Datos del Grado</h5>
                 </div>
+                <div class="card-body p-4">
+                    {% if errors and errors.general %}
+                    <div class="server-error mb-3">
+                        <strong><i class="bi bi-exclamation-triangle me-1"></i>Error General:</strong> {{ errors.general }}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% set data = form_data if form_data else {} %}
+                        {% set grade_data = grade if grade else {} %}
+                        
+                        <!-- Name and Campus -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-tag text-primary me-1"></i>Nombre del Grado <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       name="name"
+                                       class="form-control {% if errors and errors.name %}is-invalid{% endif %}"
+                                       value="{{ data.get('name', grade_data.name if grade_data else '') }}"
+                                       placeholder="Ej: 6-1, 11°B, Transición A"
+                                       required>
+                                {% if errors and errors.name %}
+                                <div class="validation-message text-danger mt-1 small">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.name }}
+                                </div>
+                                {% else %}
+                                <div class="field-hint text-muted small mt-1">💡 Nombre del grupo educativo</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-geo-alt text-primary me-1"></i>Sede <span class="text-danger">*</span>
+                                </label>
+                                <select name="campus_id"
+                                        class="form-select {% if errors and errors.campus_id %}is-invalid{% endif %}"
+                                        required>
+                                    <option value="">Seleccione una sede...</option>
+                                    {% for campus in campuses %}
+                                    <option value="{{ campus.id }}" 
+                                            {% if data.get('campus_id') == campus.id or (not data and grade_data and grade_data.campus_id == campus.id) %}selected{% endif %}>
+                                        {{ campus.name }} {% if campus.is_main_campus %}(Principal){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors and errors.campus_id %}
+                                <div class="validation-message text-danger mt-1 small">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.campus_id }}
+                                </div>
+                                {% else %}
+                                <div class="field-hint text-muted small mt-1">💡 Sede donde funcionará este grado</div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle"></i> {{ 'Actualizar' if grade else 'Crear' }} Grado
-                </button>
-                <a href="{{ url_for('institution.grades') }}" class="btn btn-secondary">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </a>
-            </form>
+                        <!-- Director and Academic Year -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person text-primary me-1"></i>Director de Grupo
+                                </label>
+                                <select name="director_id" class="form-select">
+                                    <option value="">Sin director asignado</option>
+                                    {% for teacher in teachers %}
+                                    <option value="{{ teacher.id }}" 
+                                            {% if data.get('director_id')|string == teacher.id|string or (not data and grade_data and grade_data.director_id == teacher.id) %}selected{% endif %}>
+                                        {{ teacher.get_full_name() }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="field-hint text-muted small mt-1">💡 Profesor responsable del grupo</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 text-primary me-1"></i>Año Lectivo <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       name="academic_year"
+                                       class="form-control"
+                                       value="{{ data.get('academic_year', grade_data.academic_year if grade_data else '2026') }}"
+                                       placeholder="2026">
+                                <div class="field-hint text-muted small mt-1">💡 Año académico vigente</div>
+                            </div>
+                        </div>
+
+                        <!-- Max Students -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-people text-primary me-1"></i>Capacidad Máxima
+                            </label>
+                            <input type="number"
+                                   name="max_students"
+                                   class="form-control"
+                                   min="1"
+                                   max="60"
+                                   value="{{ data.get('max_students', grade_data.max_students if grade_data else 40) }}"
+                                   placeholder="40">
+                            <div class="field-hint text-muted small mt-1">💡 Número máximo de estudiantes en el grado (1-60)</div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ 'Actualizar' if grade else 'Crear' }} Grado
+                            </button>
+                            <a href="{{ url_for('institution.grades') }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-1"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Help -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4 animate-in" style="border-radius:15px;">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Información</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2"><strong>¿Qué es un grado?</strong></p>
+                    <p class="small">Un grado representa un grupo específico de estudiantes en un año y sede determinados.</p>
+
+                    <hr>
+
+                    <p class="small text-muted mb-2"><i class="bi bi-person-check text-primary me-1"></i><strong>Director de Grupo</strong></p>
+                    <ul class="small text-muted mb-0">
+                        <li>Profesor responsable del seguimiento académico</li>
+                        <li>Puede tomar asistencia y registrar observaciones</li>
+                        <li>Es opcional asignar un director</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Consejos</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small text-muted mb-0">
+                        <li>Use nombres claros: 6-1, 11°B, Transición A</li>
+                        <li>La sede determina dónde se imparten las clases</li>
+                        <li>La capacidad máxima evita sobrecupo</li>
+                        <li>El director puede asignarse o cambiarse después</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>

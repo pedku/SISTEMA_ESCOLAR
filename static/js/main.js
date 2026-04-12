@@ -15,24 +15,31 @@ $(document).ready(function() {
     // ============================================
     // Initialize DataTables
     // ============================================
-    $('.datatable').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-            search: "Buscar:",
-            lengthMenu: "Mostrar _MENU_ registros",
-            info: "Mostrando _START_ - _END_ de _TOTAL_ registros",
-            infoEmpty: "No hay registros disponibles",
-            infoFiltered: "(filtrado de _MAX_ registros totales)",
-            paginate: {
-                first: "Primero",
-                last: "Último",
-                next: "Siguiente",
-                previous: "Anterior"
-            }
-        },
-        pageLength: 20,
-        responsive: true,
-        order: [[0, 'desc']]
+    $('.datatable').each(function() {
+        // Skip if already initialized
+        if ($.fn.DataTable.isDataTable(this)) {
+            return;
+        }
+        
+        $(this).DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando _START_ - _END_ de _TOTAL_ registros",
+                infoEmpty: "No hay registros disponibles",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 20,
+            responsive: true,
+            order: [[0, 'desc']]
+        });
     });
     
     // ============================================

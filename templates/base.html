@@ -46,8 +46,9 @@
                     <ul class="collapse list-unstyled" id="institutionSubmenu">
                         {% if user_has_role('root') %}
                         <li><a href="{{ url_for('institution.institutions_list') }}"><i class="bi bi-buildings"></i> Gestionar Instituciones</a></li>
-                        {% endif %}
+                        {% else %}
                         <li><a href="{{ url_for('institution.config') }}"><i class="bi bi-building"></i> Datos Institución</a></li>
+                        {% endif %}
                         <li><a href="{{ url_for('institution.campuses') }}"><i class="bi bi-geo-alt"></i> Sedes</a></li>
                         <li><a href="{{ url_for('institution.grades') }}"><i class="bi bi-journal"></i> Grados</a></li>
                         <li><a href="{{ url_for('institution.subjects') }}"><i class="bi bi-book"></i> Asignaturas</a></li>
@@ -220,6 +221,7 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

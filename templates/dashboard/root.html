@@ -276,9 +276,9 @@
                                 </a>
                             </div>
                         </div>
-                        <a href="{{ url_for('institution.switch_institution') }}"
+                        <a href="{{ url_for('institution.select_and_manage_institution', id=inst_stat.institution.id) }}"
                            class="btn btn-success btn-sm">
-                            <i class="bi bi-eye me-1"></i>Ver Institución
+                            <i class="bi bi-geo-alt me-1"></i>Gestionar Sedes
                         </a>
                     </div>
                 </div>

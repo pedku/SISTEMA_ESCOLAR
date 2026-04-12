@@ -1,47 +1,300 @@
 {% extends "base.html" %}
 
-{% block title %}Grados - SIGE{% endblock %}
+{% block title %}Gestión de Grados - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .institution-select-card {
+        display: block;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .institution-select-card input[type="radio"] {
+        display: none;
+    }
+    
+    .institution-select-card-body {
+        padding: 1.5rem;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        height: 100%;
+        background: white;
+        position: relative;
+    }
+    
+    .institution-select-card:hover .institution-select-card-body {
+        border-color: #667eea;
+        background-color: #f8f9ff;
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+    }
+    
+    .institution-select-card.selected .institution-select-card-body {
+        border-color: #667eea;
+        background-color: #e7f1ff;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+    }
+    
+    .institution-select-card.selected .institution-select-card-body::after {
+        content: '\f26a';
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: #667eea;
+        font-size: 1.5rem;
+    }
+    
+    .stat-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-journal"></i> Grados</h2>
-        <a href="{{ url_for('institution.grade_new') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Nuevo Grado
-        </a>
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-journal text-primary me-2"></i>Gestión de Grados
+            </h1>
+            {% if current_user.is_root() %}
+            <p class="text-muted mb-0">Administra los grados de todas las instituciones (selecciona una para gestionar)</p>
+            {% else %}
+            <p class="text-muted mb-0">Administra los grados de tu institución educativa</p>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            {% if institution and current_user.is_root() %}
+            <a href="{{ url_for('institution.grades', change_institution=1) }}"
+               class="btn btn-outline-warning">
+                <i class="bi bi-arrow-repeat me-1"></i>Cambiar Institución
+            </a>
+            {% endif %}
+            {% if institution %}
+            <a href="{{ url_for('institution.grade_new') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle me-1"></i>Nuevo Grado
+            </a>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
+    {% if show_selector %}
+    <!-- Institution Selector for Root -->
+    <div class="animate-in delay-1">
+        <div class="alert alert-info shadow-sm" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Selecciona una institución:</strong> Como administrador del sistema, debes seleccionar una institución para gestionar sus grados.
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-building text-primary me-2"></i>Instituciones Disponibles
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% if institutions %}
+                <form method="POST" action="{{ url_for('institution.switch_institution') }}">
+                    <input type="hidden" name="next" value="{{ url_for('institution.grades') }}">
+                    
+                    <div class="row g-4 mb-4">
+                        {% for inst in institutions %}
+                        <div class="col-md-6">
+                            <label class="institution-select-card" onclick="selectInstitution(this, {{ inst.id }})">
+                                <input type="radio" name="institution_id" value="{{ inst.id }}"
+                                       class="institution-radio"
+                                       id="inst_{{ inst.id }}">
+                                <div class="institution-select-card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                            <i class="bi bi-building text-primary" style="font-size: 1.5rem;"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold text-dark">{{ inst.name }}</h6>
+                                            {% if inst.municipality or inst.department %}
+                                            <p class="text-muted mb-0 small">
+                                                <i class="bi bi-geo-alt text-danger me-1"></i>
+                                                {{ inst.municipality }}{% if inst.municipality and inst.department %}, {% endif %}{{ inst.department }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-check-circle me-2"></i>Seleccionar y Gestionar Grados
+                    </button>
+                </form>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-buildings text-muted" style="font-size: 5rem;"></i>
+                    <h3 class="h4 text-muted mt-3 mb-3">No hay instituciones creadas</h3>
+                    <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>Crear Primera Institución
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Normal Grade Management View -->
+    
+    {% if institution %}
+    <!-- Institution Banner -->
+    <div class="card shadow-sm border-0 border-start border-4 border-info mb-4 animate-in delay-1" style="border-radius:15px;">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                        <i class="bi bi-building text-info" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold">{{ institution.name }}</h5>
+                        {% if institution.municipality %}
+                        <p class="text-muted mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ institution.municipality }}, {{ institution.department }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if current_user.is_root() %}
+                <span class="badge bg-primary">
+                    <i class="bi bi-shield-check me-1"></i> Vista Root
+                </span>
+                {% else %}
+                <span class="badge bg-success">
+                    <i class="bi bi-person-check me-1"></i> Tu Institución
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    {% if grades %}
+    <div class="row g-4 mb-4 animate-in delay-2">
+        <div class="col-md-4">
+            <div class="card stat-card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                        <i class="bi bi-journal text-primary" style="font-size: 1.8rem;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-primary">{{ grades|length }}</h3>
+                    <p class="text-muted mb-0 small">Total Grados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                        <i class="bi bi-geo text-success" style="font-size: 1.8rem;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-success">{{ grades|map(attribute='campus')|unique|list|length }}</h3>
+                    <p class="text-muted mb-0 small">Sedes Activas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                        <i class="bi bi-people text-warning" style="font-size: 1.8rem;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-warning">{{ grades|selectattr('director')|list|length }}</h3>
+                    <p class="text-muted mb-0 small">Con Director</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grades Table -->
+    <div class="card shadow-sm animate-in delay-3">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-table text-primary me-2"></i>Listado de Grados
+            </h5>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover datatable">
-                    <thead>
+                <table class="table table-hover mb-0" id="gradesTable">
+                    <thead class="bg-primary text-white">
                         <tr>
                             <th>Nombre</th>
                             <th>Sede</th>
-                            <th>Director</th>
-                            <th>Año Académico</th>
-                            <th>Max. Estudiantes</th>
-                            <th>Acciones</th>
+                            <th>Director de Grupo</th>
+                            <th>Año Lectivo</th>
+                            <th class="text-center">Capacidad</th>
+                            <th class="text-center">Estudiantes</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for grade in grades %}
                         <tr>
-                            <td>{{ grade.name }}</td>
-                            <td>{{ grade.campus.name }}</td>
-                            <td>{{ grade.director.get_full_name() if grade.director else '-' }}</td>
-                            <td>{{ grade.academic_year }}</td>
-                            <td>{{ grade.max_students }}</td>
                             <td>
-                                <a href="{{ url_for('institution.grade_edit', id=grade.id) }}" class="btn btn-sm btn-warning">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('institution.grade_delete', id=grade.id) }}" style="display:inline" onsubmit="return confirm('¿Eliminar grado {{ grade.name }}?')">
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                <strong>{{ grade.name }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ grade.campus.name }}</span>
+                            </td>
+                            <td>
+                                {% if grade.director %}
+                                {{ grade.director.get_full_name() }}
+                                {% else %}
+                                <span class="text-muted">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ grade.academic_year }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ grade.max_students }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success rounded-pill">{{ grade.academic_students.count() }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="{{ url_for('institution.grade_edit', id=grade.id) }}"
+                                       class="btn btn-warning btn-sm" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('institution.grade_delete', id=grade.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar"
+                                                onclick="return confirm('¿Eliminar grado {{ grade.name }}? Esta acción no se puede deshacer si tiene estudiantes asociados.')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -50,5 +303,54 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="card shadow-sm animate-in delay-2">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-journal text-muted" style="font-size: 5rem;"></i>
+            <h3 class="h4 text-muted mt-3 mb-3">No hay grados registrados</h3>
+            <p class="text-muted mb-4">Crea el primer grado para esta institución</p>
+            <a href="{{ url_for('institution.grade_new') }}" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-plus-circle me-2"></i>Crear Primer Grado
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% endif %}
 </div>
+
+{% if show_selector %}
+<script>
+function selectInstitution(cardElement, institutionId) {
+    document.querySelectorAll('.institution-select-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    cardElement.classList.add('selected');
+    document.getElementById('inst_' + institutionId).checked = true;
+}
+</script>
+{% endif %}
+
+<script>
+$(document).ready(function() {
+    {% if grades %}
+    if ($.fn.DataTable.isDataTable('#gradesTable')) {
+        // Already initialized
+    } else {
+        $('#gradesTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+            },
+            pageLength: 10,
+            order: [[0, 'asc']],
+            columnDefs: [
+                { orderable: false, targets: [6] }
+            ],
+            retrieve: true
+        });
+    }
+    {% endif %}
+});
+</script>
 {% endblock %}

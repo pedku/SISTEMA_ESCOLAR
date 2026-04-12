@@ -4,7 +4,7 @@ Full CRUD for institution, campuses, grades, subjects, periods, and evaluation c
 Includes multi-institution management for root users.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
 from flask_login import login_required, current_user
 from extensions import db
 from models.institution import Institution, Campus
@@ -101,11 +101,18 @@ def institution_new():
                 return render_template('institution/institution_form.html', institution=None)
             
             from werkzeug.security import generate_password_hash
-            from utils.username_generator import generate_username
-            
-            # Auto-generate username from name + document
-            existing_usernames = [u.username for u in User.query.all()]
-            admin_username = generate_username(admin_first_name, admin_last_name, admin_document, existing_usernames)
+            from utils.username_generator import generate_username, generate_username_from_db
+
+            # Auto-generate username using new dynamic system
+            admin_username = generate_username_from_db(
+                admin_first_name,
+                admin_last_name,
+                query_func=lambda pattern: [
+                    u.username for u in User.query.filter(
+                        User.username.like(f'{pattern}%')
+                    ).all()
+                ]
+            )
             
             # Default password = document number
             default_password = admin_document.strip()
@@ -266,16 +273,16 @@ def institution_delete(id):
 @role_required('root', 'admin')
 def config():
     """View and edit institution configuration."""
-    institution = get_current_institution()
+    # Root users should manage institutions from the institutions list, not this config page
+    if current_user.is_root():
+        return redirect(url_for('institution.institutions_list'))
     
-    # For root users without active institution, get first or allow selection
-    if not institution and current_user.is_root():
-        institution = Institution.query.first()
+    institution = get_current_institution()
 
     if request.method == 'POST':
         if not institution:
-            flash('No hay institución configurada. Cree una primero desde la lista de instituciones.', 'error')
-            return redirect(url_for('institution.institutions_list'))
+            flash('No hay institución configurada. Contacte al administrador del sistema.', 'error')
+            return redirect(url_for('dashboard.index'))
 
         institution.name = request.form.get('name', '').strip()
         institution.nit = request.form.get('nit', '').strip()
@@ -286,14 +293,14 @@ def config():
         institution.department = request.form.get('department', '').strip()
         institution.resolution = request.form.get('resolution', '').strip()
         institution.academic_year = request.form.get('academic_year', '').strip()
-        
+
         # Handle logo upload
         if 'logo' in request.files:
             logo = request.files['logo']
             if logo and logo.filename != '':
                 # TODO: Implement logo upload logic
                 pass
-        
+
         try:
             db.session.commit()
             flash('Configuración de institución actualizada exitosamente.', 'success')
@@ -315,15 +322,35 @@ def config():
 @role_required('root', 'admin', 'coordinator')
 def campuses():
     """List all campuses."""
-    institution = get_current_institution()
+    # For root users, check if they want to change institution FIRST
+    if current_user.is_root():
+        change_institution = request.args.get('change_institution', type=int)
+        if change_institution and 'active_institution_id' in session:
+            del session['active_institution_id']
+            flash('Institución deseleccionada. Selecciona una nueva.', 'info')
     
+    # Now get current institution
+    institution = get_current_institution()
+
+    # For root users without active institution, show inline selector
+    if not institution and current_user.is_root():
+        institutions = Institution.query.order_by(Institution.name).all()
+        return render_template('institution/campuses.html', 
+                             campuses=[], 
+                             institution=None,
+                             institutions=institutions,
+                             show_selector=True)
+
     if institution:
         campus_list = Campus.query.filter_by(institution_id=institution.id).order_by(Campus.name).all()
     else:
-        # Root can see all campuses
+        # Root with institution selected can see all campuses
         campus_list = Campus.query.order_by(Campus.name).all()
-    
-    return render_template('institution/campuses.html', campuses=campus_list, institution=institution)
+
+    return render_template('institution/campuses.html', 
+                         campuses=campus_list, 
+                         institution=institution,
+                         show_selector=False)
 
 
 @institution_bp.route('/campuses/new', methods=['GET', 'POST'])
@@ -331,41 +358,120 @@ def campuses():
 @role_required('root', 'admin')
 def campus_new():
     """Create a new campus."""
-    if request.method == 'POST':
-        institution = get_current_institution()
+    institution = get_current_institution()
+
+    # For root users without active institution
+    if not institution and current_user.is_root():
+        if request.method == 'POST':
+            inst_id = request.form.get('institution_id', type=int)
+            if inst_id:
+                institution = Institution.query.get(inst_id)
+                session['active_institution_id'] = institution.id
         
         if not institution:
-            # For root, use institution_id from form or first
-            institution_id = request.form.get('institution_id')
-            if institution_id:
-                institution = Institution.query.get(int(institution_id))
-            else:
-                flash('Debe seleccionar una institución para crear la sede.', 'error')
-                institutions = Institution.query.order_by(Institution.name).all()
-                return render_template('institution/campus_form.html', campus=None, institutions=institutions)
+            institutions = Institution.query.order_by(Institution.name).all()
+            return render_template('institution/campus_form.html', 
+                                 campus=None, 
+                                 institution=None, 
+                                 institutions=institutions,
+                                 is_main_options=[])
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        code = request.form.get('code', '').strip()
+        address = request.form.get('address', '').strip()
+        jornada = request.form.get('jornada', 'completa')
+        is_main = request.form.get('is_main_campus') == 'on'
+        active = request.form.get('active') == 'on'
+        
+        errors = {}
+        
+        # Validate name
+        if not name:
+            errors['name'] = 'El nombre de la sede es obligatorio. Ejemplo: Sede Principal, Sede Norte'
+        elif len(name) < 3:
+            errors['name'] = 'El nombre debe tener al menos 3 caracteres'
+        
+        # Validate unique code within institution
+        if code:
+            existing_code = Campus.query.filter_by(
+                institution_id=institution.id,
+                code=code
+            ).first()
+            
+            if existing_code:
+                errors['code'] = f'Ya existe una sede con el código "{code}". Cada sede debe tener un código único. Sede existente: "{existing_code.name}"'
+        
+        # Validate only one main campus per institution
+        if is_main:
+            existing_main = Campus.query.filter_by(
+                institution_id=institution.id,
+                is_main_campus=True
+            ).first()
+
+            if existing_main:
+                errors['is_main_campus'] = f'Ya existe una sede principal: "{existing_main.name}". Solo puede haber una sede principal por institución. Desmarca esa opción o edita la sede principal primero.'
+        
+        # If has errors, return form with data and errors
+        if errors:
+            institutions_list = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            return render_template('institution/campus_form.html',
+                                 campus=None,
+                                 institution=institution,
+                                 institutions=institutions_list,
+                                 is_main_options=[],
+                                 form_data={
+                                     'name': name,
+                                     'code': code,
+                                     'address': address,
+                                     'jornada': jornada,
+                                     'is_main_campus': is_main,
+                                     'active': active
+                                 },
+                                 errors=errors)
 
         campus = Campus(
             institution_id=institution.id,
-            name=request.form.get('name', '').strip(),
-            code=request.form.get('code', '').strip(),
-            address=request.form.get('address', '').strip(),
-            jornada=request.form.get('jornada', 'completa'),
-            active=request.form.get('active') == 'on'
+            name=name,
+            code=code if code else None,
+            address=address if address else None,
+            jornada=jornada,
+            is_main_campus=is_main,
+            active=active
         )
-        
+
         try:
             db.session.add(campus)
             db.session.commit()
-            flash('Sede creada exitosamente.', 'success')
+            flash('✅ Sede creada exitosamente.', 'success')
             return redirect(url_for('institution.campuses'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear la sede: {str(e)}', 'error')
+            flash(f'❌ Error al crear la sede: {str(e)}', 'error')
+            institutions_list = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
+            return render_template('institution/campus_form.html',
+                                 campus=None,
+                                 institution=institution,
+                                 institutions=institutions_list,
+                                 is_main_options=[],
+                                 form_data={
+                                     'name': name,
+                                     'code': code,
+                                     'address': address,
+                                     'jornada': jornada,
+                                     'is_main_campus': is_main,
+                                     'active': active
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
 
     # GET request - show form
-    institution = get_current_institution()
-    institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
-    return render_template('institution/campus_form.html', campus=None, institutions=institutions)
+    institutions_list = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
+    return render_template('institution/campus_form.html', 
+                         campus=None, 
+                         institution=institution, 
+                         institutions=institutions_list,
+                         is_main_options=[])
 
 
 @institution_bp.route('/campuses/<int:id>/edit', methods=['GET', 'POST'])
@@ -374,27 +480,86 @@ def campus_new():
 def campus_edit(id):
     """Edit an existing campus."""
     campus = db.session.get(Campus, id)
-    
+
     if not campus:
         flash('Sede no encontrada.', 'error')
         return redirect(url_for('institution.campuses'))
-    
+
+    institution = get_current_institution()
+
+    # Verify campus belongs to user's institution
+    if institution and campus.institution_id != institution.id:
+        flash('No tiene permiso para editar esta sede.', 'error')
+        return redirect(url_for('institution.campuses'))
+
     if request.method == 'POST':
-        campus.name = request.form.get('name', '').strip()
-        campus.code = request.form.get('code', '').strip()
-        campus.address = request.form.get('address', '').strip()
-        campus.jornada = request.form.get('jornada', 'completa')
-        campus.active = request.form.get('active') == 'on'
+        name = request.form.get('name', '').strip()
+        code = request.form.get('code', '').strip()
+        address = request.form.get('address', '').strip()
+        jornada = request.form.get('jornada', 'completa')
+        is_main = request.form.get('is_main_campus') == 'on'
+        active = request.form.get('active') == 'on'
         
+        errors = {}
+        
+        # Validate name
+        if not name:
+            errors['name'] = 'El nombre de la sede es obligatorio. Ejemplo: Sede Principal, Sede Norte'
+        elif len(name) < 3:
+            errors['name'] = 'El nombre debe tener al menos 3 caracteres'
+        
+        # Validate unique code within institution (exclude current campus)
+        if code and code != campus.code:
+            existing_code = Campus.query.filter_by(
+                institution_id=campus.institution_id,
+                code=code
+            ).first()
+            
+            if existing_code:
+                errors['code'] = f'Ya existe una sede con el código "{code}". Cada sede debe tener un código único. Sede existente: "{existing_code.name}"'
+        
+        # Validate only one main campus per institution
+        if is_main and not campus.is_main_campus:
+            existing_main = Campus.query.filter_by(
+                institution_id=campus.institution_id,
+                is_main_campus=True
+            ).first()
+
+            if existing_main:
+                errors['is_main_campus'] = f'Ya existe una sede principal: "{existing_main.name}". Solo puede haber una sede principal por institución. Desmarca esa opción o edita la sede principal primero.'
+        
+        # If has errors, return form with data and errors
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            return render_template('institution/campus_form.html',
+                                 campus=campus,
+                                 institution=institution,
+                                 form_data={
+                                     'name': name,
+                                     'code': code,
+                                     'address': address,
+                                     'jornada': jornada,
+                                     'is_main_campus': is_main,
+                                     'active': active
+                                 },
+                                 errors=errors)
+
+        campus.name = name
+        campus.code = code if code else None
+        campus.address = address if address else None
+        campus.jornada = jornada
+        campus.is_main_campus = is_main
+        campus.active = active
+
         try:
             db.session.commit()
-            flash('Sede actualizada exitosamente.', 'success')
+            flash('✅ Sede actualizada exitosamente.', 'success')
             return redirect(url_for('institution.campuses'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
-    
-    return render_template('institution/campus_form.html', campus=campus)
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+
+    return render_template('institution/campus_form.html', campus=campus, institution=institution)
 
 
 @institution_bp.route('/campuses/<int:id>/delete', methods=['POST'])
@@ -432,16 +597,36 @@ def campus_delete(id):
 @role_required('root', 'admin', 'coordinator')
 def grades():
     """List all grades."""
-    institution = get_current_institution()
+    # For root users, check if they want to change institution FIRST
+    if current_user.is_root():
+        change_institution = request.args.get('change_institution', type=int)
+        if change_institution and 'active_institution_id' in session:
+            del session['active_institution_id']
+            flash('Institución deseleccionada. Selecciona una nueva.', 'info')
     
+    # Now get current institution
+    institution = get_current_institution()
+
+    # For root users without active institution, show selector
+    if not institution and current_user.is_root():
+        institutions = Institution.query.order_by(Institution.name).all()
+        return render_template('institution/grades.html', 
+                             grades=[], 
+                             institution=None,
+                             institutions=institutions,
+                             show_selector=True)
+
     if institution:
         grade_list = Grade.query.join(Campus).filter(
             Campus.institution_id == institution.id
         ).order_by(Grade.name).all()
     else:
         grade_list = Grade.query.order_by(Grade.name).all()
-    
-    return render_template('institution/grades.html', grades=grade_list, institution=institution)
+
+    return render_template('institution/grades.html', 
+                         grades=grade_list, 
+                         institution=institution,
+                         show_selector=False)
 
 
 @institution_bp.route('/grades/new', methods=['GET', 'POST'])
@@ -450,34 +635,94 @@ def grades():
 def grade_new():
     """Create a new grade."""
     institution = get_current_institution()
-    
+
     if request.method == 'POST':
-        campus = db.session.get(Campus, int(request.form.get('campus_id')))
+        name = request.form.get('name', '').strip()
+        campus_id = request.form.get('campus_id', type=int)
+        director_id = request.form.get('director_id')
+        academic_year = request.form.get('academic_year', '2026').strip()
+        max_students = request.form.get('max_students', 40, type=int)
         
+        errors = {}
+        
+        # Validate name
+        if not name:
+            errors['name'] = 'El nombre del grado es obligatorio. Ejemplo: 6-1, 11°B, Transición A'
+        elif len(name) < 2:
+            errors['name'] = 'El nombre debe tener al menos 2 caracteres'
+        
+        # Validate campus
+        if not campus_id:
+            errors['campus_id'] = 'Debes seleccionar una sede donde funcionará este grado'
+        
+        # If has errors, return form with data
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            if institution:
+                campuses = Campus.query.filter_by(institution_id=institution.id, active=True).order_by(Campus.name).all()
+                teachers = User.query.filter_by(role='teacher', institution_id=institution.id).order_by(User.first_name).all()
+            else:
+                campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+                teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+            
+            return render_template('institution/grade_form.html',
+                                 grade=None,
+                                 campuses=campuses,
+                                 teachers=teachers,
+                                 institution=institution,
+                                 form_data={
+                                     'name': name,
+                                     'campus_id': campus_id,
+                                     'director_id': director_id,
+                                     'academic_year': academic_year,
+                                     'max_students': max_students
+                                 },
+                                 errors=errors)
+        
+        campus = db.session.get(Campus, campus_id)
+
         # Verify campus belongs to user's institution
         if institution and campus.institution_id != institution.id:
-            flash('No tiene permiso para crear grados en esta sede.', 'error')
+            flash('❌ No tiene permiso para crear grados en esta sede.', 'error')
             return redirect(url_for('institution.grades'))
-        
-        director_id = request.form.get('director_id')
 
         grade = Grade(
             campus_id=campus.id,
             director_id=int(director_id) if director_id else None,
-            name=request.form.get('name', '').strip(),
-            academic_year=request.form.get('academic_year', '2026').strip(),
-            max_students=int(request.form.get('max_students', 40))
+            name=name,
+            academic_year=academic_year,
+            max_students=max_students
         )
-        
+
         try:
             db.session.add(grade)
             db.session.commit()
-            flash('Grado creado exitosamente.', 'success')
+            flash('✅ Grado creado exitosamente.', 'success')
             return redirect(url_for('institution.grades'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear el grado: {str(e)}', 'error')
-    
+            flash(f'❌ Error al crear el grado: {str(e)}', 'error')
+            if institution:
+                campuses = Campus.query.filter_by(institution_id=institution.id, active=True).order_by(Campus.name).all()
+                teachers = User.query.filter_by(role='teacher', institution_id=institution.id).order_by(User.first_name).all()
+            else:
+                campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+                teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+            
+            return render_template('institution/grade_form.html',
+                                 grade=None,
+                                 campuses=campuses,
+                                 teachers=teachers,
+                                 institution=institution,
+                                 form_data={
+                                     'name': name,
+                                     'campus_id': campus_id,
+                                     'director_id': director_id,
+                                     'academic_year': academic_year,
+                                     'max_students': max_students
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     if institution:
         campuses = Campus.query.filter_by(institution_id=institution.id, active=True).order_by(Campus.name).all()
         # Get teachers from this institution
@@ -893,26 +1138,48 @@ def switch_institution():
     from flask import session
     
     institution_id = request.form.get('institution_id')
-    
+
     if not institution_id:
         # Clear active institution - root sees all
         if 'active_institution_id' in session:
             del session['active_institution_id']
         flash('Ahora puede ver todas las instituciones.', 'info')
-        return redirect(url_for('dashboard.index'))
-    
+        next_url = request.form.get('next', url_for('institution.institutions_list'))
+        return redirect(next_url)
+
     institution = Institution.query.get(int(institution_id))
+
+    if not institution:
+        flash('Institución no encontrada.', 'error')
+        next_url = request.form.get('next', url_for('institution.institutions_list'))
+        return redirect(next_url)
+
+    session['active_institution_id'] = institution.id
+    flash(f'✅ Institución seleccionada: {institution.name}', 'success')
+
+    # Redirect to specified next URL
+    next_url = request.form.get('next', url_for('dashboard.index'))
+    return redirect(next_url)
+
+
+@institution_bp.route('/select-institution/<int:id>')
+@login_required
+@role_required('root')
+def select_and_manage_institution(id):
+    """Select a specific institution and redirect to campus management."""
+    from flask import session
     
+    institution = Institution.query.get(id)
     if not institution:
         flash('Institución no encontrada.', 'error')
         return redirect(url_for('institution.institutions_list'))
     
+    # Set active institution
     session['active_institution_id'] = institution.id
-    flash(f'Ahora está trabajando en: {institution.name}', 'success')
+    flash(f'🏫 Trabajando en: {institution.name}', 'info')
     
-    # Redirect back to the page they came from or default
-    next_url = request.form.get('next') or url_for('dashboard.index')
-    return redirect(next_url)
+    # Redirect to campus management
+    return redirect(url_for('institution.campuses'))
 
 
 @institution_bp.route('/institutions/select')
@@ -978,10 +1245,17 @@ def institution_add_admin(id):
             return render_template('institution/add_admin_form.html', institution=institution)
         
         from werkzeug.security import generate_password_hash
-        from utils.username_generator import generate_username
-        
-        existing_usernames = [u.username for u in User.query.all()]
-        username = generate_username(first_name, last_name, document_number, existing_usernames)
+        from utils.username_generator import generate_username, generate_username_from_db
+
+        username = generate_username_from_db(
+            first_name,
+            last_name,
+            query_func=lambda pattern: [
+                u.username for u in User.query.filter(
+                    User.username.like(f'{pattern}%')
+                ).all()
+            ]
+        )
         
         if User.query.filter_by(email=email).first():
             flash('El email ya está registrado.', 'error')
@@ -1031,12 +1305,203 @@ def change_user_password(user_id):
     
     from werkzeug.security import generate_password_hash
     user.password_hash = generate_password_hash(new_password)
-    
+
     try:
         db.session.commit()
         flash(f'Contraseña de {user.username} actualizada exitosamente.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al actualizar: {str(e)}', 'error')
-    
+
     return redirect(url_for('users.user_edit', id=user_id))
+
+
+# ============================================
+# API Routes for Campus Management (AJAX)
+# ============================================
+
+@institution_bp.route('/api/campuses/<int:institution_id>', methods=['GET'])
+@login_required
+@role_required('root', 'admin')
+def api_get_campuses(institution_id):
+    """API endpoint to get all campuses for an institution."""
+    institution = Institution.query.get(institution_id)
+    
+    if not institution:
+        return {'error': 'Institución no encontrada'}, 404
+    
+    # Verify permission
+    if not current_user.is_root() and current_user.institution_id != institution_id:
+        return {'error': 'No tienes permiso para ver esta institución'}, 403
+    
+    campuses = Campus.query.filter_by(institution_id=institution_id).order_by(Campus.is_main_campus.desc(), Campus.name).all()
+    
+    # Build campus data
+    campus_data = []
+    for campus in campuses:
+        campus_data.append({
+            'id': campus.id,
+            'name': campus.name,
+            'code': campus.code,
+            'address': campus.address,
+            'jornada': campus.jornada,
+            'is_main_campus': campus.is_main_campus,
+            'active': campus.active,
+            'grades_count': campus.grades.count(),
+            'created_at': campus.to_dict().get('created_at')
+        })
+    
+    # Calculate stats
+    main_campus = Campus.query.filter_by(institution_id=institution_id, is_main_campus=True).first()
+    
+    stats = {
+        'total': len(campuses),
+        'active': sum(1 for c in campuses if c.active),
+        'inactive': sum(1 for c in campuses if not c.active),
+        'main_name': main_campus.name if main_campus else None
+    }
+    
+    return {
+        'campuses': campus_data,
+        'stats': stats
+    }
+
+
+@institution_bp.route('/api/campuses/<int:institution_id>/<int:campus_id>', methods=['GET'])
+@login_required
+@role_required('root', 'admin')
+def api_get_campus(institution_id, campus_id):
+    """API endpoint to get a single campus."""
+    campus = Campus.query.get(campus_id)
+    
+    if not campus or campus.institution_id != institution_id:
+        return {'error': 'Sede no encontrada'}, 404
+    
+    # Verify permission
+    if not current_user.is_root() and current_user.institution_id != institution_id:
+        return {'error': 'No tienes permiso'}, 403
+    
+    return campus.to_dict()
+
+
+@institution_bp.route('/api/campuses/<int:institution_id>', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def api_create_campus(institution_id):
+    """API endpoint to create a new campus."""
+    institution = Institution.query.get(institution_id)
+    
+    if not institution:
+        return {'error': 'Institución no encontrada'}, 404
+    
+    # Verify permission
+    if not current_user.is_root() and current_user.institution_id != institution_id:
+        return {'error': 'No tienes permiso'}, 403
+    
+    data = request.get_json()
+    
+    name = data.get('name', '').strip()
+    if not name:
+        return {'error': 'El nombre de la sede es obligatorio'}, 400
+    
+    code = data.get('code', '').strip()
+    address = data.get('address', '').strip()
+    jornada = data.get('jornada', 'completa')
+    active = data.get('active', True)
+    is_main_campus = data.get('is_main_campus', False)
+    
+    # Validate only one main campus
+    if is_main_campus:
+        existing_main = Campus.query.filter_by(institution_id=institution_id, is_main_campus=True).first()
+        if existing_main:
+            return {'error': f'Ya existe una sede principal: {existing_main.name}'}, 400
+    
+    campus = Campus(
+        institution_id=institution_id,
+        name=name,
+        code=code if code else None,
+        address=address if address else None,
+        jornada=jornada,
+        is_main_campus=is_main_campus,
+        active=active
+    )
+    
+    try:
+        db.session.add(campus)
+        db.session.commit()
+        return {
+            'message': 'Sede creada exitosamente',
+            'id': campus.id
+        }, 201
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Error al crear la sede: {str(e)}'}, 500
+
+
+@institution_bp.route('/api/campuses/<int:institution_id>/<int:campus_id>', methods=['PUT'])
+@login_required
+@role_required('root', 'admin')
+def api_update_campus(institution_id, campus_id):
+    """API endpoint to update a campus."""
+    campus = Campus.query.get(campus_id)
+    
+    if not campus or campus.institution_id != institution_id:
+        return {'error': 'Sede no encontrada'}, 404
+    
+    # Verify permission
+    if not current_user.is_root() and current_user.institution_id != institution_id:
+        return {'error': 'No tienes permiso'}, 403
+    
+    data = request.get_json()
+    
+    name = data.get('name', '').strip()
+    if not name:
+        return {'error': 'El nombre de la sede es obligatorio'}, 400
+    
+    # Validate only one main campus
+    is_main_campus = data.get('is_main_campus', False)
+    if is_main_campus and not campus.is_main_campus:
+        existing_main = Campus.query.filter_by(institution_id=institution_id, is_main_campus=True).first()
+        if existing_main:
+            return {'error': f'Ya existe una sede principal: {existing_main.name}'}, 400
+    
+    campus.name = name
+    campus.code = data.get('code', '').strip() if data.get('code') else None
+    campus.address = data.get('address', '').strip() if data.get('address') else None
+    campus.jornada = data.get('jornada', campus.jornada)
+    campus.active = data.get('active', campus.active)
+    campus.is_main_campus = is_main_campus
+    
+    try:
+        db.session.commit()
+        return {'message': 'Sede actualizada exitosamente'}
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Error al actualizar: {str(e)}'}, 500
+
+
+@institution_bp.route('/api/campuses/<int:institution_id>/<int:campus_id>', methods=['DELETE'])
+@login_required
+@role_required('root', 'admin')
+def api_delete_campus(institution_id, campus_id):
+    """API endpoint to delete a campus."""
+    campus = Campus.query.get(campus_id)
+    
+    if not campus or campus.institution_id != institution_id:
+        return {'error': 'Sede no encontrada'}, 404
+    
+    # Verify permission
+    if not current_user.is_root() and current_user.institution_id != institution_id:
+        return {'error': 'No tienes permiso'}, 403
+    
+    # Check for related grades
+    if campus.grades.count() > 0:
+        return {'error': 'No se puede eliminar la sede porque tiene grados asociados'}, 400
+    
+    try:
+        db.session.delete(campus)
+        db.session.commit()
+        return {'message': 'Sede eliminada exitosamente'}
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Error al eliminar: {str(e)}'}, 500

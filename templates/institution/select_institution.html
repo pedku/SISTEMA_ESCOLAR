@@ -2,90 +2,236 @@
 
 {% block title %}Seleccionar Institución{% endblock %}
 
+{% block extra_css %}
+<style>
+    .institution-select-card {
+        display: block;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .institution-select-card input[type="radio"] {
+        display: none;
+    }
+    
+    .institution-select-card-body {
+        padding: 1.5rem;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        height: 100%;
+        background: white;
+    }
+    
+    .institution-select-card:hover .institution-select-card-body {
+        border-color: #667eea;
+        background-color: #f8f9ff;
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+    }
+    
+    .institution-select-card.selected .institution-select-card-body {
+        border-color: #667eea;
+        background-color: #e7f1ff;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+    }
+    
+    .institution-select-card.selected .institution-select-card-body::after {
+        content: '\f26a';
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: #667eea;
+        font-size: 1.5rem;
+    }
+    
+    .institution-select-card-body {
+        position: relative;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Seleccionar Institución</h1>
-        
-        <p class="text-gray-600 mb-6">
-            Como usuario root, puede seleccionar una institución específica para trabajar o ver datos de todas las instituciones.
-        </p>
-
-        <!-- Current institution indicator -->
-        {% if current_user.institution %}
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-            <p class="text-sm text-blue-700">
-                <strong>Institución actual:</strong> {{ current_user.institution.name }}
-            </p>
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-building text-primary me-2"></i>Seleccionar Institución
+            </h1>
+            <p class="text-muted mb-0">Como administrador del sistema, seleccione la institución donde desea trabajar</p>
         </div>
-        {% endif %}
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Dashboard
+        </a>
+    </div>
 
-        <!-- Institution selection form -->
-        <form method="POST" action="{{ url_for('institution.switch_institution') }}" class="space-y-6">
-            <div class="space-y-4">
-                <h2 class="text-lg font-semibold text-gray-700">Instituciones Disponibles</h2>
-                
+    <!-- Info Banner -->
+    <div class="alert alert-info alert-dismissible fade show mb-4 animate-in shadow-sm" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Importante:</strong> Debe seleccionar una institución para gestionar sedes, grados y otros elementos. Esta selección determina el contexto de trabajo.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    {% if session.get('active_institution_id') %}
+    <!-- Current institution indicator -->
+    {% set current_inst = institution %}
+    <div class="card shadow-sm border-0 border-start border-4 border-success mb-4 animate-in">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                    <i class="bi bi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold">Institución Actualmente Seleccionada</h6>
+                    <p class="text-muted mb-0 small">{{ current_inst.name if current_inst else 'Ninguna' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Institution Selection Grid -->
+    <div class="card shadow-sm animate-in">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-grid-3x3-gap text-primary me-2"></i>Instituciones Disponibles
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('institution.switch_institution') }}">
+                {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+                {% endif %}
+
                 {% if institutions %}
-                    <div class="grid gap-4 md:grid-cols-2">
-                        {% for inst in institutions %}
-                        <label class="relative flex items-start p-4 border-2 rounded-lg cursor-pointer transition hover:border-blue-500 {% if session.get('active_institution_id') == inst.id %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
-                            <input type="radio" name="institution_id" value="{{ inst.id }}" 
-                                   class="mt-1 h-4 w-4 text-blue-600 border-gray-300"
-                                   {% if session.get('active_institution_id') == inst.id %}checked{% endif %}>
-                            <div class="ml-3">
-                                <span class="block text-sm font-medium text-gray-900">{{ inst.name }}</span>
-                                {% if inst.nit %}
-                                <span class="block text-xs text-gray-500">NIT: {{ inst.nit }}</span>
-                                {% endif %}
-                                {% if inst.municipality %}
-                                <span class="block text-xs text-gray-500">{{ inst.municipality }}, {{ inst.department }}</span>
-                                {% endif %}
+                <div class="row g-4 mb-4">
+                    {% for inst in institutions %}
+                    <div class="col-md-6">
+                        <label class="institution-select-card {% if session.get('active_institution_id') == inst.id|string %}selected{% endif %}"
+                               onclick="selectInstitution(this, {{ inst.id }})">
+                            <input type="radio" name="institution_id" value="{{ inst.id }}"
+                                   class="institution-radio"
+                                   id="inst_{{ inst.id }}"
+                                   {% if session.get('active_institution_id') == inst.id|string %}checked{% endif %}>
+                            <div class="institution-select-card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-building text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold text-dark">{{ inst.name }}</h6>
+                                        {% if inst.municipality or inst.department %}
+                                        <p class="text-muted mb-0 small">
+                                            <i class="bi bi-geo-alt text-danger me-1"></i>
+                                            {{ inst.municipality }}{% if inst.municipality and inst.department %}, {% endif %}{{ inst.department }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="row g-2 mt-2">
+                                    {% if inst.nit %}
+                                    <div class="col-6">
+                                        <small class="text-muted"><i class="bi bi-upc-scan me-1"></i>NIT: {{ inst.nit }}</small>
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-6">
+                                        <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>Año: {{ inst.academic_year }}</small>
+                                    </div>
+                                    {% if inst.email %}
+                                    <div class="col-12">
+                                        <small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ inst.email }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </label>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-check-circle me-2"></i>Seleccionar y Continuar
+                    </button>
+                    {% if session.get('active_institution_id') %}
+                    <button type="submit" name="institution_id" value=""
+                            class="btn btn-outline-secondary btn-lg">
+                        <i class="bi bi-globe me-2"></i>Ver Todas las Instituciones
+                    </button>
+                    {% endif %}
+                </div>
                 {% else %}
-                    <div class="text-center py-8 text-gray-500">
-                        <p>No hay instituciones creadas aún.</p>
-                        <a href="{{ url_for('institution.institution_new') }}" class="text-blue-600 hover:underline mt-2 inline-block">
-                            Crear primera institución
-                        </a>
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-buildings text-muted" style="font-size: 5rem;"></i>
                     </div>
+                    <h3 class="h4 text-muted mb-3">No hay instituciones creadas</h3>
+                    <p class="text-muted mb-4">Comienza creando tu primera institución educativa del sistema.</p>
+                    <a href="{{ url_for('institution.institution_new') }}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-plus-circle me-2"></i>Crear Primera Institución
+                    </a>
+                </div>
                 {% endif %}
-            </div>
-
-            <div class="flex items-center justify-between border-t pt-4">
-                <button type="submit" 
-                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-                        {% if not institutions %}disabled{% endif %}>
-                    Seleccionar Institución
-                </button>
-                
-                {% if session.get('active_institution_id') %}
-                <button type="submit" name="institution_id" value=""
-                        class="text-gray-600 hover:text-gray-800 transition">
-                    Ver Todas las Instituciones
-                </button>
-                {% endif %}
-            </div>
-        </form>
-
-        {% if institutions %}
-        <!-- Quick links to manage institutions -->
-        <div class="mt-8 pt-6 border-t">
-            <h3 class="text-sm font-semibold text-gray-600 mb-3">Gestionar Instituciones</h3>
-            <div class="flex gap-3">
-                <a href="{{ url_for('institution.institutions_list') }}" 
-                   class="text-sm text-blue-600 hover:underline">
-                    Ver lista completa
-                </a>
-                <a href="{{ url_for('institution.institution_new') }}" 
-                   class="text-sm text-green-600 hover:underline">
-                    Crear nueva institución
-                </a>
-            </div>
+            </form>
         </div>
-        {% endif %}
     </div>
+
+    {% if institutions %}
+    <!-- Quick Links -->
+    <div class="row g-4 mt-2">
+        <div class="col-md-4">
+            <a href="{{ url_for('institution.institutions_list') }}" class="text-decoration-none">
+                <div class="card shadow-sm hover-shadow transition h-100">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-list-ul text-primary" style="font-size: 2.5rem;"></i>
+                        <h6 class="fw-bold mt-3 mb-1">Lista Completa</h6>
+                        <small class="text-muted">Ver todas las instituciones</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('institution.institution_new') }}" class="text-decoration-none">
+                <div class="card shadow-sm hover-shadow transition h-100">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-plus-circle text-success" style="font-size: 2.5rem;"></i>
+                        <h6 class="fw-bold mt-3 mb-1">Nueva Institución</h6>
+                        <small class="text-muted">Crear una nueva institución</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('dashboard.index') }}" class="text-decoration-none">
+                <div class="card shadow-sm hover-shadow transition h-100">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-speedometer2 text-info" style="font-size: 2.5rem;"></i>
+                        <h6 class="fw-bold mt-3 mb-1">Dashboard Root</h6>
+                        <small class="text-muted">Volver al panel principal</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+function selectInstitution(cardElement, institutionId) {
+    // Remove selected class from all cards
+    document.querySelectorAll('.institution-select-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked card
+    cardElement.classList.add('selected');
+    
+    // Check the radio button
+    document.getElementById('inst_' + institutionId).checked = true;
+}
+</script>
 {% endblock %}

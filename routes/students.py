@@ -6,7 +6,7 @@ Full CRUD for students, Excel upload, profile management, guardian data.
 import os
 import pandas as pd
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from extensions import db
@@ -16,6 +16,7 @@ from models.academic import Grade, AcademicStudent, ParentStudent
 from utils.decorators import role_required
 from utils.validators import validate_document, validate_email
 from utils.institution_resolver import get_current_institution, get_institution_students
+from utils.username_generator import generate_username_from_db
 
 students_bp = Blueprint('students', __name__)
 
@@ -105,18 +106,36 @@ def new():
     """Create a new student."""
     institution = get_current_institution()
 
-    # For root users without active institution, allow selecting institution
-    if not institution and current_user.is_root():
-        if request.method == 'POST':
-            inst_id = request.form.get('institution_id', type=int)
+    # For root users, allow switching institution via URL parameter
+    if current_user.is_root():
+        # Check if user wants to change institution
+        change_institution = request.args.get('change_institution', type=int)
+        if change_institution:
+            # Clear current institution and show selector
+            if 'active_institution_id' in session:
+                del session['active_institution_id']
+            institution = None
+        
+        # If still no institution, show selector or handle selection
+        if not institution:
+            # Check for institution_id in both POST form and GET query params
+            inst_id = None
+            if request.method == 'POST':
+                inst_id = request.form.get('institution_id', type=int)
+            else:
+                inst_id = request.args.get('institution_id', type=int)
+            
             if inst_id:
                 institution = Institution.query.get(inst_id)
-        
-        if not institution:
-            # Show form with institution selector for root
-            institutions = Institution.query.order_by(Institution.name).all()
-            return render_template('students/form.html', student=None, institution=None, institutions=institutions, campuses=[], grades=[])
+                # Set in session for future requests
+                session['active_institution_id'] = institution.id
+
+            if not institution:
+                # Show form with institution selector for root
+                institutions = Institution.query.order_by(Institution.name).all()
+                return render_template('students/form.html', student=None, institution=None, institutions=institutions, campuses=[], grades=[])
     elif not institution:
+        # For admin/coordinator without institution assigned
         flash('Debe seleccionar una institución antes de crear estudiantes.', 'error')
         return redirect(url_for('institution.select_institution'))
 
@@ -141,21 +160,24 @@ def new():
             flash('Ya existe un estudiante con ese número de documento.', 'error')
             return render_template('students/form.html', student=None, institution=institution)
         
-        # Generate username
+        # Generate username using new dynamic system
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
-        
+
         if not first_name or not last_name:
             flash('Nombre y apellido son requeridos.', 'error')
             return render_template('students/form.html', student=None, institution=institution)
-        
-        # Create username from name
-        base_username = f"{first_name.lower()}.{last_name.lower().split()[0].lower()}"
-        username = base_username
-        counter = 1
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
+
+        # Generate username with incremental numbering (pcastro1, pcastro2, etc.)
+        username = generate_username_from_db(
+            first_name, 
+            last_name,
+            query_func=lambda pattern: [
+                u.username for u in User.query.filter(
+                    User.username.like(f'{pattern}%')
+                ).all()
+            ]
+        )
         
         # Create email
         email = request.form.get('email', '').strip()
@@ -398,13 +420,16 @@ def upload():
                         errors.append(f"Fila {index + 2}: Estudiante con documento {doc_number} ya existe")
                         continue
 
-                    # Create username
-                    base_username = f"{first_name.lower()}.{last_name.lower().split()[0].lower()}"
-                    username = base_username
-                    counter = 1
-                    while User.query.filter_by(username=username).first():
-                        username = f"{base_username}{counter}"
-                        counter += 1
+                    # Generate username with incremental numbering
+                    username = generate_username_from_db(
+                        first_name,
+                        last_name,
+                        query_func=lambda pattern: [
+                            u.username for u in User.query.filter(
+                                User.username.like(f'{pattern}%')
+                            ).all()
+                        ]
+                    )
 
                     # Create user
                     user = User(

@@ -12,7 +12,7 @@ from models.institution import Institution, Campus
 from models.academic import AcademicStudent
 from utils.decorators import role_required
 from utils.institution_resolver import get_current_institution
-from utils.username_generator import generate_username
+from utils.username_generator import generate_username, generate_username_from_db
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 import re
@@ -121,10 +121,16 @@ def user_create():
             return render_template('users/create.html', institutions=institutions, user=None,
                                    form_data=request.form)
         
-        # Auto-generate username from name and document
-        existing_users = User.query.all()
-        existing_usernames = [u.username for u in existing_users]
-        username = generate_username(first_name, last_name, document_number, existing_usernames)
+        # Auto-generate username using new system
+        username = generate_username_from_db(
+            first_name, 
+            last_name,
+            query_func=lambda pattern: [
+                u.username for u in User.query.filter(
+                    User.username.like(f'{pattern}%')
+                ).all()
+            ]
+        )
         
         # Validate email format
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
