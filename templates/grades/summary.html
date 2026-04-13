@@ -1,1 +1,331 @@
-{% extends "base.html" %}{% block title %}Resumen de Notas{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-table"></i> Resumen de Notas del Grupo</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Resumen de Notas - {{ subject.name }} - {{ grade.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        text-align: center;
+        padding: 1.5rem;
+    }
+    .stat-card .number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .stat-card .label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .chart-bar {
+        height: 30px;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bar-chart"></i> Resumen de Notas del Grupo</h2>
+        <div>
+            <a href="{{ url_for('grades.grade_input_form', sg_id=subject_grade.id, period_id=period.id) }}"
+               class="btn btn-outline-primary">
+                <i class="bi bi-pencil-square"></i> Ir a Planilla
+            </a>
+            <a href="{{ url_for('grades.final_grades_view', sg_id=subject_grade.id, period_id=period.id) }}"
+               class="btn btn-outline-success">
+                <i class="bi bi-calculator"></i> Notas Finales
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Header -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong><i class="bi bi-journal"></i> Grado:</strong> {{ grade.name }}
+                </div>
+                <div class="col-md-3">
+                    <strong><i class="bi bi-book"></i> Asignatura:</strong> {{ subject.name }}
+                </div>
+                <div class="col-md-3">
+                    <strong><i class="bi bi-calendar3"></i> Periodo:</strong> {{ period.name }}
+                </div>
+                <div class="col-md-3">
+                    <strong><i class="bi bi-person"></i> Docente:</strong>
+                    {{ subject_grade.teacher_user.get_full_name() if subject_grade.teacher_user else 'N/A' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ "%.1f"|format(average) }}</div>
+                    <div class="label">Promedio</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ "%.1f"|format(max_score) }}</div>
+                    <div class="label">Nota Maxima</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ "%.1f"|format(min_score) }}</div>
+                    <div class="label">Nota Minima</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ "%.1f"|format(median) }}</div>
+                    <div class="label">Mediana</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ "%.2f"|format(std_dev) }}</div>
+                    <div class="label">Desv. Estandar</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-dark text-white">
+                <div class="card-body stat-card">
+                    <div class="number">{{ students|length }}</div>
+                    <div class="label">Total Estudiantes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pass/Fail Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-check-circle"></i> Aprobados</h6>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-success">{{ passed }}</h2>
+                    <p class="mb-0"><strong>{{ pass_rate }}%</strong> del total evaluado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="bi bi-x-circle"></i> Reprobados</h6>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-danger">{{ failed }}</h2>
+                    <p class="mb-0"><strong>{{ fail_rate }}%</strong> del total evaluado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-dash-circle"></i> No Evaluados</h6>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-muted">{{ not_evaluated }}</h2>
+                    <p class="mb-0">Estudiantes sin nota final</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Distribution Chart -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-bar-chart-line"></i> Distribucion de Notas</h6>
+        </div>
+        <div class="card-body">
+            {% set max_count = distribution.values()|max if distribution.values()|max > 0 else 1 %}
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-danger me-2" style="width: 70px;">1.0 - 1.9</span>
+                    <span class="me-2">{{ distribution['1.0-1.9'] }}</span>
+                    <div class="flex-grow-1 bg-light rounded" style="height: 30px;">
+                        <div class="chart-bar bg-danger" style="width: {{ (distribution['1.0-1.9'] / max_count * 100)|round }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-warning me-2" style="width: 70px;">2.0 - 2.9</span>
+                    <span class="me-2">{{ distribution['2.0-2.9'] }}</span>
+                    <div class="flex-grow-1 bg-light rounded" style="height: 30px;">
+                        <div class="chart-bar bg-warning" style="width: {{ (distribution['2.0-2.9'] / max_count * 100)|round }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-info me-2" style="width: 70px;">3.0 - 3.9</span>
+                    <span class="me-2">{{ distribution['3.0-3.9'] }}</span>
+                    <div class="flex-grow-1 bg-light rounded" style="height: 30px;">
+                        <div class="chart-bar bg-info" style="width: {{ (distribution['3.0-3.9'] / max_count * 100)|round }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-primary me-2" style="width: 70px;">4.0 - 4.9</span>
+                    <span class="me-2">{{ distribution['4.0-4.9'] }}</span>
+                    <div class="flex-grow-1 bg-light rounded" style="height: 30px;">
+                        <div class="chart-bar bg-primary" style="width: {{ (distribution['4.0-4.9'] / max_count * 100)|round }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-success me-2" style="width: 70px;">5.0</span>
+                    <span class="me-2">{{ distribution['5.0'] }}</span>
+                    <div class="flex-grow-1 bg-light rounded" style="height: 30px;">
+                        <div class="chart-bar bg-success" style="width: {{ (distribution['5.0'] / max_count * 100)|round }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Criteria Averages -->
+    {% if criteria_stats %}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="bi bi-list-check"></i> Promedio por Criterio</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Criterio</th>
+                            <th>Peso</th>
+                            <th>Promedio</th>
+                            <th>Estudiantes Evaluados</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in criteria_stats %}
+                        <tr>
+                            <td><strong>{{ stat.criterion.name }}</strong></td>
+                            <td>{{ stat.criterion.weight }}%</td>
+                            <td class="text-center">
+                                {% if stat.average > 0 %}
+                                <span class="fw-bold {% if stat.average >= 4.5 %}text-success
+                                    {% elif stat.average >= 4.0 %}text-info
+                                    {% elif stat.average >= 3.0 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(stat.average) }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ stat.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Student Grades Table -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="bi bi-people"></i> Notas por Estudiante</h6>
+        </div>
+        <div class="card-body">
+            {% if students %}
+            <div class="table-responsive">
+                <table id="summaryTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Estudiante</th>
+                            <th>Nota Final</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a href="{{ url_for('grades.student_grades', student_id=student.id) }}">
+                                    {{ student.user.get_full_name() }}
+                                </a>
+                            </td>
+                            <td class="text-center">
+                                {% if student.id in student_grades and student_grades[student.id].final_score %}
+                                <span class="fw-bold {% if student_grades[student.id].final_score >= 4.5 %}text-success
+                                    {% elif student_grades[student.id].final_score >= 4.0 %}text-info
+                                    {% elif student_grades[student.id].final_score >= 3.0 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(student_grades[student.id].final_score) }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if student.id in student_grades %}
+                                    {% set fg = student_grades[student.id] %}
+                                    {% if fg.status == 'ganada' %}
+                                    <span class="badge bg-success">Ganada</span>
+                                    {% elif fg.status == 'perdida' %}
+                                    <span class="badge bg-danger">Perdida</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No evaluado</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary">Sin nota</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> No hay estudiantes activos en este grado.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#summaryTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        pageLength: 25,
+        order: [[0, 'asc']]
+    });
+});
+</script>
+{% endblock %}

@@ -23,7 +23,8 @@ class Attendance(db.Model):
 
     # Relationships
     student = db.relationship('AcademicStudent', foreign_keys=[student_id], overlaps="attendance_records")
-    subject_grade = db.relationship('SubjectGrade', backref='attendance_sg', foreign_keys=[subject_grade_id], overlaps="attendance_records")
+    subject_grade = db.relationship('SubjectGrade', foreign_keys=[subject_grade_id],
+                                    back_populates='attendance_records')
     # recorder relationship is defined via backref in User model
     
     def __repr__(self):

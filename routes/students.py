@@ -408,25 +408,48 @@ def edit(id):
 @login_required
 @role_required('root', 'admin', 'coordinator')
 def delete(id):
-    """Delete a student."""
+    """Delete a student and all associated records."""
     student = db.session.get(AcademicStudent, id)
-    
+
     if not student:
         flash('Estudiante no encontrado.', 'error')
         return redirect(url_for('students.list'))
-    
+
     try:
+        # Import models that reference AcademicStudent (avoid circular imports)
+        from models.alert import Alert
+        from models.observation import Observation
+        from models.attendance import Attendance
+        from models.achievement import StudentAchievement
+        from models.grading import GradeRecord, FinalGrade, AnnualGrade
+        from models.report import ReportCard
+        from models.academic import ParentStudent
+
+        # Delete all associated records that reference this student
+        Alert.query.filter_by(student_id=student.id).delete()
+        Observation.query.filter_by(student_id=student.id).delete()
+        Attendance.query.filter_by(student_id=student.id).delete()
+        StudentAchievement.query.filter_by(student_id=student.id).delete()
+        GradeRecord.query.filter_by(student_id=student.id).delete()
+        FinalGrade.query.filter_by(student_id=student.id).delete()
+        AnnualGrade.query.filter_by(student_id=student.id).delete()
+        ReportCard.query.filter_by(student_id=student.id).delete()
+        ParentStudent.query.filter_by(student_id=student.id).delete()
+
+        # Delete the student
+        db.session.delete(student)
+
         # Delete associated user
         user = db.session.get(User, student.user_id)
-        db.session.delete(student)
         if user:
             db.session.delete(user)
+
         db.session.commit()
         flash('Estudiante eliminado exitosamente.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar: {str(e)}', 'error')
-    
+
     return redirect(url_for('students.list'))
 
 
@@ -441,8 +464,30 @@ def upload():
     """Upload students from Excel file."""
     institution = get_current_institution()
 
+    # For root users without active institution, show institution selector
+    if not institution and current_user.is_root():
+        # Check for institution_id in query params (GET) or form (POST)
+        inst_id = None
+        if request.method == 'POST':
+            inst_id = request.form.get('institution_id', type=int)
+        else:
+            inst_id = request.args.get('institution_id', type=int)
+
+        if inst_id:
+            institution = Institution.query.get(inst_id)
+            if institution:
+                session['active_institution_id'] = institution.id
+            else:
+                flash('Institucion no encontrada.', 'error')
+                return redirect(url_for('students.list'))
+
+        if not institution:
+            # Show form with institution selector for root
+            institutions = Institution.query.order_by(Institution.name).all()
+            return render_template('students/upload.html', institutions=institutions)
+
     if not institution:
-        flash('Debe seleccionar una institución antes de importar estudiantes.', 'error')
+        flash('Debe seleccionar una institucion antes de importar estudiantes.', 'error')
         return redirect(url_for('students.list'))
 
     if request.method == 'POST':

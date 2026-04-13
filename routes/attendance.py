@@ -50,7 +50,7 @@ def attendance():
                 Grade.academic_year == academic_year
             ).order_by(Grade.name).all()
 
-            subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+            subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
                 Campus.institution_id == institution.id,
                 Grade.academic_year == academic_year
             ).order_by(Grade.name, Subject.name).all()
@@ -60,19 +60,19 @@ def attendance():
                 academic_year=academic_year
             ).order_by(Grade.name).all() if academic_year else Grade.query.order_by(Grade.name).all()
 
-            subject_grades = SubjectGrade.query.join(Grade).filter(
+            subject_grades = SubjectGrade.query.join(Grade).join(Subject).filter(
                 Grade.academic_year == academic_year
-            ).order_by(Grade.name, Subject.name).all() if academic_year else SubjectGrade.query.join(Grade).order_by(Grade.name, Subject.name).all()
+            ).order_by(Grade.name, Subject.name).all() if academic_year else SubjectGrade.query.join(Grade).join(Subject).order_by(Grade.name, Subject.name).all()
     else:
         # Teacher: only their assigned subject-grades
         if institution:
-            subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+            subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
                 SubjectGrade.teacher_id == current_user.id,
                 Campus.institution_id == institution.id,
                 Grade.academic_year == academic_year
             ).order_by(Grade.name, Subject.name).all()
         else:
-            subject_grades = SubjectGrade.query.join(Grade).filter(
+            subject_grades = SubjectGrade.query.join(Grade).join(Subject).filter(
                 SubjectGrade.teacher_id == current_user.id,
                 Grade.academic_year == academic_year
             ).order_by(Grade.name, Subject.name).all()
@@ -260,6 +260,7 @@ def get_attendance():
 
 @attendance_bp.route('/student/<int:student_id>')
 @login_required
+@role_required('root', 'admin', 'teacher', 'coordinator')
 def student_attendance_history(student_id):
     """
     View attendance history for a specific student.

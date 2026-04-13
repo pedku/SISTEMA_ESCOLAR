@@ -140,7 +140,7 @@
 
                     <!-- Logros -->
                     <li class="{% if is_active_route('/achievements') %}active{% endif %}">
-                        <a href="{{ url_for('achievements.achievements') }}">
+                        <a href="{{ url_for('achievements.achievements_list') }}">
                             <i class="bi bi-trophy"></i>
                             <span>Logros</span>
                         </a>
@@ -293,7 +293,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/form-validation.js') }}"></script>
-    {% if current_user.has_any_role('root', 'admin', 'coordinator') %}
+    {% if user_has_any_role('root', 'admin', 'coordinator') %}
     <script>
     // Load alert count for sidebar badge
     fetch("{{ url_for('alerts.alert_count') }}")

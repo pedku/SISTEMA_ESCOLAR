@@ -82,7 +82,14 @@ def create_app(config_name=None):
     def utility_processor():
         """Add utility functions to template context."""
         from utils.template_helpers import get_template_helpers
-        return get_template_helpers()
+        helpers = get_template_helpers()
+        # Make csrf_token available in templates even without global CSRF enforcement
+        try:
+            from flask_wtf.csrf import generate_csrf
+            helpers['csrf_token'] = generate_csrf
+        except ImportError:
+            pass
+        return helpers
     
     return app
 

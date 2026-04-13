@@ -11,7 +11,11 @@
       "Bash(venv\\scripts\\python.exe *)",
       "Bash(.venv\\scripts\\python.exe *)",
       "Bash(rmdir *)",
-      "Bash(netstat *)"
+      "Bash(netstat *)",
+      "Bash(/grades/input *)",
+      "Bash(do)",
+      "Bash(powershell *)",
+      "Bash(git restore *)"
     ]
   },
   "$version": 3

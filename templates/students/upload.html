@@ -7,7 +7,33 @@
     <h2 class="mb-4">
         <i class="bi bi-file-earmark-excel"></i> Cargar Estudiantes desde Excel
     </h2>
-    
+
+    {% if institutions %}
+    <!-- Institution Selector for Root -->
+    <div class="card shadow-sm mb-4" style="border-radius:15px;">
+        <div class="card-header bg-warning bg-opacity-10 border-bottom">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Seleccionar Institucion</h5>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted mb-3">Como root, debe seleccionar la institucion para importar estudiantes.</p>
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Institucion</label>
+                    <select name="institution_id" class="form-select form-select-lg" required>
+                        <option value="">Seleccionar institucion...</option>
+                        {% for inst in institutions %}
+                        <option value="{{ inst.id }}">{{ inst.name }} {% if inst.nit %}(NIT: {{ inst.nit }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-check-circle me-1"></i>Seleccionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+
     <div class="row">
         <div class="col-md-8">
             <div class="card">
@@ -16,22 +42,23 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label class="form-label">Archivo Excel (.xlsx, .xls) *</label>
                             <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
-                            <small class="text-muted">Tamaño máximo: 10MB</small>
+                            <small class="text-muted">Tamano maximo: 10MB</small>
                         </div>
-                        
+
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle"></i>
                             <strong>Importante:</strong>
                             <ul class="mb-0 mt-2">
-                                <li>Los estudiantes que ya existen (mismo documento) serán omitidos</li>
-                                <li>Contraseña por defecto para todos: <code>estudiante123</code></li>
-                                <li>Se generará usuario automáticamente</li>
+                                <li>Los estudiantes que ya existen (mismo documento) seran omitidos</li>
+                                <li>Contrasena por defecto para todos: <code>estudiante123</code></li>
+                                <li>Se generara usuario automaticamente</li>
                             </ul>
                         </div>
-                        
+
                         <button type="submit" class="btn btn-success">
                             <i class="bi bi-upload"></i> Cargar Estudiantes
                         </button>
@@ -42,7 +69,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
@@ -50,7 +77,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">El archivo Excel debe tener las siguientes columnas:</p>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
@@ -60,9 +87,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>nombre</code></td><td>✅ Sí</td></tr>
-                                <tr><td><code>apellido</code></td><td>✅ Sí</td></tr>
-                                <tr><td><code>documento</code></td><td>✅ Sí</td></tr>
+                                <tr><td><code>nombre</code></td><td>✅ Si</td></tr>
+                                <tr><td><code>apellido</code></td><td>✅ Si</td></tr>
+                                <tr><td><code>documento</code></td><td>✅ Si</td></tr>
                                 <tr><td><code>tipo_documento</code></td><td>❌ No (TI)</td></tr>
                                 <tr><td><code>fecha_nacimiento</code></td><td>❌ No</td></tr>
                                 <tr><td><code>genero</code></td><td>❌ No</td></tr>
@@ -79,9 +106,9 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <hr>
-                    
+
                     <a href="#" class="btn btn-outline-primary btn-sm w-100">
                         <i class="bi bi-download"></i> Descargar Plantilla
                     </a>
@@ -89,5 +116,6 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

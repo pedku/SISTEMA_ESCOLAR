@@ -15,6 +15,12 @@
     .grade-alto { background-color: #d1f2eb; color: #0dcaf0; }
     .grade-basico { background-color: #fff3cd; color: #856404; }
     .grade-bajo { background-color: #f8d7da; color: #dc3545; }
+    /* Classes matching get_grade_class() return values */
+    .grade-excellent { background-color: #d1e7dd; color: #198754; }
+    .grade-good { background-color: #d1f2eb; color: #0dcaf0; }
+    .grade-average { background-color: #fff3cd; color: #856404; }
+    .grade-below { background-color: #fff3cd; color: #fd7e14; }
+    .grade-fail { background-color: #f8d7da; color: #dc3545; }
 
     .status-ganada { color: #198754; }
     .status-perdida { color: #dc3545; }
@@ -152,9 +158,10 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Asignatura</th>
-                                {% if period_data.period.subjects.values()|list and period_data.period.subjects.values()|list[0].records %}
-                                {% for record in period_data.period.subjects.values()|list[0].records|rejectattr('criterion', 'none')|list %}
-                                {% if loop.index0 == 0 or record.criterion.id != period_data.period.subjects.values()|list[0].records[loop.index0-1].criterion.id if loop.index0 > 0 else true %}
+                                {% set first_subject = period_data.subjects.values()|list %}
+                                {% if first_subject and first_subject[0].records %}
+                                {% for record in first_subject[0].records %}
+                                {% if loop.index0 == 0 or record.criterion.id != first_subject[0].records[loop.index0 - 1].criterion.id %}
                                 <th class="text-center">{{ record.criterion.name }} ({{ record.criterion.weight }}%)</th>
                                 {% endif %}
                                 {% endfor %}

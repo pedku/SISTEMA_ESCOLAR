@@ -103,6 +103,7 @@
     {% endif %}
 
     <form method="POST" class="needs-validation" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row">
             {% if not existing_user %}
             <!-- Full Creation: User Information -->

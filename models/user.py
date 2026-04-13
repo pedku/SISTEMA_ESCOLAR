@@ -72,7 +72,12 @@ class User(UserMixin, db.Model):
     def get_full_name(self):
         """Get user's full name."""
         return f"{self.first_name} {self.last_name}"
-    
+
+    @property
+    def name(self):
+        """Get user's full name (alias for get_full_name)."""
+        return self.get_full_name()
+
     def has_role(self, role):
         """Check if user has specific role."""
         return self.role == role
