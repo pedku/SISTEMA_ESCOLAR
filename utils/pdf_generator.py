@@ -90,21 +90,20 @@ def generate_certificate_pdf(student, institution, certificate_type='enrollment'
     """
     Generate various certificates.
     
+    NOTE: This function is currently disabled because the template
+    'certificates/template.html' does not exist. To enable it, create
+    the template file at templates/certificates/template.html.
+
     Args:
         student: AcademicStudent instance
         institution: Institution instance
         certificate_type: 'enrollment', 'grades', 'attendance'
-    
+
     Returns:
         bytes: PDF bytes
     """
-    html_content = render_template(
-        'certificates/template.html',
-        student=student,
-        institution=institution,
-        certificate_type=certificate_type,
-        generated_date=datetime.now()
+    # TODO: Create templates/certificates/template.html to enable this feature
+    raise NotImplementedError(
+        "Certificate template generation is not yet implemented. "
+        "Create templates/certificates/template.html to enable this feature."
     )
-    
-    pdf_bytes = HTML(string=html_content).write_pdf()
-    return pdf_bytes

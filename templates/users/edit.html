@@ -65,6 +65,7 @@
     </div>
 
     <form method="POST" id="userForm" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row g-4">
             <!-- Main Form -->
             <div class="col-lg-8">
@@ -292,10 +293,10 @@
                                 <i class="bi bi-mortarboard me-2"></i>Ver Perfil Académico
                             </a>
                             {% endif %}
-                            <a href="{{ url_for('auth.reset_password', user_id=user.id) if current_user.is_root() else '#' }}" 
-                               class="btn btn-outline-warning btn-sm">
+                            <button type="button" class="btn btn-outline-warning btn-sm" disabled
+                                    title="Funcionalidad no disponible - El usuario puede cambiar su contraseña desde su perfil">
                                 <i class="bi bi-key me-2"></i>Resetear Contraseña
-                            </a>
+                            </button>
                             {% if user.is_active %}
                             <button type="button" class="btn btn-outline-danger btn-sm" disabled>
                                 <i class="bi bi-pause me-2"></i>Deshabilitar Usuario

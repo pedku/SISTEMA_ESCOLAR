@@ -167,6 +167,7 @@
 
     <!-- Grade Input Form -->
     <form method="POST" id="gradeForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-table"></i> Planilla de Calificaciones</h5>
@@ -434,7 +435,7 @@ function calculateStudentAverage(studentId) {
 }
 
 function calculateGroupAverages() {
-    const criteria = {{ criteria|tojson }};
+    const criteria = {{ criteria_json|tojson }};
     const passing = {{ PASSING_GRADE }};
 
     // Per-criterion averages

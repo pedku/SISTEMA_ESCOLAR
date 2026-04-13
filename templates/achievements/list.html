@@ -8,6 +8,7 @@
         <h2><span class="trophy-icon">&#127942;</span> Logros y Gamificaci&#243;n</h2>
         <div>
             <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary" onclick="return confirm('&#191;Ejecutar el motor de logros para todos los estudiantes?')">
                     <span class="spinner-border spinner-border-sm d-none" id="engine-spinner"></span>
                     &#9881;&#65039; Ejecutar Motor Autom&#225;tico
@@ -79,6 +80,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST" action="{{ url_for('achievements.award_achievement_manual') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
                     <h5 class="modal-title">&#127942; Otorgar Logro</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

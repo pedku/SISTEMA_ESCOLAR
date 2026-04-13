@@ -12,6 +12,7 @@
                 <i class="bi bi-arrow-left"></i> Volver a Planilla
             </a>
             <form method="POST" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-calculator"></i> Recalcular Todas
                 </button>
@@ -166,7 +167,7 @@
     </div>
 </div>
 
-{% block scripts %}
+{% block extra_js %}
 <script>
 $(document).ready(function() {
     $('#finalTable').DataTable({

@@ -21,6 +21,7 @@
         </div>
         <div class="card-body">
             <form method="POST" class="row g-3 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-4">
                     <label for="subject_grade_id" class="form-label">Asignatura - Grado</label>
                     <select name="subject_grade_id" id="subject_grade_id" class="form-select" required>
@@ -90,6 +91,7 @@
                             </td>
                             <td>
                                 <form method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="subject_grade_id" value="{{ item.sg.id }}">
                                     <input type="hidden" name="period_id" value="{{ item.period.id }}">
                                     {% if item.is_locked %}
@@ -118,7 +120,7 @@
     </div>
 </div>
 
-{% block scripts %}
+{% block extra_js %}
 <script>
 $(document).ready(function() {
     $('#lockTable').DataTable({

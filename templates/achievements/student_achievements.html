@@ -7,11 +7,12 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>&#127942; Logros de {{ user.get_full_name() if user else 'Estudiante' }}</h2>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('students.student_detail', id=student.id) }}" class="btn btn-outline-secondary">
+            <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-outline-secondary">
                 &#8592; Volver al Estudiante
             </a>
             {% if current_user.role in ['root', 'admin', 'coordinator'] %}
             <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="student_id" value="{{ student.id }}">
                 <button type="submit" class="btn btn-primary">
                     &#9881;&#65039; Ejecutar Motor
@@ -116,6 +117,7 @@
                 <p>Este estudiante a&#250;n no ha obtenido logros. Ejecuta el motor autom&#225;tico o otorga logros manualmente.</p>
                 {% if current_user.role in ['root', 'admin', 'coordinator'] %}
                 <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="student_id" value="{{ student.id }}">
                     <button type="submit" class="btn btn-primary btn-sm">
                         &#9881;&#65039; Ejecutar Motor para este Estudiante
@@ -135,6 +137,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('achievements.award_achievement_manual') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="student_id" value="{{ student.id }}">
                         <div class="mb-3">
                             <label for="quick-achievement" class="form-label">Logro:</label>

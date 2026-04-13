@@ -70,7 +70,7 @@ def grade_input():
             Grade.academic_year == academic_year
         ).distinct().order_by(Grade.name).all()
 
-        subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+        subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
             Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
@@ -81,7 +81,7 @@ def grade_input():
             Grade.academic_year == academic_year
         ).distinct().order_by(Grade.name).all()
 
-        subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+        subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
             Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
@@ -89,7 +89,7 @@ def grade_input():
         # Teacher: only see their own subject-grades
         subject_grades = SubjectGrade.query.filter_by(
             teacher_id=current_user.id
-        ).join(Grade).join(Campus).filter(
+        ).join(Grade).join(Campus).join(Subject).filter(
             Campus.institution_id == institution.id,
             Grade.academic_year == academic_year
         ).order_by(Grade.name, Subject.name).all()
@@ -310,6 +310,9 @@ def grade_input_form(sg_id, period_id):
     ).count()
     is_locked = total_records > 0 and locked_records == total_records
 
+    # Convert criteria to JSON-serializable list for JavaScript
+    criteria_json = [{'id': c.id, 'name': c.name, 'weight': c.weight, 'order': c.order} for c in criteria]
+
     return render_template(
         'grades/input.html',
         subject_grade=subject_grade,
@@ -318,6 +321,7 @@ def grade_input_form(sg_id, period_id):
         period=period,
         students=students,
         criteria=criteria,
+        criteria_json=criteria_json,
         criteria_weights=criteria_weights,
         grade_data=grade_data,
         is_locked=is_locked,
@@ -361,7 +365,7 @@ def grade_upload():
             Campus.institution_id == institution.id,
             Grade.academic_year == institution.academic_year
         ).order_by(Grade.name).all()
-        all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+        all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
             Campus.institution_id == institution.id,
             Grade.academic_year == institution.academic_year
         ).order_by(Grade.name, Subject.name).all()
@@ -613,7 +617,7 @@ def lock_panel():
         Grade.academic_year == institution.academic_year
     ).order_by(Grade.name).all()
 
-    all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).filter(
+    all_subject_grades = SubjectGrade.query.join(Grade).join(Campus).join(Subject).filter(
         Campus.institution_id == institution.id,
         Grade.academic_year == institution.academic_year
     ).order_by(Grade.name, Subject.name).all()
@@ -898,6 +902,7 @@ def annual_grades_view(sg_id):
 
 @grades_bp.route('/student/<int:student_id>')
 @login_required
+@role_required('root', 'admin', 'coordinator', 'teacher', 'student', 'parent')
 def student_grades(student_id):
     """
     View all grades for a specific student.

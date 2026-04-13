@@ -168,6 +168,7 @@
                 <p>A&#250;n no hay estudiantes con logros. Ejecuta el motor autom&#225;tico para generar logros.</p>
                 {% if current_user.role in ['root', 'admin', 'coordinator'] %}
                 <form method="POST" action="{{ url_for('achievements.run_engine') }}" class="d-inline mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-primary btn-sm">
                         &#9881;&#65039; Ejecutar Motor Autom&#225;tico
                     </button>

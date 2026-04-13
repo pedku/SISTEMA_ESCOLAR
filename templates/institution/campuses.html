@@ -118,6 +118,7 @@
             <div class="card-body p-4">
                 {% if institutions %}
                 <form method="POST" action="{{ url_for('institution.switch_institution') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="next" value="{{ url_for('institution.campuses') }}">
                     
                     <div class="row g-4 mb-4">
@@ -328,6 +329,7 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <form method="POST" action="{{ url_for('institution.campus_delete', id=campus.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-danger btn-sm" title="Eliminar"
                                                 onclick="return confirm('¿Eliminar sede {{ campus.name }}? Esta acción no se puede deshacer si tiene grados asociados.')">
                                             <i class="bi bi-trash"></i>

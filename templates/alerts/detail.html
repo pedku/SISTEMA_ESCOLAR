@@ -125,6 +125,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('alerts.resolve_alert_route', alert_id=alert.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notas de Resolucion</label>
                         <textarea name="notes" id="notes" class="form-control" rows="4" placeholder="Describe las acciones tomadas para resolver esta alerta..."></textarea>

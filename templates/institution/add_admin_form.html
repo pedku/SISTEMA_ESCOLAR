@@ -75,6 +75,7 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="POST" id="adminForm" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- General Error Alert -->
                         {% if errors and errors.general %}
                         <div class="alert alert-danger alert-dismissible fade show mb-4">

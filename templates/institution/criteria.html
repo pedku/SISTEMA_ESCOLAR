@@ -36,6 +36,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <form method="POST" action="{{ url_for('institution.criteria_delete', id=criterion.id) }}" style="display:inline" onsubmit="return confirm('¿Eliminar criterio {{ criterion.name }}?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
                                         <i class="bi bi-trash"></i>
                                     </button>

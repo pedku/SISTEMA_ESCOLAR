@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models.observation import Observation
-from models.academic import AcademicStudent
+from models.academic import AcademicStudent, ParentStudent
 from models.user import User
 from models.institution import Campus
 from utils.decorators import role_required
@@ -31,14 +31,14 @@ def observations_list():
     
     # Base query - start from Observation and filter by institution through student
     query = Observation.query
-    
+
     # Institution filter
     if institution:
         # Get student IDs for this institution
-        student_ids = db.session.query(AcademicStudent.id).filter(
+        institution_student_ids = db.session.query(AcademicStudent.id).filter(
             AcademicStudent.institution_id == institution.id
         ).subquery()
-        query = query.filter(Observation.student_id.in_(student_ids))
+        query = query.filter(Observation.student_id.in_(institution_student_ids))
     
     # Apply filters
     obs_type = request.args.get('type', '')
@@ -110,20 +110,25 @@ def observations_list():
     ).order_by(User.first_name).all()
     
     # Statistics
+    # Use institution_student_ids for institution-scoped stats, or teacher_student_ids if teacher
+    stats_scope = institution_student_ids if institution else None
+    if current_user.is_teacher():
+        stats_scope = teacher_student_ids
+
     stats = {
         'total': pagination.total,
-        'positiva': Observation.query.filter(Observation.type == 'positiva').count() if not institution else 
-                   Observation.query.filter(Observation.type == 'positiva', Observation.student_id.in_(student_ids)).count(),
-        'negativa': Observation.query.filter(Observation.type == 'negativa').count() if not institution else
-                   Observation.query.filter(Observation.type == 'negativa', Observation.student_id.in_(student_ids)).count(),
-        'seguimiento': Observation.query.filter(Observation.type == 'seguimiento').count() if not institution else
-                      Observation.query.filter(Observation.type == 'seguimiento', Observation.student_id.in_(student_ids)).count(),
-        'convivencia': Observation.query.filter(Observation.type == 'convivencia').count() if not institution else
-                      Observation.query.filter(Observation.type == 'convivencia', Observation.student_id.in_(student_ids)).count(),
-        'notificadas': Observation.query.filter(Observation.notified == True).count() if not institution else
-                      Observation.query.filter(Observation.notified == True, Observation.student_id.in_(student_ids)).count(),
-        'pendientes': Observation.query.filter(Observation.notified == False).count() if not institution else
-                     Observation.query.filter(Observation.notified == False, Observation.student_id.in_(student_ids)).count(),
+        'positiva': Observation.query.filter(Observation.type == 'positiva').count() if not stats_scope else
+                   Observation.query.filter(Observation.type == 'positiva', Observation.student_id.in_(stats_scope)).count(),
+        'negativa': Observation.query.filter(Observation.type == 'negativa').count() if not stats_scope else
+                   Observation.query.filter(Observation.type == 'negativa', Observation.student_id.in_(stats_scope)).count(),
+        'seguimiento': Observation.query.filter(Observation.type == 'seguimiento').count() if not stats_scope else
+                      Observation.query.filter(Observation.type == 'seguimiento', Observation.student_id.in_(stats_scope)).count(),
+        'convivencia': Observation.query.filter(Observation.type == 'convivencia').count() if not stats_scope else
+                      Observation.query.filter(Observation.type == 'convivencia', Observation.student_id.in_(stats_scope)).count(),
+        'notificadas': Observation.query.filter(Observation.notified == True).count() if not stats_scope else
+                      Observation.query.filter(Observation.notified == True, Observation.student_id.in_(stats_scope)).count(),
+        'pendientes': Observation.query.filter(Observation.notified == False).count() if not stats_scope else
+                     Observation.query.filter(Observation.notified == False, Observation.student_id.in_(stats_scope)).count(),
     }
     
     return render_template(
@@ -164,7 +169,7 @@ def observation_create():
         if not student_id or not obs_type or not description:
             flash('Estudiante, tipo y descripción son obligatorios.', 'error')
             students = _get_available_students(institution)
-            return render_template('observations/create.html', students=students, observation=None)
+            return render_template('observations/create.html', students=students, observation=None, today=datetime.utcnow().strftime('%Y-%m-%d'))
         
         # Verify student belongs to institution
         student = AcademicStudent.query.get(student_id)
@@ -203,7 +208,7 @@ def observation_create():
             flash(f'Error al crear la observación: {str(e)}', 'error')
     
     students = _get_available_students(institution)
-    return render_template('observations/create.html', students=students, observation=None)
+    return render_template('observations/create.html', students=students, observation=None, today=datetime.utcnow().strftime('%Y-%m-%d'))
 
 
 # ============================================
@@ -275,7 +280,7 @@ def observation_edit(id):
             flash(f'Error al actualizar: {str(e)}', 'error')
     
     students = _get_available_students(get_current_institution())
-    return render_template('observations/create.html', students=students, observation=observation)
+    return render_template('observations/create.html', students=students, observation=observation, today=datetime.utcnow().strftime('%Y-%m-%d'))
 
 
 # ============================================
@@ -342,9 +347,9 @@ def student_observations(student_id):
     
     # Get parent contacts for notification
     parent_students = db.session.query(User).join(
-        'parent_students'
+        ParentStudent, User.id == ParentStudent.parent_id
     ).filter(
-        db.text(f'parent_students.student_id = {student_id}')
+        ParentStudent.student_id == student_id
     ).all()
     
     return render_template(

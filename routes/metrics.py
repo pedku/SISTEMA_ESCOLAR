@@ -24,27 +24,16 @@ def _get_teacher_subject_grades(teacher_id=None, institution=None):
     For teachers: only THEIR own subject-grades.
     For root/admin: all teachers' subject-grades in the institution.
     """
+    from models.institution import Campus
+
     query = db.session.query(SubjectGrade)
 
-    # Filter by institution
+    # Filter by institution through Grade -> Campus
     if institution:
-        query = query.join(Grade).filter(Grade.campus_id.in_(
-            db.session.query(Grade.campus_id).join(
-                db.session.query(Grade).with_entities(Grade.campus_id)
-            )
-        ))
-        # Simpler: filter grades by campus that belongs to institution
-        query = query.join(Grade).filter(
-            Grade.campus_id.in_(
-                db.session.query(Grade.campus_id).filter(
-                    Grade.id.in_(
-                        db.session.query(SubjectGrade.grade_id).filter(
-                            SubjectGrade.teacher_id.isnot(None)
-                        )
-                    )
-                )
-            )
-        )
+        valid_grade_ids = db.session.query(Grade.id).join(
+            Campus, Grade.campus_id == Campus.id
+        ).filter(Campus.institution_id == institution.id).subquery()
+        query = query.filter(SubjectGrade.grade_id.in_(valid_grade_ids))
 
     if teacher_id:
         query = query.filter(SubjectGrade.teacher_id == teacher_id)
@@ -733,12 +722,8 @@ def institution_metrics():
     )
     if institution:
         grades_query = grades_query.join(SubjectGrade).join(Grade).join(
-            db.session.query(Campus).with_entities(Campus.id).filter(
-                Campus.institution_id == institution.id
-            ).subquery()
-        ).filter(Grade.campus_id == db.session.query(Campus.id).filter(
-            Campus.institution_id == institution.id
-        ))
+            Campus, Grade.campus_id == Campus.id
+        ).filter(Campus.institution_id == institution.id)
 
     all_final_grades = grades_query.all()
     all_scores = [fg.final_score for fg in all_final_grades if fg.final_score is not None]

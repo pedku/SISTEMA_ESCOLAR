@@ -14,6 +14,7 @@
             <div class="card card-modern shadow-sm animate-in delay-1">
                 <div class="card-body p-4">
                     <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Archivo Excel</label>
                             <input type="file" name="file" accept=".xlsx,.xls" required class="form-control form-control-lg">

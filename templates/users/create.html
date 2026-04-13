@@ -49,6 +49,7 @@
     </div>
 
     <form method="POST" id="userForm" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <!-- General Error Alert -->
         {% if errors and errors.general %}
         <div class="alert alert-danger alert-dismissible fade show mb-4">

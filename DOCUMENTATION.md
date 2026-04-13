@@ -2,8 +2,9 @@
 
 ## Sistema Integral de Gestión Escolar
 
-> **Versión**: ~98% implementado | **Rama**: main | **Última actualización**: 2026-04-12
+> **Versión**: ~99% implementado | **Rama**: main | **Última actualización**: 2026-04-13
 > **Stack**: Python 3 + Flask + Bootstrap 5 + Chart.js + DataTables + SQLite
+> **Total errores corregidos**: 40+ | **Testing**: Pirámide de 4 fases validada
 
 ---
 
@@ -515,13 +516,25 @@ print(f"\nResultados: {passed} passed, {failed} failed, {passed+failed} total")
 ### Pendientes de Baja Prioridad
 | # | Tarea | Esfuerzo | Notas |
 |---|-------|----------|-------|
-| 1 | Template `grades/summary.html` | 30 min | Ruta funciona, solo falta template |
-| 2 | Template `metrics/risk_students.html` | 30 min | Ruta funciona, solo falta template |
+| 1 | Template `grades/summary.html` | 30 min | Ruta funciona, solo falta contenido completo |
+| 2 | Template `metrics/risk_students.html` | 30 min | Ruta funciona, solo falta contenido completo |
 | 3 | Dashboard padre más completo | 1 hora | Funcional pero minimal |
 | 4 | Sistema QR | Variable | Requiere integración con PROYECTO-LAB |
 | 5 | Capa de servicios | Refactor | Extraer lógica de rutas a services/ |
-| 6 | Tests unitarios | Variable | Mover a tests/ con pytest |
+| 6 | Tests con pytest | Variable | Framework de testing con cobertura |
 | 7 | Upload foto/logo | 30 min | Implementar stubs con `pass` |
+| 8 | Habilitar CSRF globalmente | 1h | Descomentar `csrf.init_app(app)` en app.py |
+| 9 | AJAX CSRF en institutions_list.html | 30 min | Agregar header X-CSRFToken en $.ajax |
+| 10 | Migraciones Alembic | 4h | Reemplazar scripts one-off por cadena de migraciones |
+
+### Correcciones de Seguridad Aplicadas (Sesión 2026-04-13)
+- 44 formularios POST recibieron `{{ csrf_token() }}` (login, password, users, institution, grades, observations, alerts, achievements)
+- Rutas QR protegidas con `@login_required` (qr.py)
+- Ruta `student_grades` protegida con `@role_required` (grades.py)
+- SQL bug en `_get_teacher_subject_grades()` corregido: institution filter con subconsultas circulares reemplazado por JOIN Campus limpio
+- SQL bug en `institution_metrics()` corregido: `.join(subquery())` invalido reemplazado por `.join(Campus)` directo
+- Variable shadowing en `observations.py` corregido: `student_ids` renombrado a `institution_student_ids` + `stats_scope`
+- Dead code en `pdf_generator.py` desactivado: `generate_certificate_pdf()` ahora lanza `NotImplementedError`
 
 ### Arquitectura Futura
 - **Integración PROYECTO-LAB**: QR como identificación única, validación en tiempo real
@@ -543,7 +556,10 @@ print(f"\nResultados: {passed} passed, {failed} failed, {passed+failed} total")
 7. **Jerarquía de roles**: Admin NO puede crear/editar/eliminar otros admins
 8. **Formularios**: Siempre mantener datos tras errores (`form_data` + `errors`)
 9. **Relationships del modelo**: Verificar que existen antes de usar en templates
-10. **Responder en español**: Siempre
+10. **CSRF**: Todos los forms POST deben tener `{{ csrf_token() }}`. Para AJAX usar header `X-CSRFToken`
+11. **Decoradores**: Siempre `@login_required` + `@role_required` en rutas que modifican datos
+12. **Testing**: Seguir pirámide en TESTING_STRATEGY.md (Linting → Estático → Runtime → Manual)
+13. **Responder en español**: Siempre
 
 ### 🎨 Paleta de Colores
 | Uso | Color | Clase Bootstrap |

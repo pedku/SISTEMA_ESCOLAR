@@ -72,6 +72,7 @@
             <div class="card-body text-center py-4">
                 <p class="text-muted">Ejecuta las 6 reglas de alerta simultaneamente</p>
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="all">
                     <button type="submit" class="btn btn-primary btn-lg" onclick="return confirmRunAll();">
                         <i class="bi bi-play-circle-fill"></i> Ejecutar Motor Completo
@@ -88,6 +89,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="rule" class="form-label">Seleccionar Regla</label>
                         <select name="action" id="rule" class="form-select" required>

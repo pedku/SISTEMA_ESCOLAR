@@ -122,9 +122,10 @@
             </button>
             {% endif %}
             
-            {% if current_user.has_any_role('root', 'admin', 'coordinator') %}
-            <form method="POST" action="{{ url_for('observations.observation_delete', id=observation.id) }}" 
+            {% if user_has_any_role('root', 'admin', 'coordinator') %}
+            <form method="POST" action="{{ url_for('observations.observation_delete', id=observation.id) }}"
                   class="ml-auto" onsubmit="return confirm('¿Está seguro de eliminar esta observación?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition">
                     🗑️ Eliminar
                 </button>

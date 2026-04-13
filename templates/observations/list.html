@@ -211,9 +211,10 @@
                         <a href="{{ url_for('observations.observation_edit', id=obs.id) }}" 
                            class="text-yellow-600 hover:text-yellow-900">Editar</a>
                         {% endif %}
-                        {% if current_user.has_any_role('root', 'admin', 'coordinator') %}
-                        <form method="POST" action="{{ url_for('observations.observation_delete', id=obs.id) }}" 
+                        {% if user_has_any_role('root', 'admin', 'coordinator') %}
+                        <form method="POST" action="{{ url_for('observations.observation_delete', id=obs.id) }}"
                               class="inline" onsubmit="return confirm('¿Eliminar esta observación?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                         </form>
                         {% endif %}
