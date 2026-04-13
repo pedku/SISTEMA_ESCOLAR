@@ -43,9 +43,12 @@ def users_list():
     # Base query
     query = User.query
 
-    # Admin can only see users from their assigned institution
+    # Admin can only see users from their institution, BUT NOT other admins
     if institution:
-        query = query.filter(User.institution_id == institution.id)
+        query = query.filter(
+            User.institution_id == institution.id,
+            User.role != 'admin'  # Admins cannot see other admins
+        )
 
     # Apply filters
     role = request.args.get('role', '')
@@ -114,19 +117,47 @@ def user_create():
         document_number = request.form.get('document_number', '').strip()
         role = request.form.get('role', '').strip()
         institution_id = request.form.get('institution_id', type=int)
+
+        errors = {}
         
-        # Validation
-        if not first_name or not last_name or not email or not role:
-            flash('Nombre, apellido, email y rol son obligatorios.', 'error')
-            institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', institutions=institutions, user=None, 
-                                   form_data=request.form)
+        # Validate required fields
+        if not first_name:
+            errors['first_name'] = 'El nombre es obligatorio'
+        if not last_name:
+            errors['last_name'] = 'El apellido es obligatorio'
+        if not email:
+            errors['email'] = 'El email es obligatorio'
+        elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            errors['email'] = 'El correo electrónico no tiene un formato válido'
+        if not role:
+            errors['role'] = 'El rol es obligatorio'
         
+        # Non-root users cannot create root or admin roles
+        if not current_user.is_root():
+            if role in ['root', 'admin']:
+                errors['role'] = 'Solo el usuario root puede crear administradores. Contacta a root para crear un admin.'
+                # Override the role to prevent bypassing
+                role = 'coordinator'
         if not document_number:
-            flash('El número de documento es obligatorio (se usa como contraseña inicial).', 'error')
+            errors['document_number'] = 'El número de documento es obligatorio (se usa como contraseña inicial)'
+
+        # Check email uniqueness
+        if email and User.query.filter_by(email=email).first():
+            errors['email'] = 'El correo electrónico ya está registrado'
+
+        # Check document number uniqueness
+        if document_number and User.query.filter_by(document_number=document_number).first():
+            errors['document_number'] = f'El documento "{document_number}" ya está registrado. Cada usuario debe tener un documento único.'
+
+        # If has errors, return form with data and errors
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
             institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', institutions=institutions, user=None,
-                                   form_data=request.form)
+            return render_template('users/create.html', 
+                                 institutions=institutions, 
+                                 user=None,
+                                 form_data=request.form,
+                                 errors=errors)
         
         # Auto-generate username using new system
         username = generate_username_from_db(
@@ -138,21 +169,7 @@ def user_create():
                 ).all()
             ]
         )
-        
-        # Validate email format
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            flash('El correo electrónico no tiene un formato válido.', 'error')
-            institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', institutions=institutions, user=None,
-                                   form_data=request.form)
-        
-        # Check email uniqueness
-        if User.query.filter_by(email=email).first():
-            flash('El correo electrónico ya está registrado.', 'error')
-            institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', institutions=institutions, user=None,
-                                   form_data=request.form)
-        
+
         # Institution assignment
         if current_user.is_root():
             final_institution_id = institution_id
@@ -185,20 +202,43 @@ def user_create():
         try:
             db.session.add(user)
             db.session.commit()
-            
-            # If creating a student, create academic student record
+
+            # If creating a student, redirect to complete academic profile
             if role == 'student':
-                flash(f'Usuario creado exitosamente. Username: {username}. Complete el perfil académico.', 'info')
+                flash(f'✅ Usuario creado exitosamente. Username: {username}. Ahora complete el perfil académico del estudiante.', 'info')
                 return redirect(url_for('students.new', user_id=user.id))
-            
+
             flash(f'✅ Usuario creado exitosamente.\n\n👤 Username: {username}\n🔑 Contraseña inicial: {document_number}\n\n⚠️ El usuario deberá cambiar la contraseña en su primer inicio de sesión.', 'success')
             return redirect(url_for('users.users_list'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear el usuario: {str(e)}', 'error')
+            
+            # Handle duplicate document/email gracefully
+            error_str = str(e).lower()
+            errors = {}
+            if 'unique' in error_str and 'document_number' in error_str:
+                errors['document_number'] = f'El documento "{document_number}" ya está registrado.'
+            elif 'unique' in error_str and 'email' in error_str:
+                errors['email'] = 'El email ya está registrado en el sistema.'
+            
+            if errors:
+                flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+                institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
+                return render_template('users/create.html', 
+                                     institutions=institutions, 
+                                     user=None,
+                                     form_data=request.form,
+                                     generated_username=username,
+                                     errors=errors)
+            
+            flash(f'❌ Error al crear el usuario: {str(e)}', 'error')
             institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', institutions=institutions, user=None,
-                                   form_data=request.form, generated_username=username)
+            return render_template('users/create.html', 
+                                 institutions=institutions, 
+                                 user=None,
+                                 form_data=request.form, 
+                                 generated_username=username,
+                                 errors={'general': f'Error inesperado: {str(e)}'})
     
     # GET request
     institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
@@ -222,6 +262,11 @@ def user_edit(id):
     if not current_user.is_root():
         if user.institution_id != (institution.id if institution else None):
             flash('No tiene permiso para editar este usuario.', 'error')
+            return redirect(url_for('users.users_list'))
+        
+        # Admins cannot edit other admins
+        if user.role == 'admin':
+            flash('No tiene permiso para editar otros administradores. Solo root puede editar admins.', 'warning')
             return redirect(url_for('users.users_list'))
     
     # Root cannot edit other root users' details (except themselves)
@@ -296,6 +341,11 @@ def user_delete(id):
     if not current_user.is_root():
         if user.institution_id != (institution.id if institution else None):
             flash('No tiene permiso para eliminar este usuario.', 'error')
+            return redirect(url_for('users.users_list'))
+        
+        # Admins cannot delete other admins
+        if user.role == 'admin':
+            flash('No tiene permiso para eliminar otros administradores. Solo root puede eliminar admins.', 'warning')
             return redirect(url_for('users.users_list'))
     
     # Cannot delete root users

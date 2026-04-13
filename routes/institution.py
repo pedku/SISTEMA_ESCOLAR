@@ -741,29 +741,72 @@ def grade_new():
 def grade_edit(id):
     """Edit an existing grade."""
     grade = db.session.get(Grade, id)
-    
+
     if not grade:
         flash('Grado no encontrado.', 'error')
         return redirect(url_for('institution.grades'))
-    
+
     if request.method == 'POST':
-        grade.campus_id = int(request.form.get('campus_id'))
-        grade.director_id = int(request.form.get('director_id')) if request.form.get('director_id') else None
-        grade.name = request.form.get('name', '').strip()
-        grade.academic_year = request.form.get('academic_year', '2026').strip()
-        grade.max_students = int(request.form.get('max_students', 40))
-        
+        name = request.form.get('name', '').strip()
+        campus_id = request.form.get('campus_id', type=int)
+        director_id = request.form.get('director_id')
+        academic_year = request.form.get('academic_year', '2026').strip()
+        max_students = request.form.get('max_students', 40, type=int)
+
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del grado es obligatorio'
+        if not campus_id:
+            errors['campus_id'] = 'Debes seleccionar una sede'
+
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+            teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+            return render_template('institution/grade_form.html',
+                                 grade=grade,
+                                 campuses=campuses,
+                                 teachers=teachers,
+                                 form_data={
+                                     'name': name,
+                                     'campus_id': campus_id,
+                                     'director_id': director_id,
+                                     'academic_year': academic_year,
+                                     'max_students': max_students
+                                 },
+                                 errors=errors)
+
+        grade.campus_id = campus_id
+        grade.director_id = int(director_id) if director_id else None
+        grade.name = name
+        grade.academic_year = academic_year
+        grade.max_students = max_students
+
         try:
             db.session.commit()
-            flash('Grado actualizado exitosamente.', 'success')
+            flash('✅ Grado actualizado exitosamente.', 'success')
             return redirect(url_for('institution.grades'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
-    
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+            campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
+            teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+            return render_template('institution/grade_form.html',
+                                 grade=grade,
+                                 campuses=campuses,
+                                 teachers=teachers,
+                                 form_data={
+                                     'name': name,
+                                     'campus_id': campus_id,
+                                     'director_id': director_id,
+                                     'academic_year': academic_year,
+                                     'max_students': max_students
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
     teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
-    
+
     return render_template('institution/grade_form.html', grade=grade, campuses=campuses, teachers=teachers)
 
 
@@ -1177,8 +1220,40 @@ def criteria():
 def criteria_new():
     """Create a new evaluation criterion."""
     institution = get_current_institution()
-    
+
     if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        weight = request.form.get('weight', '').strip()
+        description = request.form.get('description', '').strip()
+        order = request.form.get('order', '1').strip()
+
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del criterio es obligatorio'
+        if not weight:
+            errors['weight'] = 'El peso es obligatorio'
+        else:
+            try:
+                weight_val = float(weight)
+                if weight_val <= 0 or weight_val > 100:
+                    errors['weight'] = 'El peso debe ser mayor a 0 y menor o igual a 100'
+            except ValueError:
+                errors['weight'] = 'El peso debe ser un número válido'
+
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/criteria_form.html',
+                                 criterion=None,
+                                 institutions=institutions,
+                                 form_data={
+                                     'name': name,
+                                     'weight': weight,
+                                     'description': description,
+                                     'order': order
+                                 },
+                                 errors=errors)
+
         if not institution:
             institution_id = request.form.get('institution_id')
             if institution_id:
@@ -1190,20 +1265,31 @@ def criteria_new():
 
         criterion = GradeCriteria(
             institution_id=institution.id,
-            name=request.form.get('name', '').strip(),
-            weight=float(request.form.get('weight')),
-            description=request.form.get('description', '').strip(),
-            order=int(request.form.get('order'))
+            name=name,
+            weight=float(weight),
+            description=description,
+            order=int(order) if order else 1
         )
-        
+
         try:
             db.session.add(criterion)
             db.session.commit()
-            flash('Criterio de evaluación creado exitosamente.', 'success')
+            flash('✅ Criterio de evaluación creado exitosamente.', 'success')
             return redirect(url_for('institution.criteria'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear el criterio: {str(e)}', 'error')
+            flash(f'❌ Error al crear el criterio: {str(e)}', 'error')
+            institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
+            return render_template('institution/criteria_form.html',
+                                 criterion=None,
+                                 institutions=institutions,
+                                 form_data={
+                                     'name': name,
+                                     'weight': weight,
+                                     'description': description,
+                                     'order': order
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
 
     institution = get_current_institution()
     institutions = [institution] if institution else Institution.query.order_by(Institution.name).all()
@@ -1216,25 +1302,64 @@ def criteria_new():
 def criteria_edit(id):
     """Edit an evaluation criterion."""
     criterion = db.session.get(GradeCriteria, id)
-    
+
     if not criterion:
         flash('Criterio no encontrado.', 'error')
         return redirect(url_for('institution.criteria'))
-    
+
     if request.method == 'POST':
-        criterion.name = request.form.get('name', '').strip()
-        criterion.weight = float(request.form.get('weight'))
-        criterion.description = request.form.get('description', '').strip()
-        criterion.order = int(request.form.get('order'))
-        
+        name = request.form.get('name', '').strip()
+        weight = request.form.get('weight', '').strip()
+        description = request.form.get('description', '').strip()
+        order = request.form.get('order', '1').strip()
+
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del criterio es obligatorio'
+        if not weight:
+            errors['weight'] = 'El peso es obligatorio'
+        else:
+            try:
+                weight_val = float(weight)
+                if weight_val <= 0 or weight_val > 100:
+                    errors['weight'] = 'El peso debe ser mayor a 0 y menor o igual a 100'
+            except ValueError:
+                errors['weight'] = 'El peso debe ser un número válido'
+
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+            return render_template('institution/criteria_form.html',
+                                 criterion=criterion,
+                                 form_data={
+                                     'name': name,
+                                     'weight': weight,
+                                     'description': description,
+                                     'order': order
+                                 },
+                                 errors=errors)
+
+        criterion.name = name
+        criterion.weight = float(weight)
+        criterion.description = description
+        criterion.order = int(order) if order else criterion.order
+
         try:
             db.session.commit()
-            flash('Criterio de evaluación actualizado exitosamente.', 'success')
+            flash('✅ Criterio de evaluación actualizado exitosamente.', 'success')
             return redirect(url_for('institution.criteria'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
-    
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+            return render_template('institution/criteria_form.html',
+                                 criterion=criterion,
+                                 form_data={
+                                     'name': name,
+                                     'weight': weight,
+                                     'description': description,
+                                     'order': order
+                                 },
+                                 errors={'general': f'Error inesperado: {str(e)}'})
+
     return render_template('institution/criteria_form.html', criterion=criterion)
 
 
@@ -1375,13 +1500,13 @@ def institution_add_admin(id):
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
-        password = request.form.get('password', '').strip()
         document_type = request.form.get('document_type', 'CC')
         document_number = request.form.get('document_number', '').strip()
         phone = request.form.get('phone', '').strip() or None
+        role = request.form.get('role', 'teacher').strip()
 
         errors = {}
-        
+
         # Validate required fields
         if not first_name:
             errors['first_name'] = 'El nombre es obligatorio'
@@ -1391,21 +1516,25 @@ def institution_add_admin(id):
             errors['email'] = 'El email es obligatorio'
         elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             errors['email'] = 'El email no tiene un formato válido'
-        if not password:
-            errors['password'] = 'La contraseña es obligatoria'
-        elif len(password) < 6:
-            errors['password'] = 'La contraseña debe tener al menos 6 caracteres'
         if not document_number:
             errors['document_number'] = 'El número de documento es obligatorio'
+        elif len(document_number) < 5:
+            errors['document_number'] = 'El documento debe tener al menos 5 caracteres'
+        if not role:
+            errors['role'] = 'El rol es obligatorio'
 
         # Check email uniqueness
         if email and User.query.filter_by(email=email).first():
             errors['email'] = 'El email ya está registrado en el sistema'
 
+        # Check document number uniqueness
+        if document_number and User.query.filter_by(document_number=document_number).first():
+            errors['document_number'] = f'El documento "{document_number}" ya está registrado. Cada usuario debe tener un documento único.'
+
         # If has errors, return form with data and errors
         if errors:
             flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
-            return render_template('institution/add_admin_form.html', 
+            return render_template('institution/add_admin_form.html',
                                  institution=institution,
                                  form_data={
                                      'first_name': first_name,
@@ -1413,7 +1542,8 @@ def institution_add_admin(id):
                                      'email': email,
                                      'document_type': document_type,
                                      'document_number': document_number,
-                                     'phone': phone
+                                     'phone': phone,
+                                     'role': role
                                  },
                                  errors=errors)
 
@@ -1430,13 +1560,16 @@ def institution_add_admin(id):
             ]
         )
 
-        admin = User(
+        # La contraseña es el número de documento
+        default_password = document_number.strip()
+
+        new_user = User(
             username=username,
             email=email,
-            password_hash=generate_password_hash(password),
+            password_hash=generate_password_hash(default_password),
             first_name=first_name,
             last_name=last_name,
-            role='admin',
+            role=role,
             institution_id=institution.id,
             document_type=document_type,
             document_number=document_number,
@@ -1447,14 +1580,48 @@ def institution_add_admin(id):
         )
 
         try:
-            db.session.add(admin)
+            db.session.add(new_user)
             db.session.commit()
-            flash(f'✅ Administrador "{username}" creado exitosamente para {institution.name}.', 'success')
+            
+            role_names = {
+                'admin': 'Administrador',
+                'coordinator': 'Coordinador',
+                'teacher': 'Profesor',
+                'student': 'Estudiante',
+                'parent': 'Acudiente',
+                'viewer': 'Viewer'
+            }
+            role_display = role_names.get(role, role.title())
+            
+            flash(f'✅ {role_display} "{username}" creado exitosamente para {institution.name}.', 'success')
             return redirect(url_for('institution.institution_users', id=id))
         except Exception as e:
             db.session.rollback()
+            
+            # Handle duplicate document/email gracefully
+            error_str = str(e).lower()
+            if 'unique' in error_str and 'document_number' in error_str:
+                errors['document_number'] = f'El documento "{document_number}" ya está registrado.'
+            elif 'unique' in error_str and 'email' in error_str:
+                errors['email'] = 'El email ya está registrado en el sistema.'
+            
+            if errors:
+                flash('⚠️ Por favor corrige los errores marcados en el formulario', 'error')
+                return render_template('institution/add_admin_form.html',
+                                     institution=institution,
+                                     form_data={
+                                         'first_name': first_name,
+                                         'last_name': last_name,
+                                         'email': email,
+                                         'document_type': document_type,
+                                         'document_number': document_number,
+                                         'phone': phone,
+                                         'role': role
+                                     },
+                                     errors=errors)
+            
             flash(f'❌ Error al crear: {str(e)}', 'error')
-            return render_template('institution/add_admin_form.html', 
+            return render_template('institution/add_admin_form.html',
                                  institution=institution,
                                  form_data={
                                      'first_name': first_name,
@@ -1462,7 +1629,8 @@ def institution_add_admin(id):
                                      'email': email,
                                      'document_type': document_type,
                                      'document_number': document_number,
-                                     'phone': phone
+                                     'phone': phone,
+                                     'role': role
                                  },
                                  errors={'general': f'Error inesperado: {str(e)}'})
 

@@ -49,6 +49,14 @@
     </div>
 
     <form method="POST" id="userForm" novalidate>
+        <!-- General Error Alert -->
+        {% if errors and errors.general %}
+        <div class="alert alert-danger alert-dismissible fade show mb-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ errors.general }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        
         <div class="row g-4">
             <!-- Main Form -->
             <div class="col-lg-8">
@@ -66,51 +74,76 @@
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-person me-1 text-primary"></i>Nombres <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="firstName" name="first_name" required 
-                                       value="{{ form_data.first_name if form_data else '' }}" 
-                                       class="form-control" 
+                                <input type="text" id="firstName" name="first_name" required
+                                       value="{{ form_data.first_name if form_data else '' }}"
+                                       class="form-control {% if errors and errors.first_name %}is-invalid{% endif %}"
                                        placeholder="Ej: Juan Carlos">
+                                {% if errors and errors.first_name %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.first_name }}
+                                </div>
+                                {% else %}
                                 <div class="form-text">Nombre completo del usuario</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-person me-1 text-primary"></i>Apellidos <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="lastName" name="last_name" required 
-                                       value="{{ form_data.last_name if form_data else '' }}" 
-                                       class="form-control" 
+                                <input type="text" id="lastName" name="last_name" required
+                                       value="{{ form_data.last_name if form_data else '' }}"
+                                       class="form-control {% if errors and errors.last_name %}is-invalid{% endif %}"
                                        placeholder="Ej: Pérez García">
+                                {% if errors and errors.last_name %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.last_name }}
+                                </div>
+                                {% else %}
                                 <div class="form-text">Apellidos completos</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">
-                                    <i class="bi bi-card-text me-1 text-primary"></i>Tipo Documento <span class="text-danger">*</span>
+                                    <i class="bi bi-card-text me-1 text-primary"></i>Tipo Documento
                                 </label>
-                                <select name="document_type" required class="form-select">
-                                    <option value="TI">TI - Tarjeta de Identidad</option>
-                                    <option value="CC" selected>CC - Cédula de Ciudadanía</option>
-                                    <option value="RC">RC - Registro Civil</option>
-                                    <option value="CE">CE - Cédula de Extranjería</option>
+                                <select name="document_type" class="form-select {% if errors and errors.document_type %}is-invalid{% endif %}">
+                                    <option value="TI" {% if form_data and form_data.document_type == 'TI' %}selected{% endif %}>TI - Tarjeta de Identidad</option>
+                                    <option value="CC" {% if not form_data or form_data.document_type == 'CC' %}selected{% endif %}>CC - Cédula de Ciudadanía</option>
+                                    <option value="RC" {% if form_data and form_data.document_type == 'RC' %}selected{% endif %}>RC - Registro Civil</option>
+                                    <option value="CE" {% if form_data and form_data.document_type == 'CE' %}selected{% endif %}>CE - Cédula de Extranjería</option>
                                 </select>
+                                {% if errors and errors.document_type %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.document_type }}
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-hash me-1 text-primary"></i>Nº Documento <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="documentNumber" name="document_number" required 
-                                       value="{{ form_data.document_number if form_data else '' }}" 
-                                       class="form-control" 
+                                <input type="text" id="documentNumber" name="document_number" required
+                                       value="{{ form_data.document_number if form_data else '' }}"
+                                       class="form-control {% if errors and errors.document_number %}is-invalid{% endif %}"
                                        placeholder="Ej: 1234567890">
+                                {% if errors and errors.document_number %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.document_number }}
+                                </div>
+                                {% else %}
                                 <div class="form-text">
                                     <i class="bi bi-key-fill text-warning me-1"></i>
                                     Se usará como contraseña inicial
                                 </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-calendar-event me-1 text-primary"></i>Fecha Nacimiento
                                 </label>
-                                <input type="date" name="birth_date" class="form-control">
+                                <input type="date" name="birth_date"
+                                       value="{{ form_data.birth_date if form_data else '' }}"
+                                       class="form-control">
                             </div>
                         </div>
                     </div>
@@ -130,11 +163,17 @@
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-envelope me-1 text-success"></i>Correo Electrónico <span class="text-danger">*</span>
                                 </label>
-                                <input type="email" name="email" required 
-                                       value="{{ form_data.email if form_data else '' }}" 
-                                       class="form-control" 
+                                <input type="email" name="email" required
+                                       value="{{ form_data.email if form_data else '' }}"
+                                       class="form-control {% if errors and errors.email %}is-invalid{% endif %}"
                                        placeholder="usuario@ejemplo.com">
+                                {% if errors and errors.email %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.email }}
+                                </div>
+                                {% else %}
                                 <div class="form-text">Correo válido para notificaciones</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
@@ -197,20 +236,28 @@
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-person-badge me-1 text-warning"></i>Rol <span class="text-danger">*</span>
                                 </label>
-                                <select name="role" required class="form-select" {% if not current_user.is_root() %}disabled{% endif %}>
-                                    <option value="teacher" selected>🟡 Profesor</option>
-                                    <option value="admin">🔵 Administrador</option>
-                                    <option value="coordinator">🟣 Coordinador</option>
-                                    <option value="student">🟢 Estudiante</option>
-                                    <option value="parent">🔵 Acudiente</option>
-                                    <option value="viewer">⚪ Viewer</option>
+                                <select name="role" required class="form-select {% if errors and errors.role %}is-invalid{% endif %}">
                                     {% if current_user.is_root() %}
-                                    <option value="root">🔴 Root</option>
+                                    <option value="root" {% if form_data and form_data.role == 'root' %}selected{% endif %}>🔴 Root</option>
+                                    <option value="admin" {% if form_data and form_data.role == 'admin' %}selected{% endif %}>🔵 Administrador</option>
                                     {% endif %}
+                                    <option value="coordinator" {% if not form_data or form_data.role == 'coordinator' %}selected{% endif %}>🟣 Coordinador</option>
+                                    <option value="teacher" {% if form_data and form_data.role == 'teacher' %}selected{% endif %}>🟡 Profesor</option>
+                                    <option value="student" {% if form_data and form_data.role == 'student' %}selected{% endif %}>🟢 Estudiante</option>
+                                    <option value="parent" {% if form_data and form_data.role == 'parent' %}selected{% endif %}>🔵 Acudiente</option>
+                                    <option value="viewer" {% if form_data and form_data.role == 'viewer' %}selected{% endif %}>⚪ Viewer</option>
                                 </select>
-                                {% if not current_user.is_root() %}
-                                <input type="hidden" name="role" value="teacher">
-                                <div class="form-text">Solo el usuario root puede asignar roles</div>
+                                {% if errors and errors.role %}
+                                <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ errors.role }}
+                                </div>
+                                {% elif not current_user.is_root() %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Como admin, puedes crear coordinadores, profesores, estudiantes, acudientes y viewers. Root crea admins.
+                                </div>
+                                {% else %}
+                                <div class="form-text">Root puede crear cualquier rol incluyendo admins</div>
                                 {% endif %}
                             </div>
                             {% if current_user.is_root() %}

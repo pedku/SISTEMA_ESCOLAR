@@ -126,8 +126,8 @@
                         <option value="">Todos los roles</option>
                         {% if current_user.is_root() %}
                         <option value="root" {% if filters.role == 'root' %}selected{% endif %}>Root</option>
-                        {% endif %}
                         <option value="admin" {% if filters.role == 'admin' %}selected{% endif %}>Administrador</option>
+                        {% endif %}
                         <option value="coordinator" {% if filters.role == 'coordinator' %}selected{% endif %}>Coordinador</option>
                         <option value="teacher" {% if filters.role == 'teacher' %}selected{% endif %}>Profesor</option>
                         <option value="student" {% if filters.role == 'student' %}selected{% endif %}>Estudiante</option>
