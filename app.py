@@ -57,6 +57,7 @@ def create_app(config_name=None):
     from routes.parent import parent_bp
     from routes.qr import qr_bp
     from routes.alerts import alerts_bp
+    from routes.scheduling import scheduling_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -72,6 +73,7 @@ def create_app(config_name=None):
     app.register_blueprint(parent_bp, url_prefix='/parent')
     app.register_blueprint(qr_bp, url_prefix='/qr')
     app.register_blueprint(alerts_bp)
+    app.register_blueprint(scheduling_bp, url_prefix='/scheduling')
     
     # Error handlers
     from utils.error_handlers import register_error_handlers

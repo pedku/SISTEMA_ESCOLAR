@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Nueva Asignacion{% else %}Editar Asignacion{% endif %} - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-person-badge me-2"></i>
+                {% if mode == 'create' %}Nueva Asignacion de Profesor{% else %}Editar Asignacion{% endif %}
+            </h1>
+            <p class="text-muted mb-0">Ano academico {{ academic_year }}</p>
+        </div>
+        <a href="{{ url_for('scheduling.assignment_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if mode == 'create' %}
+            <form method="POST" action="{{ url_for('scheduling.assignment_create') }}">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Grado <span class="text-danger">*</span></label>
+                        <select name="grade_id" class="form-select" required>
+                            <option value="">Seleccione un grado</option>
+                            {% for grade in grades %}
+                            <option value="{{ grade.id }}">{{ grade.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Materia <span class="text-danger">*</span></label>
+                        <select name="subject_id" class="form-select" required>
+                            <option value="">Seleccione una materia</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Profesor <span class="text-danger">*</span></label>
+                        <select name="teacher_id" class="form-select" required>
+                            <option value="">Seleccione un profesor</option>
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Asignar Profesor
+                    </button>
+                    <a href="{{ url_for('scheduling.assignment_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('scheduling.assignment_edit', id=assignment.id) }}">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Profesor</label>
+                        <input type="text" class="form-control" 
+                               value="{{ assignment.teacher.first_name }} {{ assignment.teacher.last_name }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Materia</label>
+                        <input type="text" class="form-control" 
+                               value="{{ assignment.subject_grade.subject.name }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Grado</label>
+                        <input type="text" class="form-control" 
+                               value="{{ assignment.subject_grade.grade.name }}" disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Estado</label>
+                        <select name="status" class="form-select">
+                            <option value="activo" {% if assignment.status == 'activo' %}selected{% endif %}>Activo</option>
+                            <option value="inactivo" {% if assignment.status == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                            <option value="temporal" {% if assignment.status == 'temporal' %}selected{% endif %}>Temporal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Asignacion</label>
+                        <input type="text" class="form-control" 
+                               value="{{ assignment.assignment_date.strftime('%d/%m/%Y') }}" disabled>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Observaciones</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ assignment.notes or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Cambios
+                    </button>
+                    <a href="{{ url_for('scheduling.assignment_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

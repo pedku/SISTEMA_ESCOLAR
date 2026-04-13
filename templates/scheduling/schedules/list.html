@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Horarios - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-calendar-week me-2"></i>Horarios de Clases</h1>
+            <p class="text-muted mb-0">Horarios para el ano academico {{ academic_year }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('scheduling.schedule_generate_view') }}" class="btn btn-success">
+                <i class="bi bi-magic me-1"></i>Generar Horario Automatico
+            </a>
+        </div>
+    </div>
+
+    <!-- Schedule Grid -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if schedules %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="scheduleTable">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th style="width: 100px;">Hora</th>
+                            {% for day in days %}
+                            <th>{{ day }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set time_slots = schedules | map(attribute='start_time') | unique | sort %}
+                        {% for time in time_slots %}
+                        <tr>
+                            <td class="bg-light fw-bold text-center">
+                                {{ time.strftime('%H:%M') }}
+                            </td>
+                            {% for day_idx in range(5) %}
+                            <td style="min-width: 200px; vertical-align: top;">
+                                {% if day_idx in schedule_grid and time.strftime('%H:%M') in schedule_grid[day_idx] %}
+                                    {% set schedule = schedule_grid[day_idx][time.strftime('%H:%M')] %}
+                                    <div class="card border-0 shadow-sm mb-2">
+                                        <div class="card-body p-2">
+                                            <h6 class="fw-bold mb-1 text-primary">{{ schedule.subject_grade.subject.name }}</h6>
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-person me-1"></i>{{ schedule.subject_grade.teacher_user.first_name }} {{ schedule.subject_grade.teacher_user.last_name }}
+                                            </small>
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-door-open me-1"></i>{{ schedule.classroom.name }}
+                                            </small>
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-journal me-1"></i>{{ schedule.subject_grade.grade.name }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x" style="font-size: 5rem;"></i>
+                <h4 class="text-muted mt-3">No hay horarios generados</h4>
+                <p class="text-muted mb-4">Genere los horarios automaticamente o asigne manualmente</p>
+                <a href="{{ url_for('scheduling.schedule_generate_view') }}" class="btn btn-success btn-lg px-5">
+                    <i class="bi bi-magic me-2"></i>Generar Horario Automatico
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.schedule-card {
+    transition: all 0.3s ease;
+}
+.schedule-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

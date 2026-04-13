@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Nueva Matricula{% else %}Editar Matricula{% endif %} - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-journal-plus me-2"></i>
+                {% if mode == 'create' %}Nueva Matricula{% else %}Editar Matricula{% endif %}
+            </h1>
+            <p class="text-muted mb-0">Ano academico {{ academic_year }}</p>
+        </div>
+        <a href="{{ url_for('scheduling.enrollment_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if mode == 'create' %}
+            <form method="POST" action="{{ url_for('scheduling.enrollment_create') }}" id="enrollmentForm">
+                <div class="row g-4">
+                    <!-- Grade Selection -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Grado <span class="text-danger">*</span></label>
+                        <select name="grade_id" class="form-select" required id="gradeSelect">
+                            <option value="">Seleccione un grado</option>
+                            {% for grade in grades %}
+                            <option value="{{ grade.id }}">{{ grade.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Students Selection -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Estudiantes <span class="text-danger">*</span></label>
+                        <select name="student_ids" class="form-select" multiple required id="studentsSelect" size="8">
+                            <!-- Students will be loaded via AJAX -->
+                            <option value="">Seleccione un grado primero</option>
+                        </select>
+                        <small class="text-muted">Mantenga Ctrl presionado para seleccionar varios</small>
+                    </div>
+
+                    <!-- Subjects Selection -->
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Materias <span class="text-danger">*</span></label>
+                        <div class="row g-2" id="subjectsContainer">
+                            {% for subject in subjects %}
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="subject_ids" 
+                                           value="{{ subject.id }}" id="subject_{{ subject.id }}">
+                                    <label class="form-check-label" for="subject_{{ subject.id }}">
+                                        {{ subject.name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Matricular Estudiantes
+                    </button>
+                    <a href="{{ url_for('scheduling.enrollment_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('scheduling.enrollment_edit', id=enrollment.id) }}">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Estudiante</label>
+                        <input type="text" class="form-control" 
+                               value="{{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}" 
+                               disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Materia</label>
+                        <input type="text" class="form-control" 
+                               value="{{ enrollment.subject_grade.subject.name }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Estado</label>
+                        <select name="status" class="form-select">
+                            <option value="activa" {% if enrollment.status == 'activa' %}selected{% endif %}>Activa</option>
+                            <option value="cancelada" {% if enrollment.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                            <option value="retirada" {% if enrollment.status == 'retirada' %}selected{% endif %}>Retirada</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Nota Final</label>
+                        <input type="number" name="final_score" class="form-control" 
+                               step="0.1" min="1.0" max="5.0" 
+                               value="{{ enrollment.final_score or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Fecha Matricula</label>
+                        <input type="text" class="form-control" 
+                               value="{{ enrollment.enrollment_date.strftime('%d/%m/%Y') }}" disabled>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Observaciones</label>
+                        <textarea name="status_note" class="form-control" rows="3">{{ enrollment.status_note or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Cambios
+                    </button>
+                    <a href="{{ url_for('scheduling.enrollment_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if mode == 'create' %}
+<script>
+$(document).ready(function() {
+    // Load students when grade is selected
+    $('#gradeSelect').change(function() {
+        var gradeId = $(this).val();
+        var studentsSelect = $('#studentsSelect');
+        
+        if (gradeId) {
+            studentsSelect.prop('disabled', true).html('<option value="">Cargando...</option>');
+            
+            $.getJSON('{{ url_for("scheduling.api_students_by_grade", grade_id=0) }}'.replace('0', gradeId), function(data) {
+                studentsSelect.empty().prop('disabled', false);
+                
+                if (data.length === 0) {
+                    studentsSelect.html('<option value="">No hay estudiantes en este grado</option>');
+                } else {
+                    data.forEach(function(student) {
+                        studentsSelect.append(
+                            $('<option></option>').val(student.id).text(student.name + ' (' + student.document + ')')
+                        );
+                    });
+                }
+            }).fail(function() {
+                studentsSelect.html('<option value="">Error cargando estudiantes</option>');
+            });
+        } else {
+            studentsSelect.html('<option value="">Seleccione un grado primero</option>');
+        }
+    });
+    
+    // Validate form
+    $('#enrollmentForm').submit(function(e) {
+        var students = $('#studentsSelect').val();
+        var subjects = $('input[name="subject_ids"]:checked').length;
+        
+        if (!students || students.length === 0) {
+            alert('Seleccione al menos un estudiante');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (subjects === 0) {
+            alert('Seleccione al menos una materia');
+            e.preventDefault();
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

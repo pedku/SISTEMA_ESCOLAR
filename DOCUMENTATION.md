@@ -31,7 +31,7 @@ sistema_escolar/
 ├── extensions.py                   # Extensiones Flask centralizadas
 ├── init_db.py                      # Inicialización BD + seed data
 │
-├── models/                         # 9 archivos, ~20 tablas
+├── models/                         # 10 archivos, ~25 tablas
 │   ├── user.py                     # User (auth + 7 roles)
 │   ├── institution.py              # Institution, Campus
 │   ├── academic.py                 # Grade, Subject, SubjectGrade, AcademicStudent, ParentStudent
@@ -40,9 +40,10 @@ sistema_escolar/
 │   ├── observation.py              # Observation
 │   ├── report.py                   # ReportCard, ReportCardObservation
 │   ├── achievement.py              # Achievement, StudentAchievement
-│   └── alert.py                    # Alert
+│   ├── alert.py                    # Alert
+│   └── scheduling.py               # Classroom, StudentEnrollment, TeacherSubjectAssignment, Schedule, ScheduleBlock
 │
-├── routes/                         # 14 blueprints
+├── routes/                         # 15 blueprints
 │   ├── auth.py                     # Login, logout, profile, password
 │   ├── dashboard.py                # 7 dashboards por rol
 │   ├── institution.py              # CRUD institución, sedes, grados, asignaturas, periodos, criterios
@@ -56,7 +57,8 @@ sistema_escolar/
 │   ├── alerts.py                   # Sistema alertas tempranas
 │   ├── achievements.py             # Logros/gamificación
 │   ├── parent.py                   # Portal de acudientes
-│   └── qr.py                       # Acceso QR (placeholder)
+│   ├── qr.py                       # Acceso QR (placeholder)
+│   └── scheduling.py               # Matrícula, asignación de profesores, generación de horarios
 │
 ├── utils/                          # 12 utilidades
 │   ├── decorators.py               # @role_required, @login_required
@@ -69,7 +71,7 @@ sistema_escolar/
 │   ├── achievement_engine.py       # Motor auto-award 7 logros
 │   └── template_helpers.py         # Helpers Jinja2
 │
-├── templates/                      # ~87 templates HTML
+├── templates/                      # ~98 templates HTML
 │   ├── base.html                   # Layout base con sidebar dinámico
 │   ├── dashboard/                  # 7 dashboards por rol
 │   ├── institution/                # Gestión institucional
@@ -83,7 +85,14 @@ sistema_escolar/
 │   ├── alerts/                     # Alertas tempranas
 │   ├── achievements/               # Logros/gamificación
 │   ├── parent/                     # Portal acudientes
-│   └── qr/                         # Acceso QR
+│   ├── qr/                         # Acceso QR
+│   └── scheduling/                 # NUEVO: Matrícula y horarios (12 templates)
+│       ├── enrollments/            # Listado y formulario de matrículas
+│       ├── assignments/            # Listado y formulario de asignaciones
+│       ├── subject_grades/         # Listado y formulario de materias por grado
+│       ├── classrooms/             # Listado y formulario de salones
+│       ├── schedules/              # Listado y generación de horarios
+│       └── blocks/                 # Listado y formulario de bloques horarios
 │
 ├── static/
 │   ├── css/
@@ -139,6 +148,15 @@ sistema_escolar/
 | **Achievement** | `achievements` | name, description, icon, criteria, category |
 | **StudentAchievement** | `student_achievements` | student_id, achievement_id, period_id, earned_at |
 | **Alert** | `alerts` | student_id, alert_type (6 tipos), severity (alta/media/baja), resolved, notes |
+
+### Programación y Matrícula (NUEVO)
+| Modelo | Tabla | Campos Clave |
+|--------|-------|-------------|
+| **Classroom** | `classrooms` | campus_id, name, code, capacity, classroom_type, floor, building |
+| **StudentEnrollment** | `student_enrollments` | student_id, subject_grade_id, academic_year, status, enrollment_date |
+| **TeacherSubjectAssignment** | `teacher_subject_assignments` | subject_grade_id, teacher_id, academic_year, status, assignment_date |
+| **Schedule** | `schedules` | subject_grade_id, classroom_id, day_of_week, start_time, end_time, academic_year |
+| **ScheduleBlock** | `schedule_blocks` | campus_id, name, start_time, end_time, is_break, order_num, academic_year |
 
 ---
 
@@ -273,6 +291,35 @@ sistema_escolar/
 | `/parent/attendance/<student_id>` | GET | Calendario asistencia |
 | `/parent/observations/<student_id>` | GET | Observaciones del acudido |
 | `/parent/report_cards/<student_id>` | GET | Boletines del acudido |
+
+### 14. Programación y Matrícula (`scheduling_bp`) - NUEVO
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/scheduling/enrollments` | GET | Lista de matrículas de estudiantes |
+| `/scheduling/enrollments/new` | GET/POST | Crear matrícula de estudiante |
+| `/scheduling/enrollments/<id>/edit` | GET/POST | Editar matrícula |
+| `/scheduling/enrollments/<id>/delete` | POST | Eliminar matrícula |
+| `/scheduling/assignments` | GET | Lista de asignaciones de profesores |
+| `/scheduling/assignments/new` | GET/POST | Asignar profesor a materia |
+| `/scheduling/assignments/<id>/edit` | GET/POST | Editar asignación |
+| `/scheduling/assignments/<id>/delete` | POST | Eliminar asignación |
+| `/scheduling/subject-grades` | GET | Lista de materias por grado |
+| `/scheduling/subject-grades/new` | GET/POST | Asignar materias a grados |
+| `/scheduling/subject-grades/<id>/delete` | POST | Eliminar asignación |
+| `/scheduling/classrooms` | GET | Lista de salones |
+| `/scheduling/classrooms/new` | GET/POST | Crear salón |
+| `/scheduling/classrooms/<id>/edit` | GET/POST | Editar salón |
+| `/scheduling/classrooms/<id>/delete` | POST | Eliminar salón |
+| `/scheduling/schedules` | GET | Ver horarios (filtrado por rol) |
+| `/scheduling/schedules/generate` | GET | Vista para generar horarios |
+| `/scheduling/schedules/generate/run` | POST | Ejecutar generador automático de horarios |
+| `/scheduling/schedules/<id>/delete` | POST | Eliminar horario |
+| `/scheduling/blocks` | GET | Lista de bloques de tiempo |
+| `/scheduling/blocks/new` | GET/POST | Crear bloque de tiempo |
+| `/scheduling/blocks/<id>/edit` | GET/POST | Editar bloque |
+| `/scheduling/blocks/<id>/delete` | POST | Eliminar bloque |
+| `/scheduling/api/students/by-grade/<grade_id>` | GET | API: Obtener estudiantes por grado |
+| `/scheduling/api/subject-grades/by-grade/<grade_id>` | GET | API: Obtener materias por grado |
 
 ---
 

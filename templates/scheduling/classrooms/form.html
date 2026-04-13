@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Nuevo Salon{% else %}Editar Salon{% endif %} - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-building me-2"></i>
+                {% if mode == 'create' %}Nuevo Salon{% else %}Editar Salon{% endif %}
+            </h1>
+        </div>
+        <a href="{{ url_for('scheduling.classroom_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Sede <span class="text-danger">*</span></label>
+                        <select name="campus_id" class="form-select" required>
+                            <option value="">Seleccione una sede</option>
+                            {% for campus in campuses %}
+                            <option value="{{ campus.id }}" {% if classroom and classroom.campus_id == campus.id %}selected{% endif %}>
+                                {{ campus.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required 
+                               value="{{ classroom.name if classroom else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Codigo <span class="text-danger">*</span></label>
+                        <input type="text" name="code" class="form-control" required 
+                               value="{{ classroom.code if classroom else '' }}">
+                        <small class="text-muted">Ej: AULA-101, LAB-CIENCIAS</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Capacidad</label>
+                        <input type="number" name="capacity" class="form-control" min="10" max="100" 
+                               value="{{ classroom.capacity if classroom else 40 }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Tipo</label>
+                        <select name="classroom_type" class="form-select">
+                            <option value="aula" {% if classroom and classroom.classroom_type == 'aula' %}selected{% endif %}>Aula</option>
+                            <option value="laboratorio" {% if classroom and classroom.classroom_type == 'laboratorio' %}selected{% endif %}>Laboratorio</option>
+                            <option value="auditorio" {% if classroom and classroom.classroom_type == 'auditorio' %}selected{% endif %}>Auditorio</option>
+                            <option value="cancha" {% if classroom and classroom.classroom_type == 'cancha' %}selected{% endif %}>Cancha</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Edificio</label>
+                        <input type="text" name="building" class="form-control" 
+                               value="{{ classroom.building if classroom else '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Piso</label>
+                        <input type="number" name="floor" class="form-control" min="1" 
+                               value="{{ classroom.floor if classroom else 1 }}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Recursos (JSON)</label>
+                        <textarea name="resources" class="form-control" rows="3" 
+                                  placeholder='{"proyector": true, "computadoras": 30}'>{{ classroom.resources if classroom else '' }}</textarea>
+                        <small class="text-muted">Lista de recursos disponibles en formato JSON</small>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>{% if mode == 'create' %}Crear Salon{% else %}Guardar Cambios{% endif %}
+                    </button>
+                    <a href="{{ url_for('scheduling.classroom_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -94,6 +94,7 @@ class SubjectGrade(db.Model):
     annual_grades = db.relationship('AnnualGrade', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
     attendance_records = db.relationship('Attendance', lazy='dynamic', cascade='all, delete-orphan')
     report_card_observations = db.relationship('ReportCardObservation', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
+    # Note: enrollments, teacher_assignment, and schedules relationships are defined in models/scheduling.py
     
     __table_args__ = (
         db.UniqueConstraint('subject_id', 'grade_id', 'teacher_id', name='uq_subject_grade_teacher'),

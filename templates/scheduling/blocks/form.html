@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Nuevo Bloque{% else %}Editar Bloque{% endif %} - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-clock me-2"></i>
+                {% if mode == 'create' %}Nuevo Bloque de Tiempo{% else %}Editar Bloque{% endif %}
+            </h1>
+        </div>
+        <a href="{{ url_for('scheduling.block_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Sede <span class="text-danger">*</span></label>
+                        <select name="campus_id" class="form-select" required>
+                            <option value="">Seleccione una sede</option>
+                            {% for campus in campuses %}
+                            <option value="{{ campus.id }}" {% if block and block.campus_id == campus.id %}selected{% endif %}>
+                                {{ campus.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required 
+                               value="{{ block.name if block else '' }}"
+                               placeholder="Ej: Bloque 1, Recreo, Almuerzo">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Hora Inicio <span class="text-danger">*</span></label>
+                        <input type="time" name="start_time" class="form-control" required 
+                               value="{{ block.start_time.strftime('%H:%M') if block else '07:00' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Hora Fin <span class="text-danger">*</span></label>
+                        <input type="time" name="end_time" class="form-control" required 
+                               value="{{ block.end_time.strftime('%H:%M') if block else '08:00' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Orden</label>
+                        <input type="number" name="order_num" class="form-control" min="1" 
+                               value="{{ block.order_num if block else 1 }}">
+                        <small class="text-muted">Orden en el dia</small>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_break" id="isBreak" 
+                                   {% if block and block.is_break %}checked{% endif %}>
+                            <label class="form-check-label" for="isBreak">
+                                <strong>Es descanso/recreo</strong>
+                                <small class="text-muted d-block">Los bloques de descanso no se asignan con materias</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>{% if mode == 'create' %}Crear Bloque{% else %}Guardar Cambios{% endif %}
+                    </button>
+                    <a href="{{ url_for('scheduling.block_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Example -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb me-2"></i>Ejemplo de bloques tÃ­picos</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Nombre</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>Bloque 1</td><td>07:00</td><td>08:00</td><td>Clase</td></tr>
+                        <tr><td>2</td><td>Bloque 2</td><td>08:00</td><td>09:00</td><td>Clase</td></tr>
+                        <tr><td>3</td><td>Recreo</td><td>09:00</td><td>09:30</td><td>Descanso</td></tr>
+                        <tr><td>4</td><td>Bloque 3</td><td>09:30</td><td>10:30</td><td>Clase</td></tr>
+                        <tr><td>5</td><td>Bloque 4</td><td>10:30</td><td>11:30</td><td>Clase</td></tr>
+                        <tr><td>6</td><td>Almuerzo</td><td>11:30</td><td>12:30</td><td>Descanso</td></tr>
+                        <tr><td>7</td><td>Bloque 5</td><td>12:30</td><td>01:30</td><td>Clase</td></tr>
+                        <tr><td>8</td><td>Bloque 6</td><td>01:30</td><td>02:30</td><td>Clase</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
