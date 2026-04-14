@@ -1339,6 +1339,29 @@ def metrics_export():
 
 
 @metrics_bp.route('/risk-students')
+@login_required
+@role_required('root', 'admin', 'coordinator', 'teacher')
 def risk_students():
-    """View students at risk."""
-    return render_template('metrics/risk_students.html')
+    """View students at risk with full data."""
+    institution = get_current_institution()
+    if not institution:
+        flash('Seleccione institución primero.', 'warning')
+        return redirect(url_for('dashboard.index'))
+
+    # Usar la función existente _get_risk_students
+    threshold = request.args.get('threshold', 3.0, type=float)
+    teacher_id = current_user.id if current_user.has_role('teacher') else None
+
+    risk_list = _get_risk_students(teacher_id, institution, threshold)
+
+    # Estadísticas
+    total_at_risk = len(risk_list)
+    high_risk = sum(1 for r in risk_list if r['avg_score'] < 2.0)
+    medium_risk = sum(1 for r in risk_list if 2.0 <= r['avg_score'] < 3.0)
+
+    return render_template('metrics/risk_students.html',
+                           risk_students=risk_list,
+                           total_at_risk=total_at_risk,
+                           high_risk=high_risk,
+                           medium_risk=medium_risk,
+                           threshold=threshold)

@@ -239,14 +239,14 @@
                                 </label>
                                 <select name="role" required class="form-select {% if errors and errors.role %}is-invalid{% endif %}">
                                     {% if current_user.is_root() %}
-                                    <option value="root" {% if form_data and form_data.role == 'root' %}selected{% endif %}>🔴 Root</option>
-                                    <option value="admin" {% if form_data and form_data.role == 'admin' %}selected{% endif %}>🔵 Administrador</option>
+                                    <option value="root" {% if (form_data and form_data.role == 'root') or (pre_selected_role == 'root') %}selected{% endif %}>🔴 Root</option>
+                                    <option value="admin" {% if (form_data and form_data.role == 'admin') or (pre_selected_role == 'admin') %}selected{% endif %}>🔵 Administrador</option>
                                     {% endif %}
-                                    <option value="coordinator" {% if not form_data or form_data.role == 'coordinator' %}selected{% endif %}>🟣 Coordinador</option>
-                                    <option value="teacher" {% if form_data and form_data.role == 'teacher' %}selected{% endif %}>🟡 Profesor</option>
-                                    <option value="student" {% if form_data and form_data.role == 'student' %}selected{% endif %}>🟢 Estudiante</option>
-                                    <option value="parent" {% if form_data and form_data.role == 'parent' %}selected{% endif %}>🔵 Acudiente</option>
-                                    <option value="viewer" {% if form_data and form_data.role == 'viewer' %}selected{% endif %}>⚪ Viewer</option>
+                                    <option value="coordinator" {% if (not form_data and pre_selected_role == 'coordinator') or (form_data and form_data.role == 'coordinator') %}selected{% endif %}>🟣 Coordinador</option>
+                                    <option value="teacher" {% if (not form_data and pre_selected_role == 'teacher') or (form_data and form_data.role == 'teacher') %}selected{% endif %}>🟡 Profesor</option>
+                                    <option value="student" {% if (not form_data and pre_selected_role == 'student') or (form_data and form_data.role == 'student') %}selected{% endif %}>🟢 Estudiante</option>
+                                    <option value="parent" {% if (not form_data and pre_selected_role == 'parent') or (form_data and form_data.role == 'parent') %}selected{% endif %}>🔵 Acudiente</option>
+                                    <option value="viewer" {% if (not form_data and pre_selected_role == 'viewer') or (form_data and form_data.role == 'viewer') %}selected{% endif %}>⚪ Viewer</option>
                                 </select>
                                 {% if errors and errors.role %}
                                 <div class="invalid-feedback">
@@ -377,44 +377,47 @@
 </div>
 
 <script>
-function generateUsernamePreview() {
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName = document.getElementById('lastName').value.trim();
-    
-    if (firstName && lastName) {
-        // Same logic as generate_username_base() in Python
-        const firstInitial = firstName.charAt(0).toLowerCase();
-        
-        // Clean last name: lowercase, remove accents and special chars
-        const cleanLastName = lastName.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // Remove accents
-            .replace(/[^a-z\s]/g, '')  // Remove special chars
-            .split(/\s+/)[0];  // Get first word only
-        
-        if (cleanLastName) {
-            return `${firstInitial}${cleanLastName}#`;  // # = incremental number
-        }
-    }
-    return null;
-}
+let usernameTimeout = null;
 
-function updateUsernamePreview() {
+function fetchGeneratedUsername() {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const box = document.getElementById('usernamePreviewBox');
     const preview = document.getElementById('generatedUsername');
-    
-    const baseUsername = generateUsernamePreview();
-    
-    if (baseUsername) {
-        preview.textContent = baseUsername + '1, ' + baseUsername.replace('#', '') + '2...';
-        box.style.display = 'block';
-    } else {
+
+    if (!firstName || !lastName) {
         box.style.display = 'none';
+        return;
     }
+
+    // Debounce AJAX calls
+    clearTimeout(usernameTimeout);
+    usernameTimeout = setTimeout(function() {
+        const url = `/users/users/api/generate-username?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    preview.textContent = data.username;
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching username:', error);
+                box.style.display = 'none';
+            });
+    }, 400);
 }
 
-document.getElementById('firstName').addEventListener('input', updateUsernamePreview);
-document.getElementById('lastName').addEventListener('input', updateUsernamePreview);
+document.getElementById('firstName').addEventListener('input', fetchGeneratedUsername);
+document.getElementById('lastName').addEventListener('input', fetchGeneratedUsername);
+
+// Show preview on page load if form has data (from validation error)
+document.addEventListener('DOMContentLoaded', function() {
+    fetchGeneratedUsername();
+});
 </script>
 {% endblock %}

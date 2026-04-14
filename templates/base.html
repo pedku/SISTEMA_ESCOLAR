@@ -74,11 +74,39 @@
 
                     <!-- Usuarios -->
                     {% if user_has_any_role('root', 'admin') %}
-                    <li class="{% if is_active_route('/users') %}active{% endif %}">
-                        <a href="{{ url_for('users.users_list') }}">
+                    <li class="has-submenu {% if is_active_route('/users') %}open{% endif %}">
+                        <a href="#" class="submenu-toggle" data-bs-toggle="collapse" data-bs-target="#usersSubmenu" aria-expanded="{{ 'true' if is_active_route('/users') else 'false' }}">
                             <i class="bi bi-people-fill"></i>
                             <span>Usuarios</span>
+                            <i class="bi bi-chevron-down submenu-arrow"></i>
                         </a>
+                        <ul class="collapse list-unstyled submenu" id="usersSubmenu">
+                            <li><a href="{{ url_for('users.users_list') }}"><i class="bi bi-people"></i> Todos</a></li>
+                            <li><a href="{{ url_for('users.users_list', role='teacher') }}"><i class="bi bi-person-workspace"></i> Profesores</a></li>
+                            <li><a href="{{ url_for('users.users_list', role='coordinator') }}"><i class="bi bi-person-badge"></i> Coordinadores</a></li>
+                            <li><a href="{{ url_for('users.users_list', role='student') }}"><i class="bi bi-mortarboard"></i> Estudiantes</a></li>
+                            <li><a href="{{ url_for('users.users_list', role='parent') }}"><i class="bi bi-person-hearts"></i> Acudientes</a></li>
+                            <li><a href="{{ url_for('users.user_create') }}"><i class="bi bi-person-plus"></i> Nuevo Usuario</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+
+                    <!-- Matrícula y Programación -->
+                    {% if user_has_any_role('root', 'admin', 'coordinator') %}
+                    <li class="has-submenu {% if is_active_route('/scheduling') %}open{% endif %}">
+                        <a href="#" class="submenu-toggle" data-bs-toggle="collapse" data-bs-target="#schedulingSubmenu" aria-expanded="{{ 'true' if is_active_route('/scheduling') else 'false' }}">
+                            <i class="bi bi-calendar4-week"></i>
+                            <span>Matrícula y Programación</span>
+                            <i class="bi bi-chevron-down submenu-arrow"></i>
+                        </a>
+                        <ul class="collapse list-unstyled submenu" id="schedulingSubmenu">
+                            <li><a href="{{ url_for('scheduling.enrollment_list') }}"><i class="bi bi-journal-check"></i> Matrículas</a></li>
+                            <li><a href="{{ url_for('scheduling.assignment_list') }}"><i class="bi bi-person-badge"></i> Asignar Profesores</a></li>
+                            <li><a href="{{ url_for('scheduling.subject_grade_list') }}"><i class="bi bi-book"></i> Materias por Grado</a></li>
+                            <li><a href="{{ url_for('scheduling.classroom_list') }}"><i class="bi bi-building"></i> Salones</a></li>
+                            <li><a href="{{ url_for('scheduling.schedule_list') }}"><i class="bi bi-calendar-week"></i> Horarios</a></li>
+                            <li><a href="{{ url_for('scheduling.block_list') }}"><i class="bi bi-clock"></i> Bloques Horarios</a></li>
+                        </ul>
                     </li>
                     {% endif %}
 

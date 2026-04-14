@@ -233,17 +233,18 @@ def user_create():
             
             flash(f'❌ Error al crear el usuario: {str(e)}', 'error')
             institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
-            return render_template('users/create.html', 
-                                 institutions=institutions, 
+            return render_template('users/create.html',
+                                 institutions=institutions,
                                  user=None,
-                                 form_data=request.form, 
+                                 form_data=request.form,
                                  generated_username=username,
                                  errors={'general': f'Error inesperado: {str(e)}'})
-    
-    # GET request
+
+    # GET request - support pre-selecting role from URL
     institutions = Institution.query.order_by(Institution.name).all() if current_user.is_root() else [institution]
+    pre_selected_role = request.args.get('role', '')
     
-    return render_template('users/create.html', institutions=institutions, user=None)
+    return render_template('users/create.html', institutions=institutions, user=None, pre_selected_role=pre_selected_role)
 
 
 # ============================================
@@ -502,3 +503,37 @@ def check_email():
     email = request.args.get('email', '')
     available = not User.query.filter_by(email=email).first()
     return jsonify({'available': available})
+
+
+@users_bp.route('/users/api/generate-username')
+@login_required
+def generate_username_ajax():
+    """Generate next available username (AJAX)."""
+    first_name = request.args.get('first_name', '').strip()
+    last_name = request.args.get('last_name', '').strip()
+
+    if not first_name or not last_name:
+        return jsonify({'error': 'Nombre y apellido son requeridos'})
+
+    # Determine institution scope for admin users
+    institution = get_current_institution()
+
+    # Build query for existing usernames
+    if current_user.has_role('admin') and institution:
+        # Admin only sees users in their institution
+        existing = User.query.filter(
+            User.institution_id == institution.id
+        ).all()
+    else:
+        # Root sees all users
+        existing = User.query.all()
+
+    existing_usernames = [u.username for u in existing]
+
+    # Generate username
+    username = generate_username(first_name, last_name, existing_usernames=existing_usernames)
+
+    return jsonify({
+        'username': username,
+        'base': generate_username.__module__ and first_name[0].lower() + last_name.lower().split()[0] if first_name and last_name else None
+    })

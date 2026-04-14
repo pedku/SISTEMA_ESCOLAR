@@ -41,31 +41,55 @@ def institutions_list():
 @role_required('root')
 def institution_new():
     """Create a new institution - root only."""
+    form_data = {}
+    errors = {}
+
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        nit = request.form.get('nit', '').strip()
+        # Collect all form data
+        form_data = {
+            'name': request.form.get('name', '').strip(),
+            'nit': request.form.get('nit', '').strip(),
+            'address': request.form.get('address', '').strip(),
+            'phone': request.form.get('phone', '').strip(),
+            'email': request.form.get('email', '').strip(),
+            'municipality': request.form.get('municipality', '').strip(),
+            'department': request.form.get('department', '').strip(),
+            'resolution': request.form.get('resolution', '').strip(),
+            'academic_year': request.form.get('academic_year', '2026').strip(),
+            'admin_first_name': request.form.get('admin_first_name', '').strip(),
+            'admin_last_name': request.form.get('admin_last_name', '').strip(),
+            'admin_email': request.form.get('admin_email', '').strip(),
+            'admin_document': request.form.get('admin_document', '').strip(),
+            'admin_document_type': request.form.get('admin_document_type', 'CC').strip(),
+            'admin_phone': request.form.get('admin_phone', '').strip(),
+        }
+
+        name = form_data['name']
+        nit = form_data['nit']
 
         if not name:
-            flash('El nombre de la institución es obligatorio.', 'error')
-            return render_template('institution/institution_form.html', institution=None)
+            errors['general'] = 'El nombre de la institución es obligatorio.'
+            flash('❌ El nombre de la institución es obligatorio.', 'error')
+            return render_template('institution/institution_form.html', institution=None, form_data=form_data, errors=errors)
 
         # Check for duplicate NIT if provided
         if nit:
             existing = Institution.query.filter_by(nit=nit).first()
             if existing:
-                flash('Ya existe una institución con ese NIT.', 'error')
-                return render_template('institution/institution_form.html', institution=None)
+                errors['nit'] = 'Ya existe una institución con ese NIT.'
+                flash('❌ Ya existe una institución con ese NIT.', 'error')
+                return render_template('institution/institution_form.html', institution=None, form_data=form_data, errors=errors)
 
         institution = Institution(
             name=name,
             nit=nit if nit else None,
-            address=request.form.get('address', '').strip(),
-            phone=request.form.get('phone', '').strip(),
-            email=request.form.get('email', '').strip(),
-            municipality=request.form.get('municipality', '').strip(),
-            department=request.form.get('department', '').strip(),
-            resolution=request.form.get('resolution', '').strip(),
-            academic_year=request.form.get('academic_year', '2026').strip()
+            address=form_data['address'],
+            phone=form_data['phone'],
+            email=form_data['email'],
+            municipality=form_data['municipality'],
+            department=form_data['department'],
+            resolution=form_data['resolution'],
+            academic_year=form_data['academic_year']
         )
 
         # Handle logo upload
@@ -88,19 +112,20 @@ def institution_new():
         try:
             db.session.add(institution)
             db.session.flush()  # Get institution.id without committing
-            
+
             # Admin creation is MANDATORY - only basic data required
-            admin_first_name = request.form.get('admin_first_name', '').strip()
-            admin_last_name = request.form.get('admin_last_name', '').strip()
-            admin_email = request.form.get('admin_email', '').strip()
-            admin_document = request.form.get('admin_document', '').strip()
-            
+            admin_first_name = form_data['admin_first_name']
+            admin_last_name = form_data['admin_last_name']
+            admin_email = form_data['admin_email']
+            admin_document = form_data['admin_document']
+
             # Validate required fields
             if not all([admin_first_name, admin_last_name, admin_email, admin_document]):
                 db.session.rollback()
-                flash('Es obligatorio crear un administrador: Nombre, Apellido, Email y Documento son requeridos.', 'error')
-                return render_template('institution/institution_form.html', institution=None)
-            
+                errors['general'] = 'Es obligatorio crear un administrador: Nombre, Apellido, Email y Documento son requeridos.'
+                flash('❌ Es obligatorio crear un administrador: Nombre, Apellido, Email y Documento son requeridos.', 'error')
+                return render_template('institution/institution_form.html', institution=None, form_data=form_data, errors=errors)
+
             from werkzeug.security import generate_password_hash
             from utils.username_generator import generate_username, generate_username_from_db
 
@@ -114,17 +139,19 @@ def institution_new():
                     ).all()
                 ]
             )
-            
+
             # Default password = document number
             default_password = admin_document.strip()
-            
+
             # Check if email already exists
             if User.query.filter_by(email=admin_email).first():
                 db.session.rollback()
-                flash(f'El email "{admin_email}" ya está registrado.', 'error')
+                errors['admin_email'] = f'El email "{admin_email}" ya está registrado.'
+                flash(f'❌ El email "{admin_email}" ya está registrado.', 'error')
                 return render_template('institution/institution_form.html', institution=None,
+                                       form_data=form_data, errors=errors,
                                        generated_username=admin_username)
-            
+
             # Create admin user with auto-generated username
             admin_user = User(
                 username=admin_username,
@@ -134,23 +161,24 @@ def institution_new():
                 last_name=admin_last_name,
                 role='admin',
                 institution_id=institution.id,
-                document_type=request.form.get('admin_document_type', 'CC'),
+                document_type=form_data['admin_document_type'],
                 document_number=admin_document,
-                phone=request.form.get('admin_phone', '').strip() or None,
+                phone=form_data['admin_phone'] or None,
                 country='Colombia',
                 must_change_password=True,  # Force password change on first login
                 is_active=True
             )
             db.session.add(admin_user)
             db.session.commit()
-            
+
             flash(f'✅ Institución "{institution.name}" creada exitosamente.\n\n👤 Admin: {admin_username}\n🔑 Contraseña: {default_password}\n\n⚠️ El admin deberá cambiar la contraseña en su primer inicio de sesión.', 'success')
             return redirect(url_for('institution.institutions_list'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear la institución: {str(e)}', 'error')
+            errors['general'] = f'Error al crear la institución: {str(e)}'
+            flash(f'❌ Error al crear la institución: {str(e)}', 'error')
 
-    return render_template('institution/institution_form.html', institution=None)
+    return render_template('institution/institution_form.html', institution=None, form_data={}, errors={})
 
 
 @institution_bp.route('/<int:id>/edit', methods=['GET', 'POST'])

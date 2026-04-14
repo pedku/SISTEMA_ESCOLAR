@@ -28,20 +28,35 @@
                 <div class="card-body p-4">
                     <form method="POST" enctype="multipart/form-data" id="institutionForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- General Error Alert -->
+                        {% if errors and errors.get('general') %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {{ errors.get('general') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
                         <div class="row g-3">
                             <!-- Name & NIT -->
                             <div class="col-md-7">
                                 <label class="form-label fw-semibold">Nombre de la Institución <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control form-control-lg"
-                                       value="{{ institution.name if institution else '' }}" required
+                                <input type="text" name="name" class="form-control form-control-lg {{ 'is-invalid' if errors and errors.get('name') }}"
+                                       value="{{ form_data.get('name', '') if not institution else institution.name }}" required
                                        placeholder="Ej: Institución Educativa Simón Bolívar">
+                                {% if errors and errors.get('name') %}
+                                <div class="invalid-feedback">{{ errors.get('name') }}</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold">NIT</label>
-                                <input type="text" name="nit" class="form-control"
-                                       value="{{ institution.nit if institution else '' }}"
+                                <input type="text" name="nit" class="form-control {{ 'is-invalid' if errors and errors.get('nit') }}"
+                                       value="{{ form_data.get('nit', '') if not institution else institution.nit }}"
                                        placeholder="900.123.456-7">
-                                <div class="form-text">Número de Identificación Tributaria</div>
+                                {% if errors and errors.get('nit') %}
+                                <div class="invalid-feedback">{{ errors.get('nit') }}</div>
+                                {% endif %}
                             </div>
 
                             <!-- Phone & Email -->
@@ -50,7 +65,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                                     <input type="tel" name="phone" class="form-control"
-                                           value="{{ institution.phone if institution else '' }}"
+                                           value="{{ form_data.get('phone', '') if not institution else institution.phone }}"
                                            placeholder="(601) 234 5678">
                                 </div>
                             </div>
@@ -59,7 +74,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                                     <input type="email" name="email" class="form-control"
-                                           value="{{ institution.email if institution else '' }}"
+                                           value="{{ form_data.get('email', '') if not institution else institution.email }}"
                                            placeholder="contacto@inst.edu.co">
                                 </div>
                             </div>
@@ -70,7 +85,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
                                     <input type="text" name="address" class="form-control"
-                                           value="{{ institution.address if institution else '' }}"
+                                           value="{{ form_data.get('address', '') if not institution else institution.address }}"
                                            placeholder="Calle 123 # 45-67, Barrio Centro">
                                 </div>
                             </div>
@@ -79,26 +94,26 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Municipio</label>
                                 <input type="text" name="municipality" class="form-control"
-                                       value="{{ institution.municipality if institution else '' }}"
+                                       value="{{ form_data.get('municipality', '') if not institution else institution.municipality }}"
                                        placeholder="Ej: Bogotá">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Departamento</label>
                                 <input type="text" name="department" class="form-control"
-                                       value="{{ institution.department if institution else '' }}"
+                                       value="{{ form_data.get('department', '') if not institution else institution.department }}"
                                        placeholder="Ej: Cundinamarca">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Año Lectivo</label>
                                 <input type="text" name="academic_year" class="form-control"
-                                       value="{{ institution.academic_year if institution else '2026' }}">
+                                       value="{{ form_data.get('academic_year', '2026') if not institution else institution.academic_year }}">
                             </div>
 
                             <!-- Resolution -->
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Resolución de Aprobación</label>
                                 <input type="text" name="resolution" class="form-control"
-                                       value="{{ institution.resolution if institution else '' }}"
+                                       value="{{ form_data.get('resolution', '') if not institution else institution.resolution }}"
                                        placeholder="Resolución No. 1234 del 01/01/2025">
                             </div>
 
@@ -116,21 +131,15 @@
                                 {% endif %}
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
 
-            {% if not institution %}
-            <!-- Admin Creation Section (MANDATORY) -->
-            <div class="card shadow-sm border-0 border-start border-4 border-primary mt-4">
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-person-check-fill me-2"></i>Crear Administrador (Obligatorio)</h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="alert alert-warning mb-4">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Requerido:</strong> Cada institución debe tener un administrador (Rector) que la gestione.
-                    </div>
+                        {% if not institution %}
+                        <!-- Admin Creation Fields (MANDATORY) -->
+                        <div class="border border-2 border-primary rounded-3 p-4 mt-4 bg-light">
+                            <h5 class="text-primary mb-3"><i class="bi bi-person-check-fill me-2"></i>Crear Administrador (Obligatorio)</h5>
+                            <div class="alert alert-warning mb-4">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Requerido:</strong> Cada institución debe tener un administrador (Rector) que la gestione.
+                            </div>
 
                     <!-- Live Username Preview -->
                     <div id="usernamePreviewBox" class="bg-light border-2 border-primary rounded-lg p-3 mb-4" style="display:none;">
@@ -146,77 +155,79 @@
                         </div>
                     </div>
 
-                    <form id="adminForm">
-                        <h6 class="text-muted mb-3 border-bottom pb-2">📋 Datos Básicos del Admin</h6>
-                        
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
-                                <input type="text" id="adminFirstName" name="admin_first_name" class="form-control form-control-lg" required placeholder="Ej: Juan Carlos">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
-                                <input type="text" id="adminLastName" name="admin_last_name" class="form-control form-control-lg" required placeholder="Ej: Pérez García">
-                            </div>
-                        </div>
-                        
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">Tipo Doc. <span class="text-danger">*</span></label>
-                                <select name="admin_document_type" class="form-select form-select-lg" required>
-                                    <option value="CC">CC</option>
-                                    <option value="TI">TI</option>
-                                    <option value="CE">CE</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Nº Documento <span class="text-danger">*</span></label>
-                                <input type="text" id="adminDocument" name="admin_document" class="form-control form-control-lg" required placeholder="1234567890" minlength="5">
-                                <div class="form-text">Se usará como <strong>contraseña inicial</strong></div>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                                <input type="email" name="admin_email" class="form-control form-control-lg" required placeholder="rector@inst.edu.co">
-                            </div>
-                        </div>
+                    <h6 class="text-muted mb-3 border-bottom pb-2">📋 Datos Básicos del Admin</h6>
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Teléfono</label>
-                                <input type="text" name="admin_phone" class="form-control" placeholder="3001234567">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
+                            <input type="text" id="adminFirstName" name="admin_first_name" class="form-control form-control-lg {{ 'is-invalid' if errors and errors.get('admin_first_name') }}" value="{{ form_data.get('admin_first_name', '') }}" required placeholder="Ej: Juan Carlos">
+                            {% if errors and errors.get('admin_first_name') %}
+                            <div class="invalid-feedback">{{ errors.get('admin_first_name') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
+                            <input type="text" id="adminLastName" name="admin_last_name" class="form-control form-control-lg {{ 'is-invalid' if errors and errors.get('admin_last_name') }}" value="{{ form_data.get('admin_last_name', '') }}" required placeholder="Ej: Pérez García">
+                            {% if errors and errors.get('admin_last_name') %}
+                            <div class="invalid-feedback">{{ errors.get('admin_last_name') }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Tipo Doc. <span class="text-danger">*</span></label>
+                            <select name="admin_document_type" class="form-select form-select-lg {{ 'is-invalid' if errors and errors.get('admin_document_type') }}" required>
+                                <option value="CC" {{ 'selected' if form_data.get('admin_document_type') == 'CC' }}>CC</option>
+                                <option value="TI" {{ 'selected' if form_data.get('admin_document_type') == 'TI' }}>TI</option>
+                                <option value="CE" {{ 'selected' if form_data.get('admin_document_type') == 'CE' }}>CE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Nº Documento <span class="text-danger">*</span></label>
+                            <input type="text" id="adminDocument" name="admin_document" class="form-control form-control-lg {{ 'is-invalid' if errors and errors.get('admin_document') }}" value="{{ form_data.get('admin_document', '') }}" required placeholder="1234567890" minlength="5">
+                            <div class="form-text">Se usará como <strong>contraseña inicial</strong></div>
+                            {% if errors and errors.get('admin_document') %}
+                            <div class="invalid-feedback">{{ errors.get('admin_document') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="admin_email" class="form-control form-control-lg {{ 'is-invalid' if errors and errors.get('admin_email') }}" value="{{ form_data.get('admin_email', '') }}" required placeholder="rector@inst.edu.co">
+                            {% if errors and errors.get('admin_email') %}
+                            <div class="invalid-feedback">{{ errors.get('admin_email') }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" name="admin_phone" class="form-control" value="{{ form_data.get('admin_phone', '') }}" placeholder="3001234567">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="text-muted small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                El username se genera automáticamente al escribir los datos
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <div class="text-muted small">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    El username se genera automáticamente al escribir los datos
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ 'Actualizar Institución' if institution else 'Crear Institución con Admin' }}
+                            </button>
+                            <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary btn-lg">
+                                Cancelar
+                            </a>
                         </div>
                     </form>
-
-                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
-                        <button type="submit" form="institutionForm" class="btn btn-primary btn-lg px-4">
-                            <i class="bi bi-check-circle me-1"></i>
-                            {{ 'Actualizar Institución' if institution else 'Crear Institución con Admin' }}
-                        </button>
-                        <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary btn-lg">
-                            Cancelar
-                        </a>
-                    </div>
                 </div>
             </div>
-            {% else %}
-            <!-- Submit Buttons for edit mode -->
-            <div class="d-flex gap-2 mt-4">
-                <button type="submit" form="institutionForm" class="btn btn-primary btn-lg px-4">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Actualizar Institución
-                </button>
-                <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-outline-secondary btn-lg">
-                    Cancelar
-                </a>
-            </div>
-            {% endif %}
         </div>
 
         <!-- Sidebar Info -->
@@ -269,32 +280,51 @@
 
 {% if not institution %}
 <script>
-// Auto-generate username preview dynamically
-function updateUsernamePreview() {
-    const firstName = document.getElementById('adminFirstName').value.trim();
-    const lastName = document.getElementById('adminLastName').value.trim();
-    const doc = document.getElementById('adminDocument').value.trim();
+let instUsernameTimeout = null;
+
+function fetchInstAdminUsername() {
+    const firstName = document.getElementById('adminFirstName')?.value.trim() || '';
+    const lastName = document.getElementById('adminLastName')?.value.trim() || '';
     const box = document.getElementById('usernamePreviewBox');
     const preview = document.getElementById('generatedUsername');
-    
-    if (firstName && lastName) {
-        const firstInitial = firstName.charAt(0).toLowerCase();
-        const cleanLastName = lastName.toLowerCase().replace(/[^a-z]/g, '');
-        const docSuffix = doc ? doc.slice(-4) : '';
-        
-        let username = `@${firstInitial}${cleanLastName}`;
-        if (docSuffix) username += docSuffix;
-        
-        preview.textContent = username;
-        box.style.display = 'block';
-    } else {
-        box.style.display = 'none';
+
+    if (!firstName || !lastName) {
+        if (box) box.style.display = 'none';
+        return;
     }
+
+    // Debounce AJAX calls
+    clearTimeout(instUsernameTimeout);
+    instUsernameTimeout = setTimeout(function() {
+        const url = `/users/users/api/generate-username?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.username && box && preview) {
+                    preview.textContent = data.username;
+                    box.style.display = 'block';
+                } else if (box) {
+                    box.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching username:', error);
+                if (box) box.style.display = 'none';
+            });
+    }, 400);
 }
 
-document.getElementById('adminFirstName').addEventListener('input', updateUsernamePreview);
-document.getElementById('adminLastName').addEventListener('input', updateUsernamePreview);
-document.getElementById('adminDocument').addEventListener('input', updateUsernamePreview);
+document.addEventListener('DOMContentLoaded', function() {
+    const firstName = document.getElementById('adminFirstName');
+    const lastName = document.getElementById('adminLastName');
+
+    if (firstName) firstName.addEventListener('input', fetchInstAdminUsername);
+    if (lastName) lastName.addEventListener('input', fetchInstAdminUsername);
+
+    // Show preview on page load if form has data
+    fetchInstAdminUsername();
+});
 </script>
 {% endif %}
 {% endblock %}

@@ -52,7 +52,9 @@ def enrollment_list():
     enrollments = query.order_by(StudentEnrollment.enrollment_date.desc()).all()
 
     # Get grades and subjects for filters
-    grades = Grade.query.filter_by(institution_id=institution.id, academic_year=academic_year).all()
+    grades = Grade.query.filter(
+        Grade.campus_id.in_(db.session.query(Campus.id).filter_by(institution_id=institution.id))
+    ).filter_by(academic_year=academic_year).all()
     subjects = Subject.query.filter_by(institution_id=institution.id).all()
 
     # Stats
@@ -75,7 +77,7 @@ def enrollment_list():
 @login_required
 @role_required('root', 'admin', 'coordinator')
 def enrollment_create():
-    """Create new student enrollments (matricular estudiantes)."""
+    """Create new student enrollments (matricular estudiantes a un grado)."""
     institution = get_current_institution()
     if not institution:
         flash('Seleccione una institucion primero.', 'warning')
@@ -85,16 +87,14 @@ def enrollment_create():
 
     if request.method == 'POST':
         grade_id = request.form.get('grade_id', type=int)
-        subject_ids = request.form.getlist('subject_ids', type=int)
         student_ids = request.form.getlist('student_ids', type=int)
 
         errors = []
         success_count = 0
+        skip_count = 0
 
         if not grade_id:
             errors.append('Seleccione un grado')
-        if not subject_ids:
-            errors.append('Seleccione al menos una materia')
         if not student_ids:
             errors.append('Seleccione al menos un estudiante')
 
@@ -102,34 +102,31 @@ def enrollment_create():
             for error in errors:
                 flash(error, 'danger')
         else:
-            # Enroll each student in each subject
+            # Get ALL subject-grades for this grade
+            subject_grades = SubjectGrade.query.filter_by(grade_id=grade_id).all()
+
+            if not subject_grades:
+                flash('Este grado no tiene materias asignadas. Asigne materias primero.', 'warning')
+                return redirect(url_for('scheduling.subject_grade_create'))
+
+            # Enroll each student in ALL subjects of the grade
             for student_id in student_ids:
-                for subject_id in subject_ids:
-                    # Find or create SubjectGrade
-                    subject_grade = SubjectGrade.query.filter_by(
-                        subject_id=subject_id,
-                        grade_id=grade_id
-                    ).first()
-
-                    if not subject_grade:
-                        flash(f'La materia no esta asignada a este grado', 'warning')
-                        continue
-
+                for sg in subject_grades:
                     # Check if enrollment already exists
                     existing = StudentEnrollment.query.filter_by(
                         student_id=student_id,
-                        subject_grade_id=subject_grade.id,
+                        subject_grade_id=sg.id,
                         academic_year=academic_year
                     ).first()
 
                     if existing:
-                        flash(f'Estudiante ya matriculado en esta materia', 'info')
+                        skip_count += 1
                         continue
 
                     # Create enrollment
                     enrollment = StudentEnrollment(
                         student_id=student_id,
-                        subject_grade_id=subject_grade.id,
+                        subject_grade_id=sg.id,
                         academic_year=academic_year,
                         enrollment_date=date.today(),
                         status='activa'
@@ -139,22 +136,22 @@ def enrollment_create():
 
             if success_count > 0:
                 db.session.commit()
-                flash(f'{success_count} matriculas creadas exitosamente', 'success')
+                msg = f'{success_count} matriculas creadas exitosamente.'
+                if skip_count > 0:
+                    msg += f' ({skip_count} ya existian)'
+                flash(msg, 'success')
                 return redirect(url_for('scheduling.enrollment_list'))
             else:
-                flash('No se pudieron crear matriculas', 'danger')
+                flash('No se pudieron crear matriculas (todas ya existian).', 'info')
 
     # GET - show form
     grades = Grade.query.filter_by(
         campus_id=db.session.query(Campus.id).filter_by(institution_id=institution.id).subquery()
     ).filter_by(academic_year=academic_year).all()
-    
-    subjects = Subject.query.filter_by(institution_id=institution.id).all()
-    
+
     # Students will be loaded via AJAX based on grade selection
     return render_template('scheduling/enrollments/form.html',
                          grades=grades,
-                         subjects=subjects,
                          academic_year=academic_year,
                          mode='create')
 

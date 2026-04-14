@@ -104,6 +104,27 @@
 
     <form method="POST" class="needs-validation" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if not existing_user %}
+        <!-- Username Preview for New Students -->
+        <div id="usernamePreviewBox" class="card shadow-sm border-0 border-start border-4 border-success mb-4 animate-in" style="display:none;">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <p class="text-muted mb-0 small text-uppercase fw-semibold">
+                            <i class="bi bi-person-badge me-1"></i>Username auto-generado
+                        </p>
+                        <p id="generatedUsername" class="mb-0 h5 font-monospace text-success fw-bold"></p>
+                    </div>
+                    <div class="text-end">
+                        <p class="text-muted mb-0 small"><i class="bi bi-key me-1"></i>Contraseña inicial</p>
+                        <p class="mb-0 h6 text-primary fw-semibold">estudiante123</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="row">
             {% if not existing_user %}
             <!-- Full Creation: User Information -->
@@ -118,12 +139,12 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre *</label>
-                                <input type="text" name="first_name" class="form-control" required
+                                <input type="text" id="studentFirstName" name="first_name" class="form-control" required
                                        value="{{ student.user.first_name if student else '' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Apellido *</label>
-                                <input type="text" name="last_name" class="form-control" required
+                                <input type="text" id="studentLastName" name="last_name" class="form-control" required
                                        value="{{ student.user.last_name if student else '' }}">
                             </div>
                         </div>
@@ -131,7 +152,7 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Tipo de Documento</label>
-                                <select name="document_type" class="form-select" {% if student %}disabled{% endif %}>
+                                <select id="studentDocType" name="document_type" class="form-select" {% if student %}disabled{% endif %}>
                                     <option value="TI" {% if student and student.document_type == 'TI' %}selected{% endif %}>TI</option>
                                     <option value="RC" {% if student and student.document_type == 'RC' %}selected{% endif %}>RC</option>
                                     <option value="CC" {% if student and student.document_type == 'CC' %}selected{% endif %}>CC</option>
@@ -143,7 +164,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Número de Documento *</label>
-                                <input type="text" name="document_number" class="form-control" required
+                                <input type="text" id="studentDocNumber" name="document_number" class="form-control" required
                                        value="{{ student.document_number if student else '' }}"
                                        {% if student %}readonly{% endif %}>
                             </div>
@@ -336,4 +357,56 @@
     </form>
     {% endif %}
 </div>
+
+{% if not existing_user %}
+<script>
+let studentUsernameTimeout = null;
+
+function fetchStudentUsername() {
+    const firstName = document.getElementById('studentFirstName')?.value.trim() || '';
+    const lastName = document.getElementById('studentLastName')?.value.trim() || '';
+    const box = document.getElementById('usernamePreviewBox');
+    const preview = document.getElementById('generatedUsername');
+
+    if (!box || !preview) return;
+
+    if (!firstName || !lastName) {
+        box.style.display = 'none';
+        return;
+    }
+
+    // Debounce AJAX calls
+    clearTimeout(studentUsernameTimeout);
+    studentUsernameTimeout = setTimeout(function() {
+        const url = `/users/users/api/generate-username?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    preview.textContent = data.username;
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching username:', error);
+                box.style.display = 'none';
+            });
+    }, 400);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const firstName = document.getElementById('studentFirstName');
+    const lastName = document.getElementById('studentLastName');
+
+    if (firstName) firstName.addEventListener('input', fetchStudentUsername);
+    if (lastName) lastName.addEventListener('input', fetchStudentUsername);
+
+    // Show preview on page load if form has data
+    fetchStudentUsername();
+});
+</script>
+{% endif %}
 {% endblock %}

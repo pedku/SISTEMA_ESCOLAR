@@ -284,41 +284,47 @@
 </div>
 
 <script>
-function generateUsernamePreview() {
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName = document.getElementById('lastName').value.trim();
-    
-    if (firstName && lastName) {
-        const firstInitial = firstName.charAt(0).toLowerCase();
-        const cleanLastName = lastName.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z\s]/g, '')
-            .split(/\s+/)[0];
-        
-        if (cleanLastName) {
-            return `${firstInitial}${cleanLastName}#`;
-        }
-    }
-    return null;
-}
+let usernameTimeout = null;
 
-function updateUsernamePreview() {
+function fetchGeneratedUsername() {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const box = document.getElementById('usernamePreviewBox');
     const preview = document.getElementById('generatedUsername');
-    
-    const baseUsername = generateUsernamePreview();
-    
-    if (baseUsername) {
-        preview.textContent = baseUsername + '1, ' + baseUsername.replace('#', '') + '2...';
-        box.style.display = 'block';
-    } else {
+
+    if (!firstName || !lastName) {
         box.style.display = 'none';
+        return;
     }
+
+    // Debounce AJAX calls
+    clearTimeout(usernameTimeout);
+    usernameTimeout = setTimeout(function() {
+        const url = `/users/users/api/generate-username?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.username) {
+                    preview.textContent = data.username;
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching username:', error);
+                box.style.display = 'none';
+            });
+    }, 400);
 }
 
-document.getElementById('firstName').addEventListener('input', updateUsernamePreview);
-document.getElementById('lastName').addEventListener('input', updateUsernamePreview);
+document.getElementById('firstName').addEventListener('input', fetchGeneratedUsername);
+document.getElementById('lastName').addEventListener('input', fetchGeneratedUsername);
+
+// Show preview on page load if form has data (from validation error)
+document.addEventListener('DOMContentLoaded', function() {
+    fetchGeneratedUsername();
+});
 </script>
 {% endblock %}

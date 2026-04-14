@@ -1,15 +1,29 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Usuarios{% endblock %}
+{% block title %}
+{% if filters.role == 'teacher' %}Profesores
+{% elif filters.role == 'coordinator' %}Coordinadores
+{% elif filters.role == 'student' %}Estudiantes
+{% elif filters.role == 'parent' %}Acudientes
+{% elif filters.role == 'admin' %}Administradores
+{% elif filters.role == 'root' %}Usuarios Root
+{% else %}Gestión de Usuarios{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
         <div>
-            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Usuarios</h1>
+            {% set role_icons = {'teacher': 'bi-person-workspace', 'coordinator': 'bi-person-badge', 'student': 'bi-mortarboard', 'parent': 'bi-person-hearts', 'admin': 'bi-shield-lock', 'root': 'bi-key'} %}
+            {% set role_names = {'teacher': 'Profesores', 'coordinator': 'Coordinadores', 'student': 'Estudiantes', 'parent': 'Acudientes', 'admin': 'Administradores', 'root': 'Usuarios Root'} %}
+            {% set icon = role_icons.get(filters.role, 'bi-people-fill') %}
+            {% set title = role_names.get(filters.role, 'Gestión de Usuarios') %}
+            <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi {{ icon }} text-primary me-2"></i>{{ title }}</h1>
             <p class="text-muted mb-0">
-                {% if current_user.is_root() %}
+                {% if filters.role %}
+                    Mostrando {{ role_names.get(filters.role, 'usuarios') }} · <a href="{{ url_for('users.users_list') }}" class="text-decoration-none">Ver todos</a>
+                {% elif current_user.is_root() %}
                     Administración de todos los usuarios del sistema
                 {% else %}
                     Usuarios de {{ current_user.institution.name if current_user.institution else 'tu institución' }}
@@ -21,10 +35,17 @@
                 <i class="bi bi-file-earmark-excel me-1"></i>
                 <span class="d-none d-md-inline">Importar Excel</span>
             </a>
+            {% if filters.role %}
+            <a href="{{ url_for('users.user_create', role=filters.role) }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-person-plus me-1"></i>
+                <span class="d-none d-md-inline">Nuevo {{ role_names.get(filters.role, 'Usuario') }}</span>
+            </a>
+            {% else %}
             <a href="{{ url_for('users.user_create') }}" class="btn btn-primary shadow-sm">
                 <i class="bi bi-person-plus me-1"></i>
                 <span class="d-none d-md-inline">Nuevo Usuario</span>
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -292,9 +313,15 @@
                             No hay usuarios en tu institución. Crea el primer usuario.
                         {% endif %}
                     </p>
+                    {% if filters.role %}
+                    <a href="{{ url_for('users.user_create', role=filters.role) }}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-person-plus me-2"></i>Crear {{ role_names.get(filters.role, 'Usuario') }}
+                    </a>
+                    {% else %}
                     <a href="{{ url_for('users.user_create') }}" class="btn btn-primary btn-lg px-5">
                         <i class="bi bi-person-plus me-2"></i>Crear Primer Usuario
                     </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

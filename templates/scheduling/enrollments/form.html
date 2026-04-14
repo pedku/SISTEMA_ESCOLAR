@@ -45,21 +45,11 @@
                         <small class="text-muted">Mantenga Ctrl presionado para seleccionar varios</small>
                     </div>
 
-                    <!-- Subjects Selection -->
+                    <!-- Info box -->
                     <div class="col-md-12">
-                        <label class="form-label fw-bold">Materias <span class="text-danger">*</span></label>
-                        <div class="row g-2" id="subjectsContainer">
-                            {% for subject in subjects %}
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="subject_ids" 
-                                           value="{{ subject.id }}" id="subject_{{ subject.id }}">
-                                    <label class="form-check-label" for="subject_{{ subject.id }}">
-                                        {{ subject.name }}
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Nota:</strong> Al matricular, los estudiantes seran inscritos en <strong>todas las materias</strong> asignadas a este grado.
                         </div>
                     </div>
                 </div>
@@ -162,20 +152,13 @@ $(document).ready(function() {
     // Validate form
     $('#enrollmentForm').submit(function(e) {
         var students = $('#studentsSelect').val();
-        var subjects = $('input[name="subject_ids"]:checked').length;
-        
+
         if (!students || students.length === 0) {
             alert('Seleccione al menos un estudiante');
             e.preventDefault();
             return false;
         }
-        
-        if (subjects === 0) {
-            alert('Seleccione al menos una materia');
-            e.preventDefault();
-            return false;
-        }
-        
+
         return true;
     });
 });
