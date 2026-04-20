@@ -157,8 +157,13 @@ def grade_input_form(sg_id, period_id):
     if not students:
         flash('No hay estudiantes activos en este grado.', 'warning')
 
-    # Get evaluation criteria with weights
-    criteria = GradeCriteria.query.order_by(GradeCriteria.order).all()
+    # Get institution from grade
+    institution = grade.campus.institution
+
+    # Get evaluation criteria with weights (filtered by institution)
+    criteria = GradeCriteria.query.filter_by(
+        institution_id=institution.id
+    ).order_by(GradeCriteria.order).all()
 
     if not criteria:
         flash('No hay criterios de evaluacion configurados. Configure los criterios primero.', 'warning')
@@ -721,6 +726,7 @@ def final_grades_view(sg_id, period_id):
         return redirect(url_for('grades.grade_input'))
 
     grade = subject_grade.grade
+    institution = grade.campus.institution
     subject = subject_grade.subject
 
     students = AcademicStudent.query.filter_by(
@@ -728,7 +734,13 @@ def final_grades_view(sg_id, period_id):
         status='activo'
     ).join(User).order_by(User.last_name, User.first_name).all()
 
-    criteria = GradeCriteria.query.order_by(GradeCriteria.order).all()
+    # Get institution from grade
+    institution = grade.campus.institution
+
+    # Get evaluation criteria (filtered by institution)
+    criteria = GradeCriteria.query.filter_by(
+        institution_id=institution.id
+    ).order_by(GradeCriteria.order).all()
 
     if request.method == 'POST':
         # Recalculate all final grades
@@ -1013,6 +1025,7 @@ def grade_summary(sg_id, period_id):
 
     grade = subject_grade.grade
     subject = subject_grade.subject
+    institution = grade.campus.institution
 
     # Get all final grades for this subject-grade/period
     final_grades = FinalGrade.query.filter_by(
@@ -1076,8 +1089,10 @@ def grade_summary(sg_id, period_id):
         else:
             distribution['5.0'] += 1
 
-    # Get criteria (for detailed breakdown)
-    criteria = GradeCriteria.query.order_by(GradeCriteria.order).all()
+    # Get criteria (for detailed breakdown) - filtered by institution
+    criteria = GradeCriteria.query.filter_by(
+        institution_id=institution.id
+    ).order_by(GradeCriteria.order).all()
 
     # Per-criteria statistics
     criteria_stats = []

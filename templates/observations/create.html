@@ -1,126 +1,192 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Editar' if observation else 'Nueva' }} Observación{% endblock %}
+{% block title %}{{ 'Editar' if observation else 'Nueva' }} Observación - SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .observation-form .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .card-custom {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card-custom:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .btn-custom {
+        border-radius: 10px;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">
-                {{ 'Editar Observación' if observation else 'Nueva Observación' }}
-            </h1>
-            {% if observation %}
-            <a href="{{ url_for('observations.observation_detail', id=observation.id) }}" 
-               class="text-gray-600 hover:text-gray-800">
-                ← Volver
-            </a>
-            {% else %}
-            <a href="{{ url_for('observations.observations_list') }}" 
-               class="text-gray-600 hover:text-gray-800">
-                ← Volver a la lista
-            </a>
-            {% endif %}
-        </div>
-
-        <form method="POST" class="space-y-6">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <!-- Student Selection -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Estudiante *</label>
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1 fw-bold text-dark">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        {{ 'Editar Observación' if observation else 'Nueva Observación' }}
+                    </h1>
+                    <p class="text-muted mb-0">Complete el formulario para {{ 'actualizar' if observation else 'crear' }} la observación</p>
+                </div>
                 {% if observation %}
-                <input type="text" value="{{ observation.student.user.get_full_name() if observation.student else 'N/A' }}" 
-                       disabled class="w-full px-3 py-2 border rounded-lg bg-gray-100">
+                <a href="{{ url_for('observations.observation_detail', id=observation.id) }}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Volver
+                </a>
                 {% else %}
-                <select name="student_id" required class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Seleccionar estudiante...</option>
-                    {% for s in students %}
-                    <option value="{{ s.id }}">{{ s.name }} - {{ s.grade }} ({{ s.document }})</option>
-                    {% endfor %}
-                </select>
+                <a href="{{ url_for('observations.observations_list') }}"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Volver a la lista
+                </a>
                 {% endif %}
             </div>
 
-            <!-- Type -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-                <select name="type" required class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Seleccionar tipo...</option>
-                    <option value="positiva" {% if observation and observation.type == 'positiva' %}selected{% endif %}>👍 Positiva</option>
-                    <option value="negativa" {% if observation and observation.type == 'negativa' %}selected{% endif %}>⚠️ Negativa</option>
-                    <option value="seguimiento" {% if observation and observation.type == 'seguimiento' %}selected{% endif %}>📋 Seguimiento</option>
-                    <option value="convivencia" {% if observation and observation.type == 'convivencia' %}selected{% endif %}>🤝 Convivencia</option>
-                </select>
-            </div>
+            <!-- Form Card -->
+            <div class="card card-custom observation-form">
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <!-- Category -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <select name="category" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Seleccionar categoría...</option>
-                    <option value="Disciplina" {% if observation and observation.category == 'Disciplina' %}selected{% endif %}>Disciplina</option>
-                    <option value="Rendimiento" {% if observation and observation.category == 'Rendimiento' %}selected{% endif %}>Rendimiento</option>
-                    <option value="Valores" {% if observation and observation.category == 'Valores' %}selected{% endif %}>Valores</option>
-                    <option value="Convivencia" {% if observation and observation.category == 'Convivencia' %}selected{% endif %}>Convivencia</option>
-                    <option value="Responsabilidad" {% if observation and observation.category == 'Responsabilidad' %}selected{% endif %}>Responsabilidad</option>
-                    <option value="Participación" {% if observation and observation.category == 'Participación' %}selected{% endif %}>Participación</option>
-                    <option value="Otro" {% if observation and observation.category == 'Otro' %}selected{% endif %}>Otro</option>
-                </select>
-            </div>
+                        <!-- Student Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-person me-1"></i>Estudiante <span class="text-danger">*</span>
+                            </label>
+                            {% if observation %}
+                            <input type="text" value="{{ observation.student.user.get_full_name() if observation.student else 'N/A' }}"
+                                   disabled class="form-control bg-light">
+                            <div class="form-text text-muted">
+                                No se puede cambiar el estudiante de una observación existente
+                            </div>
+                            {% else %}
+                            <select name="student_id" required class="form-select">
+                                <option value="">Seleccionar estudiante...</option>
+                                {% for s in students %}
+                                <option value="{{ s.id }}">{{ s.user.get_full_name() if s.user else s.name }} - {{ s.grade.name if s.grade else 'Sin grado' }} ({{ s.user.document_number if s.user else s.document }})</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </div>
 
-            <!-- Description -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
-                <textarea name="description" rows="5" required
-                          class="w-full px-3 py-2 border rounded-lg"
-                          placeholder="Describa la observación detalladamente...">{% if observation %}{{ observation.description }}{% endif %}</textarea>
-            </div>
+                        <!-- Type -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-tag me-1"></i>Tipo <span class="text-danger">*</span>
+                            </label>
+                            <select name="type" required class="form-select">
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="positiva" {% if observation and observation.type == 'positiva' %}selected{% endif %}>
+                                    <i class="bi bi-hand-thumbs-up text-success me-1"></i>Positiva
+                                </option>
+                                <option value="negativa" {% if observation and observation.type == 'negativa' %}selected{% endif %}>
+                                    <i class="bi bi-exclamation-triangle text-danger me-1"></i>Negativa
+                                </option>
+                                <option value="seguimiento" {% if observation and observation.type == 'seguimiento' %}selected{% endif %}>
+                                    <i class="bi bi-clipboard-check text-warning me-1"></i>Seguimiento
+                                </option>
+                                <option value="convivencia" {% if observation and observation.type == 'convivencia' %}selected{% endif %}>
+                                    <i class="bi bi-people text-info me-1"></i>Convivencia
+                                </option>
+                            </select>
+                        </div>
 
-            <!-- Commitments -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Compromisos</label>
-                <textarea name="commitments" rows="3"
-                          class="w-full px-3 py-2 border rounded-lg"
-                          placeholder="Compromisos adquiridos (opcional)...">{% if observation %}{{ observation.commitments }}{% endif %}</textarea>
-            </div>
+                        <!-- Category -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-folder me-1"></i>Categoría
+                            </label>
+                            <select name="category" class="form-select">
+                                <option value="">Seleccionar categoría...</option>
+                                <option value="Disciplina" {% if observation and observation.category == 'Disciplina' %}selected{% endif %}>Disciplina</option>
+                                <option value="Rendimiento" {% if observation and observation.category == 'Rendimiento' %}selected{% endif %}>Rendimiento</option>
+                                <option value="Valores" {% if observation and observation.category == 'Valores' %}selected{% endif %}>Valores</option>
+                                <option value="Convivencia" {% if observation and observation.category == 'Convivencia' %}selected{% endif %}>Convivencia</option>
+                                <option value="Responsabilidad" {% if observation and observation.category == 'Responsabilidad' %}selected{% endif %}>Responsabilidad</option>
+                                <option value="Participación" {% if observation and observation.category == 'Participación' %}selected{% endif %}>Participación</option>
+                                <option value="Otro" {% if observation and observation.category == 'Otro' %}selected{% endif %}>Otro</option>
+                            </select>
+                        </div>
 
-            <!-- Date -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                <input type="date" name="date" 
-                       value="{{ observation.date.strftime('%Y-%m-%d') if observation and observation.date else today }}"
-                       class="w-full px-3 py-2 border rounded-lg">
-            </div>
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-textarea-resize me-1"></i>Descripción <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="description" rows="5" required
+                                      class="form-control"
+                                      placeholder="Describa la observación detalladamente...">{% if observation %}{{ observation.description }}{% endif %}</textarea>
+                            <div class="form-text">
+                                Proporcione una descripción clara y detallada de la observación
+                            </div>
+                        </div>
 
-            <!-- Submit -->
-            <div class="flex gap-3 pt-4">
-                <button type="submit" 
-                        class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium">
-                    {{ 'Actualizar Observación' if observation else 'Crear Observación' }}
-                </button>
-                <a href="{{ url_for('observations.observations_list') }}" 
-                   class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                    Cancelar
-                </a>
-            </div>
-        </form>
+                        <!-- Commitments -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-check-circle me-1"></i>Compromisos
+                            </label>
+                            <textarea name="commitments" rows="3"
+                                      class="form-control"
+                                      placeholder="Compromisos adquiridos (opcional)...">{% if observation %}{{ observation.commitments }}{% endif %}</textarea>
+                            <div class="form-text">
+                                Opcional: acuerdos o compromisos derivados de la observación
+                            </div>
+                        </div>
 
-        <!-- Info box for notifications -->
-        {% if not observation or observation.requires_notification() %}
-        <div class="mt-6 bg-orange-50 border-l-4 border-orange-400 p-4">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
+                        <!-- Date -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-calendar me-1"></i>Fecha
+                            </label>
+                            <input type="date" name="date"
+                                   value="{{ observation.date.strftime('%Y-%m-%d') if observation and observation.date else today }}"
+                                   class="form-control">
+                            <div class="form-text">
+                                Fecha en que ocurrió la observación (por defecto hoy)
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-3 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-custom flex-fill">
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ 'Actualizar Observación' if observation else 'Crear Observación' }}
+                            </button>
+                            <a href="{{ url_for('observations.observations_list') }}"
+                               class="btn btn-outline-secondary btn-custom">
+                                <i class="bi bi-x-circle me-1"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
                 </div>
-                <div class="ml-3">
-                    <p class="text-sm text-orange-700">
-                        <strong>Nota:</strong> Las observaciones negativas y de convivencia requieren notificación a los acudientes.
-                    </p>
+            </div>
+
+            <!-- Info Alert for Notifications -->
+            {% if not observation or observation.requires_notification() %}
+            <div class="alert alert-warning mt-4 border-0" role="alert">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        <i class="bi bi-info-circle text-warning" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="alert-heading mb-2">Información importante</h6>
+                        <p class="mb-0">
+                            Las observaciones negativas y de convivencia requieren notificación automática a los acudientes del estudiante.
+                        </p>
+                    </div>
                 </div>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

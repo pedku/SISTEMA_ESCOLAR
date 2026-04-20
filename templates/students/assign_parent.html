@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Asignar Acudientes - {{ student.user.get_full_name() }} - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-plus"></i> Asignar Acudientes</h2>
+        <div>
+            <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Volver al Perfil
+            </a>
+            <a href="{{ url_for('students.list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> Lista de Estudiantes
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Estudiante -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4>{{ student.user.get_full_name() }}</h4>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-hash"></i> {{ student.document_number }} |
+                        <i class="bi bi-mortarboard"></i> {{ student.grade.name if student.grade else 'Sin grado' }} |
+                        <i class="bi bi-building"></i> {{ student.campus.name if student.campus else 'N/A' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario Asignar -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Asignar Nuevo Acudiente</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Seleccionar Acudiente</label>
+                            <select name="parent_id" class="form-select" required>
+                                <option value="">-- Seleccione un acudiente --</option>
+                                {% for parent in parents %}
+                                    {% set already_assigned = parent.id in assigned_parents|map(attribute='parent_id')|list %}
+                                    {% if not already_assigned %}
+                                    <option value="{{ parent.id }}">
+                                        {{ parent.get_full_name() }} ({{ parent.username }}) - {{ parent.document_number }}
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% if parents|length == 0 %}
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-triangle"></i> No hay acudientes creados en la institución.
+                                <a href="{{ url_for('users.new') }}" class="text-decoration-none">Crear acudiente primero</a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Parentesco / Relación</label>
+                            <select name="relationship" class="form-select">
+                                <option value="Acudiente">Acudiente</option>
+                                <option value="Padre">Padre</option>
+                                <option value="Madre">Madre</option>
+                                <option value="Tío/a">Tío/a</option>
+                                <option value="Abuelo/a">Abuelo/a</option>
+                                <option value="Hermano/a">Hermano/a</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle"></i> Asignar Acudiente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acudientes Asignados -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Acudientes Asignados</h5>
+                </div>
+                <div class="card-body">
+                    {% if assigned_parents %}
+                    <div class="list-group list-group-flush">
+                        {% for ps in assigned_parents %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ ps.parent_user.get_full_name() }}</h6>
+                                <small class="text-muted">
+                                    <span class="badge bg-primary">{{ ps.relationship }}</span>
+                                    {{ ps.parent_user.email }} | {{ ps.parent_user.phone or 'Sin teléfono' }}
+                                </small>
+                            </div>
+                            <form method="POST" action="{{ url_for('students.remove_parent', id=student.id, parent_id=ps.parent_id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Eliminar este acudiente?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2 mb-0">No hay acudientes asignados a este estudiante</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

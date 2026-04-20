@@ -32,6 +32,10 @@ def observations_list():
     # Base query - start from Observation and filter by institution through student
     query = Observation.query
 
+    # Initialize filter variables
+    institution_student_ids = None
+    teacher_student_ids = None
+
     # Institution filter
     if institution:
         # Get student IDs for this institution
@@ -78,15 +82,19 @@ def observations_list():
     
     # Student name search
     if student_name:
-        student_ids = db.session.query(AcademicStudent.id).join(
+        student_query = db.session.query(AcademicStudent.id).join(
             User, AcademicStudent.user_id == User.id
         ).filter(
             db.or_(
                 User.first_name.ilike(f'%{student_name}%'),
                 User.last_name.ilike(f'%{student_name}%'),
-                db.concat(User.first_name, ' ', User.last_name).ilike(f'%{student_name}%')
+                (User.first_name + ' ' + User.last_name).ilike(f'%{student_name}%')
             )
-        ).distinct().subquery()
+        )
+        # Apply institution filter to student search if institution exists
+        if institution:
+            student_query = student_query.filter(AcademicStudent.institution_id == institution.id)
+        student_ids = student_query.distinct().subquery()
         query = query.filter(Observation.student_id.in_(student_ids))
     
     # Order by date descending
@@ -110,25 +118,27 @@ def observations_list():
     ).order_by(User.first_name).all()
     
     # Statistics
-    # Use institution_student_ids for institution-scoped stats, or teacher_student_ids if teacher
-    stats_scope = institution_student_ids if institution else None
+    # Build base query for stats filtering
+    stats_base = Observation.query
+    if institution:
+        stats_base = stats_base.join(AcademicStudent, Observation.student_id == AcademicStudent.id).filter(
+            AcademicStudent.institution_id == institution.id
+        )
     if current_user.is_teacher():
-        stats_scope = teacher_student_ids
-
+        # For teachers, further filter to only their students
+        from models.academic import SubjectGrade
+        stats_base = stats_base.join(SubjectGrade, AcademicStudent.grade_id == SubjectGrade.grade_id).filter(
+            SubjectGrade.teacher_id == current_user.id
+        )
+    
     stats = {
-        'total': pagination.total,
-        'positiva': Observation.query.filter(Observation.type == 'positiva').count() if not stats_scope else
-                   Observation.query.filter(Observation.type == 'positiva', Observation.student_id.in_(stats_scope)).count(),
-        'negativa': Observation.query.filter(Observation.type == 'negativa').count() if not stats_scope else
-                   Observation.query.filter(Observation.type == 'negativa', Observation.student_id.in_(stats_scope)).count(),
-        'seguimiento': Observation.query.filter(Observation.type == 'seguimiento').count() if not stats_scope else
-                      Observation.query.filter(Observation.type == 'seguimiento', Observation.student_id.in_(stats_scope)).count(),
-        'convivencia': Observation.query.filter(Observation.type == 'convivencia').count() if not stats_scope else
-                      Observation.query.filter(Observation.type == 'convivencia', Observation.student_id.in_(stats_scope)).count(),
-        'notificadas': Observation.query.filter(Observation.notified == True).count() if not stats_scope else
-                      Observation.query.filter(Observation.notified == True, Observation.student_id.in_(stats_scope)).count(),
-        'pendientes': Observation.query.filter(Observation.notified == False).count() if not stats_scope else
-                     Observation.query.filter(Observation.notified == False, Observation.student_id.in_(stats_scope)).count(),
+        'total': stats_base.count(),
+        'positiva': stats_base.filter(Observation.type == 'positiva').count(),
+        'negativa': stats_base.filter(Observation.type == 'negativa').count(),
+        'seguimiento': stats_base.filter(Observation.type == 'seguimiento').count(),
+        'convivencia': stats_base.filter(Observation.type == 'convivencia').count(),
+        'notificadas': stats_base.filter(Observation.notified == True).count(),
+        'pendientes': stats_base.filter(Observation.notified == False).count(),
     }
     
     return render_template(

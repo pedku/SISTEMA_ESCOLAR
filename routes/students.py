@@ -493,8 +493,6 @@ def upload():
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No se seleccionó ningún archivo.', 'warning')
-            return render_template('students/upload.html')
-
         file = request.files['file']
 
         if file.filename == '':
@@ -653,3 +651,90 @@ def upload():
             flash(f'Error al procesar el archivo: {str(e)}', 'error')
 
     return render_template('students/upload.html')
+
+
+# ============================================
+# Asignar Acudientes
+# ============================================
+
+@students_bp.route('/<int:id>/assign-parent', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def assign_parent(id):
+    """Asignar acudientes a un estudiante"""
+    student = db.session.get(AcademicStudent, id)
+    
+    if not student:
+        flash('Estudiante no encontrado.', 'error')
+        return redirect(url_for('students.list'))
+    
+    institution = get_current_institution()
+    
+    if request.method == 'POST':
+        parent_id = request.form.get('parent_id', type=int)
+        relationship = request.form.get('relationship', '').strip()
+        
+        if not parent_id:
+            flash('Debes seleccionar un acudiente.', 'error')
+            return redirect(url_for('students.assign_parent', id=id))
+        
+        # Verificar que el usuario es acudiente
+        parent = db.session.get(User, parent_id)
+        if not parent or parent.role != 'parent':
+            flash('El usuario seleccionado no es un acudiente.', 'error')
+            return redirect(url_for('students.assign_parent', id=id))
+        
+        # Verificar que no esté ya asignado
+        existing = ParentStudent.query.filter_by(parent_id=parent_id, student_id=student.id).first()
+        if existing:
+            flash('Este acudiente ya está asignado al estudiante.', 'warning')
+            return redirect(url_for('students.assign_parent', id=id))
+        
+        # Crear la relación
+        ps = ParentStudent(
+            parent_id=parent_id,
+            student_id=student.id,
+            relationship=relationship or 'Acudiente'
+        )
+        
+        try:
+            db.session.add(ps)
+            db.session.commit()
+            flash('✅ Acudiente asignado exitosamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error al asignar acudiente: {str(e)}', 'error')
+        
+        return redirect(url_for('students.assign_parent', id=id))
+    
+    # Obtener acudientes disponibles
+    parents = User.query.filter_by(role='parent', institution_id=institution.id, is_active=True).order_by(User.last_name).all()
+    
+    # Obtener acudientes ya asignados
+    assigned_parents = ParentStudent.query.filter_by(student_id=student.id).all()
+    
+    return render_template('students/assign_parent.html', 
+                          student=student, 
+                          parents=parents, 
+                          assigned_parents=assigned_parents)
+
+
+@students_bp.route('/<int:id>/remove-parent/<int:parent_id>', methods=['POST'])
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def remove_parent(id, parent_id):
+    """Eliminar asignación de acudiente"""
+    ps = ParentStudent.query.filter_by(student_id=id, parent_id=parent_id).first()
+    
+    if not ps:
+        flash('Asignación no encontrada.', 'error')
+    else:
+        try:
+            db.session.delete(ps)
+            db.session.commit()
+            flash('✅ Acudiente eliminado exitosamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error al eliminar: {str(e)}', 'error')
+    
+    return redirect(url_for('students.assign_parent', id=id))

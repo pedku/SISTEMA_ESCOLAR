@@ -243,7 +243,8 @@
                                            data-criterion="{{ criterion.id }}"
                                            data-weight="{{ criterion.weight }}"
                                            {% if existing_score %}data-has-grade="true"{% endif %}
-                                           oninput="validateAndCalculate(this)">
+                                            oninput="validateInput(this)"
+                                            onblur="formatAndCalculate(this)">
                                     {% endif %}
                                 </td>
                                 <td>
@@ -358,7 +359,7 @@ function getGradeClass(score, passing) {
     return 'grade-fail';
 }
 
-function validateAndCalculate(input) {
+function validateInput(input) {
     const min = parseFloat(input.min);
     const max = parseFloat(input.max);
     let value = parseFloat(input.value);
@@ -366,9 +367,8 @@ function validateAndCalculate(input) {
     // Clear previous validation
     input.classList.remove('is-invalid', 'is-valid');
 
-    if (input.value === '') {
+    if (input.value === '' || input.value === null) {
         input.dataset.hasGrade = 'false';
-        calculateStudentAverage(input.dataset.student);
         return;
     }
 
@@ -383,11 +383,22 @@ function validateAndCalculate(input) {
     }
 
     input.classList.add('is-valid');
-    input.value = value.toFixed(1);
     input.dataset.hasGrade = 'true';
-
+    
+    // Calcular promedio en tiempo real SIN modificar el valor del input
     calculateStudentAverage(input.dataset.student);
     calculateGroupAverages();
+}
+
+function formatAndCalculate(input) {
+    const min = parseFloat(input.min);
+    const max = parseFloat(input.max);
+    let value = parseFloat(input.value);
+    
+    if (!isNaN(value) && value >= min && value <= max) {
+        // Formatear solo cuando el usuario sale del campo
+        input.value = value.toFixed(1);
+    }
 }
 
 function calculateStudentAverage(studentId) {
