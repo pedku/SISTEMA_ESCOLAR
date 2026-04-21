@@ -111,12 +111,14 @@
                     {% endif %}
 
                     <!-- Estudiantes -->
+                    {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
                     <li class="{% if is_active_route('/students') %}active{% endif %}">
                         <a href="{{ url_for('students.list') }}">
                             <i class="bi bi-people"></i>
                             <span>Estudiantes</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     <!-- Notas -->
                     {% if user_has_any_role('root', 'admin', 'teacher', 'coordinator') %}
@@ -129,12 +131,14 @@
                     {% endif %}
 
                     <!-- Asistencia -->
+                    {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher', 'student') %}
                     <li class="{% if is_active_route('/attendance') %}active{% endif %}">
                         <a href="{{ url_for('attendance.attendance') }}">
                             <i class="bi bi-calendar-check"></i>
                             <span>Asistencia</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     <!-- Observaciones -->
                     {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher') %}
@@ -167,12 +171,14 @@
                     {% endif %}
 
                     <!-- Logros -->
+                    {% if user_has_any_role('root', 'admin', 'coordinator', 'teacher', 'student') %}
                     <li class="{% if is_active_route('/achievements') %}active{% endif %}">
                         <a href="{{ url_for('achievements.achievements_list') }}">
                             <i class="bi bi-trophy"></i>
                             <span>Logros</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     <!-- Alertas Tempranas -->
                     {% if user_has_any_role('root', 'admin', 'coordinator') %}

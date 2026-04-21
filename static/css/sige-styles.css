@@ -40,12 +40,24 @@
 .stat-icon {
     width: 60px;
     height: 60px;
-    border-radius: 12px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.8rem;
     flex-shrink: 0;
+    box-sizing: border-box;
+    vertical-align: middle;
+    min-width: 60px;
+}
+
+.stat-icon > i {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+    position: relative !important;
+    transform: none !important;
 }
 
 .stat-icon.small {

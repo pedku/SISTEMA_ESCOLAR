@@ -10,7 +10,7 @@ from sqlalchemy import func
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 from extensions import db
-from models.academic import AcademicStudent, ParentStudent, SubjectGrade, Grade
+from models.academic import AcademicStudent, ParentStudent, SubjectGrade, Grade, Subject
 from models.grading import AcademicPeriod, FinalGrade, GradeRecord
 from models.attendance import Attendance
 from models.observation import Observation
@@ -163,7 +163,7 @@ def parent_view_grades(student_id):
     if student.grade_id:
         subject_grades = SubjectGrade.query.filter_by(
             grade_id=student.grade_id
-        ).join(SubjectGrade.subject).order_by(Subject.name).all()
+        ).join(Subject).order_by(Subject.name).all()
 
     # Build grade matrix: for each subject-grade, get final grades per period
     grade_matrix = []
@@ -408,4 +408,33 @@ def parent_view_report_cards(student_id):
         'parent/report_cards.html',
         student=student,
         report_cards_data=rc_data
+    )
+
+
+# ============================================
+# 6. Logros
+# ============================================
+
+@parent_bp.route('/achievements/<int:student_id>')
+@login_required
+@role_required('parent')
+def parent_view_achievements(student_id):
+    """View achievements for parent's student."""
+    student = _verify_student_access(student_id)
+    
+    # Get all student achievements
+    from models.achievement import Achievement, StudentAchievement
+    
+    achievements = StudentAchievement.query.filter_by(
+        student_id=student.id
+    ).join(StudentAchievement.achievement).order_by(StudentAchievement.earned_at.desc()).all()
+    
+    # Get all available achievements for context
+    all_achievements = Achievement.query.order_by(Achievement.category, Achievement.name).all()
+    
+    return render_template(
+        'parent/achievements.html',
+        student=student,
+        achievements=achievements,
+        all_achievements=all_achievements
     )

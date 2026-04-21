@@ -27,7 +27,7 @@ def index():
         'coordinator': 'dashboard.coordinator_dashboard',
         'teacher': 'dashboard.teacher_dashboard',
         'student': 'dashboard.student_dashboard',
-        'parent': 'dashboard.parent_dashboard',
+    'parent': 'parent.parent_dashboard',
         'viewer': 'dashboard.viewer_dashboard'
     }
 

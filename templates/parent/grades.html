@@ -22,12 +22,16 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
-                    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-door"></i> Portal</a></li>
-                    <li class="breadcrumb-item active">Notas</li>
-                </ol>
-            </nav>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-1">
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_dashboard') }}"><i class="bi bi-house-door"></i> Portal</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_view_grades', student_id=student.id) }}">Notas</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_view_attendance', student_id=student.id) }}">Asistencia</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_view_observations', student_id=student.id) }}">Observaciones</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_view_report_cards', student_id=student.id) }}">Boletines</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('parent.parent_view_achievements', student_id=student.id) }}">Logros</a></li>
+  </ol>
+</nav>
             <h1 class="h3 mb-1 fw-bold text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Notas de {{ student_user.get_full_name() if student_user else 'Estudiante' }}</h1>
             {% if student.grade %}
             <p class="text-muted mb-0">{{ student.grade.name }}{% if student.campus %} - Sede: {{ student.campus.name }}{% endif %}</p>
