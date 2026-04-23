@@ -2,7 +2,7 @@
 
 from models.user import User
 from models.institution import Institution, Campus
-from models.academic import Grade, Subject, SubjectGrade, AcademicStudent, ParentStudent
+from models.academic import GradeLevel, Grade, Subject, SubjectGrade, AcademicStudent, ParentStudent
 from models.grading import AcademicPeriod, GradeCriteria, GradeRecord, FinalGrade, AnnualGrade
 from models.attendance import Attendance
 from models.observation import Observation
@@ -14,6 +14,7 @@ __all__ = [
     'User',
     'Institution',
     'Campus',
+    'GradeLevel',
     'Grade',
     'Subject',
     'SubjectGrade',

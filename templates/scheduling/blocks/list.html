@@ -26,6 +26,7 @@
                             <th>Orden</th>
                             <th>Nombre</th>
                             <th>Sede</th>
+                            <th>Jornada</th>
                             <th>Hora Inicio</th>
                             <th>Hora Fin</th>
                             <th>Tipo</th>
@@ -53,6 +54,7 @@
                                 </div>
                             </td>
                             <td>{{ block.campus.name }}</td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info">{{ block.shift }}</span></td>
                             <td><code class="fw-bold">{{ block.start_time.strftime('%H:%M') }}</code></td>
                             <td><code class="fw-bold">{{ block.end_time.strftime('%H:%M') }}</code></td>
                             <td>

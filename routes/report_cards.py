@@ -17,93 +17,9 @@ from models.user import User
 from utils.decorators import login_required, role_required
 from utils.institution_resolver import get_current_institution
 from utils.pdf_generator import generate_report_card_pdf, save_report_card_pdf
+from services.report_card_service import ReportCardService
 
 report_cards_bp = Blueprint('report_cards', __name__)
-
-
-# ============================================
-# Helpers
-# ============================================
-
-def _get_performance_level(score):
-    """Get performance level text for a grade."""
-    if score is None:
-        return 'N/A'
-    if score >= 4.6:
-        return 'Superior'
-    elif score >= 4.0:
-        return 'Alto'
-    elif score >= 3.0:
-        return 'Basico'
-    else:
-        return 'Bajo'
-
-
-def _get_status_text(status):
-    """Get display text for grade status."""
-    if status == 'ganada':
-        return 'Aprobado'
-    elif status == 'perdida':
-        return 'Reprobado'
-    return 'No evaluado'
-
-
-def _get_student_attendance(student_id, period, subject_grades):
-    """Get attendance summary for a student in a period."""
-    # Get all attendance records for this student in the period
-    query = Attendance.query.filter(
-        Attendance.student_id == student_id,
-        Attendance.date >= period.start_date,
-        Attendance.date <= period.end_date
-    )
-
-    # Filter by subject grades if provided
-    if subject_grades:
-        sg_ids = [sg.id for sg in subject_grades]
-        query = query.filter(Attendance.subject_grade_id.in_(sg_ids))
-
-    records = query.all()
-
-    presentes = sum(1 for r in records if r.status == 'presente')
-    ausentes = sum(1 for r in records if r.status == 'ausente')
-    justificados = sum(1 for r in records if r.status in ('justificado', 'excusado'))
-
-    return {
-        'presentes': presentes,
-        'ausentes': ausentes,
-        'justificados': justificados,
-        'total': len(records)
-    }
-
-
-def _get_grade_subjects(grade_id):
-    """Get all subject-grades for a grade."""
-    return SubjectGrade.query.filter_by(grade_id=grade_id).all()
-
-
-def _build_grades_data(student_id, period_id, subject_grades):
-    """Build grades data for all subjects for a student in a period."""
-    grades_data = []
-
-    for sg in subject_grades:
-        final_grade = FinalGrade.query.filter_by(
-            student_id=student_id,
-            subject_grade_id=sg.id,
-            period_id=period_id
-        ).first()
-
-        grades_data.append({
-            'subject_grade': sg,
-            'subject_name': sg.subject.name,
-            'teacher_name': sg.teacher_user.get_full_name() if sg.teacher_user else 'N/A',
-            'final_score': final_grade.final_score if final_grade else None,
-            'status': final_grade.status if final_grade else 'no evaluado',
-            'observation': final_grade.observation if final_grade else None,
-            'performance_level': _get_performance_level(final_grade.final_score) if final_grade and final_grade.final_score else 'N/A',
-            'status_text': _get_status_text(final_grade.status) if final_grade else 'No evaluado'
-        })
-
-    return grades_data
 
 
 # ============================================
@@ -182,13 +98,13 @@ def generate(student_id, period_id):
         flash('El estudiante no tiene un grado asignado.', 'danger')
         return redirect(url_for('report_cards.manage'))
 
-    subject_grades = _get_grade_subjects(student.grade_id)
+    subject_grades = ReportCardService.get_grade_subjects(student.grade_id)
     if not subject_grades:
         flash('No hay asignaturas configuradas para este grado.', 'danger')
         return redirect(url_for('report_cards.manage'))
 
     # Build grades data
-    grades_data = _build_grades_data(student.id, period.id, subject_grades)
+    grades_data = ReportCardService.build_grades_data(student.id, period.id, subject_grades)
 
     # Check if any grades exist
     has_grades = any(g['final_score'] is not None for g in grades_data)
@@ -197,7 +113,7 @@ def generate(student_id, period_id):
         return redirect(url_for('report_cards.student_report', student_id=student.id, period_id=period.id))
 
     # Get attendance
-    attendance = _get_student_attendance(student.id, period, subject_grades)
+    attendance = ReportCardService.get_student_attendance(student.id, period, subject_grades)
 
     # Get institution
     if not institution:
@@ -299,7 +215,7 @@ def generate_bulk(grade_id, period_id):
         return jsonify({'success': False, 'error': 'No hay estudiantes activos en este grado'})
 
     # Get subject grades
-    subject_grades = _get_grade_subjects(grade_id)
+    subject_grades = ReportCardService.get_grade_subjects(grade_id)
     if not subject_grades:
         return jsonify({'success': False, 'error': 'No hay asignaturas configuradas para este grado'})
 
@@ -317,7 +233,7 @@ def generate_bulk(grade_id, period_id):
     for student in students:
         try:
             # Build grades data
-            grades_data = _build_grades_data(student.id, period.id, subject_grades)
+            grades_data = ReportCardService.build_grades_data(student.id, period.id, subject_grades)
 
             # Check if student has any grades
             has_grades = any(g['final_score'] is not None for g in grades_data)
@@ -331,7 +247,7 @@ def generate_bulk(grade_id, period_id):
                 continue
 
             # Get attendance
-            attendance = _get_student_attendance(student.id, period, subject_grades)
+            attendance = ReportCardService.get_student_attendance(student.id, period, subject_grades)
             campus = Campus.query.get(student.campus_id) if student.campus_id else None
 
             # Check existing

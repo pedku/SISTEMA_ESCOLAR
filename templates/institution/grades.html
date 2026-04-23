@@ -253,6 +253,7 @@
                             <th>Sede</th>
                             <th>Director de Grupo</th>
                             <th>Año Lectivo</th>
+                            <th>Jornada</th>
                             <th class="text-center">Capacidad</th>
                             <th class="text-center">Estudiantes</th>
                             <th class="text-center">Acciones</th>
@@ -276,6 +277,9 @@
                             </td>
                             <td>
                                 <span class="badge bg-light text-dark">{{ grade.academic_year }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info">{{ grade.shift }}</span>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-secondary">{{ grade.max_students }}</span>

@@ -2,8 +2,9 @@
 
 ## Sistema Integral de Gesti\u00f3n Escolar
 
-> **Estado actual**: ~98% implementado | **Stack**: Python 3 + Flask + Bootstrap 5 + Chart.js + DataTables + SQLite
+> **Estado actual**: ~99% implementado | **Stack**: Python 3 + Flask + Bootstrap 5 + Chart.js + DataTables + SQLite
 > **Fecha de creaci\u00f3n**: 2026-04-12
+> **\u00daltima actualizaci\u00f3n**: 2026-04-23
 > **Documento autocontenido**: Sirve como gu\u00eda completa para cualquier agente futuro
 
 ---
@@ -15,9 +16,9 @@
 | [Contexto del Proyecto](#contexto-del-proyecto) | Arquitectura, modelos, blueprints existentes |
 | [Reglas Universales](#reglas-universales) | Normas obligatorias para TODOS los agentes |
 | [Fase 0](#fase-0---completar-placeholders-inmediato) | Templates placeholder (3 tareas f\u00e1ciles) |
-| [Fase 1](#fase-1---calidad-y-robustez-corto-plazo) | Capa de servicios + Tests + Migraciones |
-| [Fase 2](#fase-2---integraci\u00f3n-qr-mediano-plazo) | Sistema QR completo con PROYECTO-LAB |
-| [Fase 3](#fase-3---funcionalidades-avanzadas-largo-plazo) | Comunicaciones, Calendario, Biblioteca, Admin Tools, i18n |
+| [Fase 1](#fase-1---calidad-y-robustez-corto-plazo) | Capa de servicios + Tests + Migraciones (COMPLETO) |
+| [Fase 2](#fase-2---reingenier\u00eda-acad\u00e9mica-y-anal\u00edtica) | Multi-jornada, Horarios e Inteligencia (COMPLETO) |
+| [Fase 3](#fase-3---integraci\u00f3n-qr-mediano-plazo) | Sistema QR completo con PROYECTO-LAB |
 | [Fase 4](#fase-4---producci\u00f3n-y-escalabilidad) | Deploy, optimizaci\u00f3n, monitoreo |
 | [Ap\u00e9ndice](#ap\u00e9ndice---referencia-r\u00e1pida) | Patrones de c\u00f3digo, paleta de colores, errores comunes |
 
@@ -34,15 +35,15 @@
 | Gesti\u00f3n institucional | 100% | CRUD instituci\u00f3n, sedes, grados, asignaturas, periodos, criterios |
 | Gesti\u00f3n de usuarios | 100% | CRUD + Excel + permisos + usernames incrementales |
 | Gesti\u00f3n de estudiantes | 100% | CRUD + Excel + perfiles incompletos visibles |
-| Sistema de notas | 95% | Lock, finales, anuales. Falta template summary.html |
+| Sistema de notas | 100% | Resumen, finales, anuales y anal\u00edtica longitudinal |
 | Asistencia | 100% | Registro, historial, resumen grupal, export CSV |
 | Observaciones | 100% | CRUD, historial, notificaci\u00f3n, quick form |
 | Boletines PDF | 90% | Generaci\u00f3n, PDF, historial. Pendiente WeasyPrint en Windows |
-| M\u00e9tricas profesor | 90% | Dashboard, comparaci\u00f3n, correlaci\u00f3n asistencia-rendimiento |
-| M\u00e9tricas institucionales | 90% | KPIs, heatmap, tendencias, export Excel |
+| M\u00e9tricas | 100% | Dashboards, heatmap, risk_students y ANAL\u00cdTICA IA |
 | Alertas tempranas | 95% | Motor 6 reglas, panel, resoluci\u00f3n |
 | Logros/Gamificaci\u00f3n | 95% | Auto-award 7 logros, cat\u00e1logo, leaderboard |
-| Portal acudientes | 95% | Dashboard, notas, asistencia, observaciones, boletines |
+| Portal acudientes | 100% | Dashboard avanzado, notas, asistencia, observaciones |
+| Horarios y Matr\u00edcula| 100% | Generaci\u00f3n inteligente, Multi-jornada, Intensidad horaria |
 
 ### Estructura del proyecto (archivos clave)
 

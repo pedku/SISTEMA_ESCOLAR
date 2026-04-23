@@ -23,7 +23,6 @@ class Classroom(db.Model):
     resources = db.Column(db.Text)  # JSON string of available resources
 
     # Relationships
-    campus = db.relationship('Campus', backref='classrooms', lazy=True)
     schedules = db.relationship('Schedule', backref='classroom', lazy='dynamic', cascade='all, delete-orphan')
 
     __table_args__ = (
@@ -62,8 +61,8 @@ class StudentEnrollment(db.Model):
     status_note = db.Column(db.Text)
 
     # Relationships
-    student = db.relationship('AcademicStudent', backref='enrollments', lazy=True)
-    subject_grade = db.relationship('SubjectGrade', backref='enrollments', lazy=True)
+    student = db.relationship('AcademicStudent', lazy=True)
+    subject_grade = db.relationship('SubjectGrade', backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete-orphan'), lazy=True)
 
     __table_args__ = (
         db.UniqueConstraint('student_id', 'subject_grade_id', 'academic_year', name='uq_enrollment_student_subject_year'),
@@ -99,7 +98,7 @@ class TeacherSubjectAssignment(db.Model):
     notes = db.Column(db.Text)
 
     # Relationships
-    subject_grade = db.relationship('SubjectGrade', backref='teacher_assignment', lazy=True)
+    subject_grade = db.relationship('SubjectGrade', backref=db.backref('teacher_assignment', uselist=False, cascade='all, delete-orphan'), lazy=True)
     teacher = db.relationship('User', backref='subject_assignments', lazy=True)
 
     def __repr__(self):
@@ -132,7 +131,7 @@ class Schedule(db.Model):
     is_active = db.Column(db.Boolean, default=True, index=True)
 
     # Relationships
-    subject_grade = db.relationship('SubjectGrade', backref='schedules', lazy=True)
+    subject_grade = db.relationship('SubjectGrade', backref=db.backref('schedules', lazy='dynamic', cascade='all, delete-orphan'), lazy=True)
 
     __table_args__ = (
         # Prevent classroom double-booking
@@ -175,13 +174,13 @@ class ScheduleBlock(db.Model):
     end_time = db.Column(db.Time, nullable=False)
     is_break = db.Column(db.Boolean, default=False)  # Recreo/pause
     order_num = db.Column(db.Integer, default=0)  # Sort order
+    shift = db.Column(db.String(20), default='Mañana', index=True)  # Mañana, Tarde, Nocturna, Única
     academic_year = db.Column(db.String(20), nullable=False, index=True)
 
     # Relationships
-    campus = db.relationship('Campus', backref='schedule_blocks', lazy=True)
 
     __table_args__ = (
-        db.UniqueConstraint('campus_id', 'name', 'academic_year', name='uq_block_campus_name_year'),
+        db.UniqueConstraint('campus_id', 'name', 'academic_year', 'shift', name='uq_block_campus_name_year_shift'),
     )
 
     def __repr__(self):

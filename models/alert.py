@@ -28,7 +28,7 @@ class Alert(db.Model):
     notes = db.Column(db.Text, nullable=True)
 
     # Relationships
-    student = db.relationship('AcademicStudent', backref='alerts', lazy='joined')
+    student = db.relationship('AcademicStudent', lazy='joined')
     resolver = db.relationship('User', foreign_keys=[resolved_by], lazy='joined')
 
     def __repr__(self):

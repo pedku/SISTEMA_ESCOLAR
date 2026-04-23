@@ -18,432 +18,7 @@ from sqlalchemy import func, case
 metrics_bp = Blueprint('metrics', __name__)
 
 
-def _get_teacher_subject_grades(teacher_id=None, institution=None):
-    """
-    Get subject-grade assignments filtered by teacher and institution.
-    For teachers: only THEIR own subject-grades.
-    For root/admin: all teachers' subject-grades in the institution.
-    """
-    from models.institution import Campus
-
-    query = db.session.query(SubjectGrade)
-
-    # Filter by institution through Grade -> Campus
-    if institution:
-        valid_grade_ids = db.session.query(Grade.id).join(
-            Campus, Grade.campus_id == Campus.id
-        ).filter(Campus.institution_id == institution.id).subquery()
-        query = query.filter(SubjectGrade.grade_id.in_(valid_grade_ids))
-
-    if teacher_id:
-        query = query.filter(SubjectGrade.teacher_id == teacher_id)
-
-    return query.all()
-
-
-def _get_teacher_groups_data(teacher_id, institution=None):
-    """
-    Get all groups (subject-grade) for a teacher with computed metrics.
-    Returns list of dicts with group info, averages, pass rates, etc.
-    """
-    query = db.session.query(
-        SubjectGrade,
-        Grade,
-        User
-    ).join(
-        Grade, SubjectGrade.grade_id == Grade.id
-    ).join(
-        User, SubjectGrade.teacher_id == User.id
-    ).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        # Filter by institution through campus
-        from models.institution import Campus
-        query = query.join(Campus, Grade.campus_id == Campus.id).filter(
-            Campus.institution_id == institution.id
-        )
-
-    results = query.all()
-    groups_data = []
-
-    for sg, grade, teacher in results:
-        # Get students in this grade
-        students = db.session.query(AcademicStudent).filter(
-            AcademicStudent.grade_id == grade.id,
-            AcademicStudent.status == 'activo'
-        ).all()
-
-        student_ids = [s.id for s in students]
-        student_count = len(student_ids)
-
-        # Calculate average and pass rate from final grades
-        avg_score = None
-        pass_count = 0
-        fail_count = 0
-        at_risk_count = 0
-
-        if student_ids:
-            # Get final grades for this subject-grade
-            final_grades = db.session.query(FinalGrade).filter(
-                FinalGrade.subject_grade_id == sg.id,
-                FinalGrade.student_id.in_(student_ids)
-            ).all()
-
-            if final_grades:
-                scores = [fg.final_score for fg in final_grades if fg.final_score is not None]
-                if scores:
-                    avg_score = round(sum(scores) / len(scores), 2)
-                    pass_count = sum(1 for s in scores if s >= 3.0)
-                    fail_count = sum(1 for s in scores if s < 3.0)
-                    at_risk_count = sum(1 for s in scores if s < 3.0)
-
-        pass_rate = round((pass_count / (pass_count + fail_count)) * 100, 1) if (pass_count + fail_count) > 0 else 0
-
-        groups_data.append({
-            'subject_grade_id': sg.id,
-            'grade_name': grade.name,
-            'grade_id': grade.id,
-            'subject_name': sg.subject.name if sg.subject else 'N/A',
-            'teacher_name': teacher.get_full_name(),
-            'student_count': student_count,
-            'avg_score': avg_score,
-            'pass_count': pass_count,
-            'fail_count': fail_count,
-            'pass_rate': pass_rate,
-            'at_risk_count': at_risk_count,
-        })
-
-    return groups_data
-
-
-def _get_risk_students(teacher_id, institution=None, threshold=3.0):
-    """
-    Get students at risk (avg < threshold) in teacher's classes.
-    """
-    # Get all subject-grades for this teacher
-    sg_query = db.session.query(SubjectGrade).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    subject_grades = sg_query.all()
-    sg_ids = [sg.id for sg in subject_grades]
-
-    if not sg_ids:
-        return []
-
-    # Get all students in these subject-grades with their average
-    # Find students who have final grades in these subject-grades
-    final_grades = db.session.query(
-        FinalGrade,
-        AcademicStudent,
-        User,
-        Grade,
-        SubjectGrade
-    ).join(
-        AcademicStudent, FinalGrade.student_id == AcademicStudent.id
-    ).join(
-        User, AcademicStudent.user_id == User.id
-    ).join(
-        Grade, AcademicStudent.grade_id == Grade.id
-    ).join(
-        SubjectGrade, FinalGrade.subject_grade_id == SubjectGrade.id
-    ).filter(
-        FinalGrade.subject_grade_id.in_(sg_ids),
-        FinalGrade.final_score.isnot(None)
-    ).all()
-
-    # Group by student and calculate average
-    student_averages = {}
-    for fg, student, user, grade, sg in final_grades:
-        if student.id not in student_averages:
-            student_averages[student.id] = {
-                'student_id': student.id,
-                'student_name': user.get_full_name(),
-                'grade_name': grade.name,
-                'grades': [],
-                'subjects': set()
-            }
-        student_averages[student.id]['grades'].append(fg.final_score)
-        student_averages[student.id]['subjects'].add(sg.subject.name if sg.subject else 'N/A')
-
-    risk_students = []
-    for sid, data in student_averages.items():
-        avg = round(sum(data['grades']) / len(data['grades']), 2) if data['grades'] else 0
-        if avg < threshold:
-            risk_students.append({
-                'student_id': sid,
-                'student_name': data['student_name'],
-                'grade_name': data['grade_name'],
-                'avg_score': avg,
-                'subjects': ', '.join(sorted(data['subjects'])),
-                'grade_count': len(data['grades'])
-            })
-
-    risk_students.sort(key=lambda x: x['avg_score'])
-    return risk_students
-
-
-def _get_grade_distribution(teacher_id, institution=None):
-    """
-    Get all final grade scores for a teacher's classes for histogram.
-    Returns list of scores.
-    """
-    sg_query = db.session.query(SubjectGrade.id).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    sg_ids = [r[0] for r in sg_query.all()]
-
-    if not sg_ids:
-        return []
-
-    final_grades = db.session.query(FinalGrade.final_score).filter(
-        FinalGrade.subject_grade_id.in_(sg_ids),
-        FinalGrade.final_score.isnot(None)
-    ).all()
-
-    return [fg[0] for fg in final_grades]
-
-
-def _get_period_trend(teacher_id, institution=None):
-    """
-    Get average score per academic period for trend line.
-    Returns list of (period_name, avg_score) tuples.
-    """
-    sg_query = db.session.query(SubjectGrade.id).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    sg_ids = [r[0] for r in sg_query.all()]
-
-    if not sg_ids:
-        return []
-
-    # Get period averages
-    results = db.session.query(
-        AcademicPeriod.short_name,
-        func.avg(FinalGrade.final_score).label('avg_score')
-    ).join(
-        FinalGrade, AcademicPeriod.id == FinalGrade.period_id
-    ).filter(
-        FinalGrade.subject_grade_id.in_(sg_ids),
-        FinalGrade.final_score.isnot(None)
-    ).group_by(
-        AcademicPeriod.id, AcademicPeriod.short_name, AcademicPeriod.order
-    ).order_by(
-        AcademicPeriod.order
-    ).all()
-
-    return [(r[0], round(r[1], 2)) for r in results]
-
-
-def _get_institution_average(teacher_id, institution=None):
-    """
-    Get overall institutional average for comparison.
-    Returns average score across all teachers in institution.
-    """
-    query = db.session.query(func.avg(FinalGrade.final_score)).filter(
-        FinalGrade.final_score.isnot(None)
-    )
-
-    if institution:
-        from models.institution import Campus
-        query = query.join(SubjectGrade).join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    result = query.scalar()
-    return round(result, 2) if result else 0
-
-
-def _get_teacher_average(teacher_id, institution=None):
-    """
-    Get this teacher's overall average.
-    """
-    sg_query = db.session.query(SubjectGrade.id).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    sg_ids = [r[0] for r in sg_query.all()]
-
-    if not sg_ids:
-        return 0
-
-    result = db.session.query(func.avg(FinalGrade.final_score)).filter(
-        FinalGrade.subject_grade_id.in_(sg_ids),
-        FinalGrade.final_score.isnot(None)
-    ).scalar()
-
-    return round(result, 2) if result else 0
-
-
-def _get_all_teacher_averages(institution=None):
-    """
-    Get averages for all teachers in institution (anonymous).
-    Returns list of (teacher_name, avg_score) tuples.
-    """
-    query = db.session.query(
-        User.id,
-        User.first_name,
-        User.last_name,
-        func.avg(FinalGrade.final_score).label('avg_score')
-    ).join(
-        SubjectGrade, User.id == SubjectGrade.teacher_id
-    ).join(
-        FinalGrade, SubjectGrade.id == FinalGrade.subject_grade_id
-    ).filter(
-        FinalGrade.final_score.isnot(None),
-        User.role == 'teacher'
-    )
-
-    if institution:
-        from models.institution import Campus
-        query = query.join(Grade, SubjectGrade.grade_id == Grade.id).join(
-            Campus, Grade.campus_id == Campus.id
-        ).filter(Campus.institution_id == institution.id)
-
-    query = query.group_by(User.id, User.first_name, User.last_name)
-
-    results = query.all()
-    return [(r[0], f"{r[1]} {r[2]}", round(float(r[3]), 2) if r[3] else 0) for r in results]
-
-
-def _get_attendance_data(teacher_id, institution=None):
-    """
-    Get attendance records for students in teacher's classes.
-    Returns list of (student_id, student_name, grade_name, attendance_pct, avg_score).
-    """
-    sg_query = db.session.query(SubjectGrade.id).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    sg_ids = [r[0] for r in sg_query.all()]
-
-    if not sg_ids:
-        return []
-
-    # Get attendance per student per subject-grade
-    attendance_records = db.session.query(
-        Attendance.student_id,
-        Attendance.subject_grade_id,
-        func.count(Attendance.id).label('total'),
-        func.sum(case((Attendance.status == 'presente', 1), else_=0)).label('present')
-    ).filter(
-        Attendance.subject_grade_id.in_(sg_ids)
-    ).group_by(
-        Attendance.student_id, Attendance.subject_grade_id
-    ).all()
-
-    # Calculate attendance percentages
-    student_attendance = {}
-    for ar in attendance_records:
-        sid = ar.student_id
-        pct = round((ar.present / ar.total) * 100, 1) if ar.total > 0 else 0
-        if sid not in student_attendance:
-            student_attendance[sid] = []
-        student_attendance[sid].append(pct)
-
-    # Calculate averages per student
-    student_averages = {}
-    final_grades = db.session.query(
-        FinalGrade.student_id,
-        func.avg(FinalGrade.final_score).label('avg')
-    ).filter(
-        FinalGrade.subject_grade_id.in_(sg_ids),
-        FinalGrade.final_score.isnot(None)
-    ).group_by(FinalGrade.student_id).all()
-
-    for fg in final_grades:
-        student_averages[fg.student_id] = round(fg.avg, 2)
-
-    # Build result
-    results = []
-    for sid, att_pcts in student_attendance.items():
-        avg_att = round(sum(att_pcts) / len(att_pcts), 1)
-        avg_score = student_averages.get(sid, 0)
-
-        student = db.session.query(AcademicStudent, User, Grade).join(
-            User, AcademicStudent.user_id == User.id
-        ).join(
-            Grade, AcademicStudent.grade_id == Grade.id
-        ).filter(
-            AcademicStudent.id == sid
-        ).first()
-
-        if student:
-            results.append({
-                'student_id': sid,
-                'student_name': student[1].get_full_name(),
-                'grade_name': student[2].name,
-                'attendance_pct': avg_att,
-                'avg_score': avg_score
-            })
-
-    return results
-
-
-def _get_total_absences(teacher_id, institution=None):
-    """
-    Get total absence count and percentage for teacher's students.
-    """
-    sg_query = db.session.query(SubjectGrade.id).filter(
-        SubjectGrade.teacher_id == teacher_id
-    )
-
-    if institution:
-        from models.institution import Campus
-        sg_query = sg_query.join(Grade).join(Campus).filter(
-            Campus.institution_id == institution.id
-        )
-
-    sg_ids = [r[0] for r in sg_query.all()]
-
-    if not sg_ids:
-        return 0, 0
-
-    total = db.session.query(func.count(Attendance.id)).filter(
-        Attendance.subject_grade_id.in_(sg_ids)
-    ).scalar() or 0
-
-    absences = db.session.query(func.count(Attendance.id)).filter(
-        Attendance.subject_grade_id.in_(sg_ids),
-        Attendance.status == 'ausente'
-    ).scalar() or 0
-
-    absence_pct = round((absences / total) * 100, 1) if total > 0 else 0
-    return absences, absence_pct
+from services.metrics_service import MetricsService
 
 
 @metrics_bp.route('/teacher')
@@ -464,21 +39,21 @@ def teacher_metrics():
         teacher_id = teacher_id_param or current_user.id
 
     # Get groups data
-    groups_data = _get_teacher_groups_data(teacher_id, institution)
+    groups_data = MetricsService.get_teacher_groups_data(teacher_id, institution)
 
     # Get grade distribution
-    all_grades = _get_grade_distribution(teacher_id, institution)
+    all_grades = MetricsService.get_grade_distribution(teacher_id, institution)
 
     # Get period trend
-    period_trend = _get_period_trend(teacher_id, institution)
+    period_trend = MetricsService.get_period_trend(teacher_id, institution)
     period_labels = [p[0] for p in period_trend]
     period_scores = [p[1] for p in period_trend]
 
     # Get at-risk students
-    risk_students = _get_risk_students(teacher_id, institution)
+    risk_students = MetricsService.get_risk_students(teacher_id, institution)
 
     # Get absence data
-    absences, absence_pct = _get_total_absences(teacher_id, institution)
+    absences, absence_pct = MetricsService.get_total_absences(teacher_id, institution)
 
     # Calculate summary stats
     total_students = sum(g['student_count'] for g in groups_data)
@@ -499,12 +74,16 @@ def teacher_metrics():
 
     selected_teacher = db.session.get(User, teacher_id) if teacher_id else None
 
+    # Get action plans
+    action_plans = MetricsService.get_action_plans(teacher_id, institution)
+
     return render_template('metrics/teacher.html',
                            groups_data=groups_data,
                            grade_distribution=all_grades,
                            period_labels=period_labels,
                            period_scores=period_scores,
                            risk_students=risk_students,
+                           action_plans=action_plans,
                            absences=absences,
                            absence_pct=absence_pct,
                            total_students=total_students,
@@ -632,7 +211,7 @@ def teacher_attendance():
         teacher_id = request.args.get('teacher_id', type=int) or current_user.id
 
     # Get scatter plot data
-    scatter_data = _get_attendance_data(teacher_id, institution)
+    scatter_data = MetricsService.get_attendance_data(teacher_id, institution)
 
     # Calculate correlation
     if scatter_data:

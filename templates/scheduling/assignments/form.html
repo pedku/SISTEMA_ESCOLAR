@@ -26,7 +26,7 @@
                 <div class="row g-4">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Grado <span class="text-danger">*</span></label>
-                        <select name="grade_id" class="form-select" required>
+                        <select name="grade_id" class="form-select select2" required>
                             <option value="">Seleccione un grado</option>
                             {% for grade in grades %}
                             <option value="{{ grade.id }}">{{ grade.name }}</option>
@@ -35,7 +35,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Materia <span class="text-danger">*</span></label>
-                        <select name="subject_id" class="form-select" required>
+                        <select name="subject_id" class="form-select select2" required>
                             <option value="">Seleccione una materia</option>
                             {% for subject in subjects %}
                             <option value="{{ subject.id }}">{{ subject.name }}</option>
@@ -44,7 +44,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Profesor <span class="text-danger">*</span></label>
-                        <select name="teacher_id" class="form-select" required>
+                        <select name="teacher_id" class="form-select select2" required>
                             <option value="">Seleccione un profesor</option>
                             {% for teacher in teachers %}
                             <option value="{{ teacher.id }}">{{ teacher.first_name }} {{ teacher.last_name }}</option>

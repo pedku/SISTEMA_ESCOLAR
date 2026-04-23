@@ -56,6 +56,11 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Intensidad Horaria (Horas/Semana) <span class="text-danger">*</span></label>
+                        <input type="number" name="hours_per_week" class="form-control" min="1" max="20" value="4" required>
+                        <small class="text-muted">¿Cuántas horas de esta materia recibe el grado a la semana?</small>
+                    </div>
                 </div>
 
                 <div class="mt-4 d-flex gap-2">

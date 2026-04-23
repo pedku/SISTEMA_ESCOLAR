@@ -54,6 +54,7 @@
                         <tr>
                             <th>Materia</th>
                             <th>Grado</th>
+                            <th class="text-center">Intensidad</th>
                             <th>Profesor Asignado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
@@ -70,6 +71,7 @@
                                 </div>
                             </td>
                             <td>{{ sg.grade.name }}</td>
+                            <td class="text-center"><span class="badge bg-secondary">{{ sg.hours_per_week }}h</span></td>
                             <td>
                                 {% if sg.teacher_user %}
                                 <span class="badge bg-success">{{ sg.teacher_user.first_name }} {{ sg.teacher_user.last_name }}</span>

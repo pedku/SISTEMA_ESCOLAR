@@ -100,13 +100,33 @@
                             </div>
                         </div>
 
-                        <!-- Director and Academic Year -->
+                        <!-- Grade Level -->
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
+                                    <i class="bi bi-layers text-primary me-1"></i>Nivel Académico
+                                </label>
+                                <select name="level_id" id="level_id" class="form-select">
+                                    <option value="">Sin nivel (opcional)</option>
+                                    {% for level in grade_levels|default([]) %}
+                                    <option value="{{ level.id }}" 
+                                            data-campus="{{ level.campus_id }}"
+                                            {% if data.get('level_id') == level.id or (not data and grade_data and grade_data.level_id == level.id) %}selected{% endif %}>
+                                        {{ level.name }} ({{ level.campus.name }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="field-hint text-muted small mt-1">💡 Nivel general: Primero, Sexto, Once, etc.</div>
+                            </div>
+                        </div>
+
+                        <!-- Director and Academic Year/Shift -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
                                     <i class="bi bi-person text-primary me-1"></i>Director de Grupo
                                 </label>
-                                <select name="director_id" class="form-select">
+                                <select name="director_id" class="form-select select2">
                                     <option value="">Sin director asignado</option>
                                     {% for teacher in teachers %}
                                     <option value="{{ teacher.id }}" 
@@ -115,9 +135,9 @@
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <div class="field-hint text-muted small mt-1">💡 Profesor responsable del grupo</div>
+                                <div class="field-hint text-muted small mt-1">💡 Responsable del grupo</div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-calendar3 text-primary me-1"></i>Año Lectivo <span class="text-danger">*</span>
                                 </label>
@@ -126,7 +146,16 @@
                                        class="form-control"
                                        value="{{ data.get('academic_year', grade_data.academic_year if grade_data else '2026') }}"
                                        placeholder="2026">
-                                <div class="field-hint text-muted small mt-1">💡 Año académico vigente</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-clock text-primary me-1"></i>Jornada <span class="text-danger">*</span>
+                                </label>
+                                <select name="shift" class="form-select" required>
+                                    {% for s in ['Mañana', 'Tarde', 'Nocturna', 'Única', 'Sabatina'] %}
+                                    <option value="{{ s }}" {% if data.get('shift') == s or (not data and grade_data and grade_data.shift == s) %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
 

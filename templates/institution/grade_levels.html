@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Niveles Académicos - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-layers text-primary me-2"></i>Niveles Académicos
+            </h1>
+            <p class="text-muted mb-0">Gestiona los niveles académicos (Primero, Sexto, Once, etc.) por sede</p>
+        </div>
+        <a href="{{ url_for('institution.grade_level_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Nivel
+        </a>
+    </div>
+
+    {% if show_selector|default(false) %}
+    <!-- Institution selector for root users -->
+    <div class="card shadow-sm animate-in" style="border-radius:15px;">
+        <div class="card-body p-4 text-center">
+            <i class="bi bi-building display-4 text-muted"></i>
+            <h5 class="mt-3">Selecciona una Institución</h5>
+            <p class="text-muted">Necesitas seleccionar una institución para ver sus niveles académicos.</p>
+            <a href="{{ url_for('institution.institutions_list') }}" class="btn btn-primary">
+                <i class="bi bi-list me-1"></i>Ver Instituciones
+            </a>
+        </div>
+    </div>
+    {% else %}
+    
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 animate-in" style="border-radius:15px;">
+                <div class="card-body d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width:50px;height:50px;">
+                        <i class="bi bi-layers text-primary" style="font-size:1.3rem;"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 fw-bold">{{ grade_levels|length }}</h4>
+                        <small class="text-muted">Niveles Registrados</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow-sm animate-in" style="border-radius:15px;">
+        <div class="card-body p-4">
+            {% if grade_levels|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="levelsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Orden</th>
+                            <th>Nombre del Nivel</th>
+                            <th>Sede</th>
+                            <th>Cursos Asociados</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for level in grade_levels %}
+                        <tr>
+                            <td><span class="badge bg-light text-dark">{{ level.order_num }}</span></td>
+                            <td>
+                                <strong>{{ level.name }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info bg-opacity-10 text-info">
+                                    <i class="bi bi-building me-1"></i>{{ level.campus.name }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary">
+                                    {{ level.grades.count() }} curso(s)
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('institution.grade_level_edit', id=level.id) }}" 
+                                   class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('institution.grade_level_delete', id=level.id) }}" 
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar el nivel {{ level.name }}?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-layers display-4 text-muted"></i>
+                <h5 class="mt-3 text-muted">No hay niveles académicos</h5>
+                <p class="text-muted">Crea niveles como "Primero", "Sexto", "Once" para agrupar tus cursos.</p>
+                <a href="{{ url_for('institution.grade_level_new') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Crear Primer Nivel
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

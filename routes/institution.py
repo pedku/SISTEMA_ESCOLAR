@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models.institution import Institution, Campus
-from models.academic import Grade, Subject, SubjectGrade
+from models.academic import GradeLevel, Grade, Subject, SubjectGrade
 from models.grading import AcademicPeriod, GradeCriteria
 from models.user import User
 from utils.decorators import role_required
@@ -262,20 +262,6 @@ def institution_delete(id):
         flash('Institución no encontrada.', 'error')
         return redirect(url_for('institution.institutions_list'))
 
-    # Check for related data
-    has_campuses = institution.campuses.count() > 0
-    has_periods = institution.academic_periods.count() > 0
-    has_criteria = institution.grade_criteria.count() > 0
-    has_students = institution.academic_students.count() > 0
-
-    if has_campuses or has_periods or has_criteria or has_students:
-        flash(
-            'No se puede eliminar la institución porque tiene datos asociados '
-            '(sedes, periodos, criterios de evaluación o estudiantes).',
-            'warning'
-        )
-        return redirect(url_for('institution.institutions_list'))
-
     # Delete logo file if exists
     if institution.logo:
         logo_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), institution.logo)
@@ -285,17 +271,13 @@ def institution_delete(id):
     try:
         db.session.delete(institution)
         db.session.commit()
-        flash('Institución eliminada exitosamente.', 'success')
+        flash('Institución eliminada exitosamente junto con todos sus datos asociados.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar la institución: {str(e)}', 'error')
 
     return redirect(url_for('institution.institutions_list'))
 
-
-# ============================================
-# Institution Configuration
-# ============================================
 
 @institution_bp.route('/config', methods=['GET', 'POST'])
 @login_required
@@ -658,6 +640,173 @@ def grades():
                          show_selector=False)
 
 
+# ============================================
+# Grade Levels CRUD (Niveles Académicos)
+# ============================================
+
+@institution_bp.route('/grade-levels')
+@login_required
+@role_required('root', 'admin', 'coordinator')
+def grade_levels():
+    """List all grade levels (niveles académicos)."""
+    institution = get_current_institution()
+
+    if not institution and current_user.is_root():
+        institutions = Institution.query.order_by(Institution.name).all()
+        return render_template('institution/grade_levels.html',
+                             grade_levels=[],
+                             institution=None,
+                             institutions=institutions,
+                             show_selector=True)
+
+    if institution:
+        levels = GradeLevel.query.join(Campus).filter(
+            Campus.institution_id == institution.id
+        ).order_by(GradeLevel.order_num).all()
+    else:
+        levels = GradeLevel.query.order_by(GradeLevel.order_num).all()
+
+    campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+
+    return render_template('institution/grade_levels.html',
+                         grade_levels=levels,
+                         campuses=campuses,
+                         institution=institution,
+                         show_selector=False)
+
+
+@institution_bp.route('/grade-levels/new', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_level_new():
+    """Create a new grade level."""
+    institution = get_current_institution()
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        campus_id = request.form.get('campus_id', type=int)
+        order_num = request.form.get('order_num', 0, type=int)
+
+        errors = {}
+        if not name:
+            errors['name'] = 'El nombre del nivel es obligatorio. Ejemplo: Primero, Sexto, Once'
+        if not campus_id:
+            errors['campus_id'] = 'Debes seleccionar una sede'
+
+        if errors:
+            flash('⚠️ Por favor corrige los errores marcados', 'error')
+            campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+            return render_template('institution/grade_level_form.html',
+                                 level=None,
+                                 campuses=campuses,
+                                 institution=institution,
+                                 form_data={'name': name, 'campus_id': campus_id, 'order_num': order_num},
+                                 errors=errors)
+
+        # Check uniqueness
+        existing = GradeLevel.query.filter_by(campus_id=campus_id, name=name).first()
+        if existing:
+            flash(f'❌ Ya existe el nivel "{name}" en esta sede.', 'error')
+            campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+            return render_template('institution/grade_level_form.html',
+                                 level=None,
+                                 campuses=campuses,
+                                 institution=institution,
+                                 form_data={'name': name, 'campus_id': campus_id, 'order_num': order_num},
+                                 errors={'name': 'Este nivel ya existe en la sede seleccionada'})
+
+        level = GradeLevel(
+            campus_id=campus_id,
+            name=name,
+            order_num=order_num
+        )
+
+        try:
+            db.session.add(level)
+            db.session.commit()
+            flash(f'✅ Nivel "{name}" creado exitosamente.', 'success')
+            return redirect(url_for('institution.grade_levels'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error al crear el nivel: {str(e)}', 'error')
+
+    campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+    return render_template('institution/grade_level_form.html',
+                         level=None,
+                         campuses=campuses,
+                         institution=institution)
+
+
+@institution_bp.route('/grade-levels/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_level_edit(id):
+    """Edit a grade level."""
+    level = db.session.get(GradeLevel, id)
+    if not level:
+        flash('Nivel no encontrado.', 'error')
+        return redirect(url_for('institution.grade_levels'))
+
+    institution = get_current_institution()
+
+    if request.method == 'POST':
+        level.name = request.form.get('name', '').strip()
+        level.order_num = request.form.get('order_num', 0, type=int)
+
+        if not level.name:
+            flash('El nombre del nivel es obligatorio.', 'error')
+            campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+            return render_template('institution/grade_level_form.html',
+                                 level=level, campuses=campuses, institution=institution)
+
+        try:
+            db.session.commit()
+            flash('✅ Nivel actualizado exitosamente.', 'success')
+            return redirect(url_for('institution.grade_levels'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error al actualizar: {str(e)}', 'error')
+
+    campuses = Campus.query.filter_by(institution_id=institution.id, active=True).all() if institution else []
+    return render_template('institution/grade_level_form.html',
+                         level=level, campuses=campuses, institution=institution)
+
+
+@institution_bp.route('/grade-levels/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('root', 'admin')
+def grade_level_delete(id):
+    """Delete a grade level."""
+    level = db.session.get(GradeLevel, id)
+
+    if not level:
+        flash('Nivel no encontrado.', 'error')
+        return redirect(url_for('institution.grade_levels'))
+
+    if level.grades.count() > 0:
+        flash('No se puede eliminar el nivel porque tiene cursos asignados. Elimine o reasigne los cursos primero.', 'warning')
+        return redirect(url_for('institution.grade_levels'))
+
+    try:
+        db.session.delete(level)
+        db.session.commit()
+        flash('Nivel eliminado exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'error')
+
+    return redirect(url_for('institution.grade_levels'))
+
+
+# API endpoint for AJAX - get levels by campus
+@institution_bp.route('/api/grade-levels/<int:campus_id>')
+@login_required
+def api_grade_levels_by_campus(campus_id):
+    """Get grade levels for a campus (AJAX)."""
+    levels = GradeLevel.query.filter_by(campus_id=campus_id).order_by(GradeLevel.order_num).all()
+    return {'levels': [l.to_dict() for l in levels]}
+
+
 @institution_bp.route('/grades/new', methods=['GET', 'POST'])
 @login_required
 @role_required('root', 'admin')
@@ -668,8 +817,10 @@ def grade_new():
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         campus_id = request.form.get('campus_id', type=int)
+        level_id = request.form.get('level_id', type=int)
         director_id = request.form.get('director_id')
         academic_year = request.form.get('academic_year', '2026').strip()
+        shift = request.form.get('shift', 'Mañana')
         max_students = request.form.get('max_students', 40, type=int)
         
         errors = {}
@@ -698,12 +849,15 @@ def grade_new():
                                  grade=None,
                                  campuses=campuses,
                                  teachers=teachers,
+                                 grade_levels=GradeLevel.query.join(Campus).filter(Campus.institution_id == institution.id).order_by(GradeLevel.order_num).all() if institution else [],
                                  institution=institution,
                                  form_data={
                                      'name': name,
                                      'campus_id': campus_id,
+                                     'level_id': level_id,
                                      'director_id': director_id,
                                      'academic_year': academic_year,
+                                     'shift': shift,
                                      'max_students': max_students
                                  },
                                  errors=errors)
@@ -717,9 +871,11 @@ def grade_new():
 
         grade = Grade(
             campus_id=campus.id,
+            level_id=level_id if level_id else None,
             director_id=int(director_id) if director_id else None,
             name=name,
             academic_year=academic_year,
+            shift=shift,
             max_students=max_students
         )
 
@@ -748,6 +904,7 @@ def grade_new():
                                      'campus_id': campus_id,
                                      'director_id': director_id,
                                      'academic_year': academic_year,
+                                     'shift': shift,
                                      'max_students': max_students
                                  },
                                  errors={'general': f'Error inesperado: {str(e)}'})
@@ -760,7 +917,9 @@ def grade_new():
         campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
         teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
 
-    return render_template('institution/grade_form.html', grade=None, campuses=campuses, teachers=teachers, institution=institution)
+    grade_levels_list = GradeLevel.query.join(Campus).filter(Campus.institution_id == institution.id).order_by(GradeLevel.order_num).all() if institution else []
+
+    return render_template('institution/grade_form.html', grade=None, campuses=campuses, teachers=teachers, grade_levels=grade_levels_list, institution=institution)
 
 
 @institution_bp.route('/grades/<int:id>/edit', methods=['GET', 'POST'])
@@ -777,8 +936,10 @@ def grade_edit(id):
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         campus_id = request.form.get('campus_id', type=int)
+        level_id = request.form.get('level_id', type=int)
         director_id = request.form.get('director_id')
         academic_year = request.form.get('academic_year', '2026').strip()
+        shift = request.form.get('shift', grade.shift)
         max_students = request.form.get('max_students', 40, type=int)
 
         errors = {}
@@ -800,14 +961,17 @@ def grade_edit(id):
                                      'campus_id': campus_id,
                                      'director_id': director_id,
                                      'academic_year': academic_year,
+                                     'shift': shift,
                                      'max_students': max_students
                                  },
                                  errors=errors)
 
         grade.campus_id = campus_id
+        grade.level_id = level_id if level_id else None
         grade.director_id = int(director_id) if director_id else None
         grade.name = name
         grade.academic_year = academic_year
+        grade.shift = shift
         grade.max_students = max_students
 
         try:
@@ -834,29 +998,34 @@ def grade_edit(id):
 
     campuses = Campus.query.filter_by(active=True).order_by(Campus.name).all()
     teachers = User.query.filter_by(role='teacher').order_by(User.first_name).all()
+    institution = get_current_institution()
+    grade_levels_list = GradeLevel.query.join(Campus).filter(Campus.institution_id == institution.id).order_by(GradeLevel.order_num).all() if institution else []
 
-    return render_template('institution/grade_form.html', grade=grade, campuses=campuses, teachers=teachers)
+    return render_template('institution/grade_form.html', grade=grade, campuses=campuses, teachers=teachers, grade_levels=grade_levels_list)
 
 
 @institution_bp.route('/grades/<int:id>/delete', methods=['POST'])
 @login_required
 @role_required('root', 'admin')
 def grade_delete(id):
-    """Delete a grade."""
+    """Delete a grade/course. Students are unlinked (not deleted)."""
     grade = db.session.get(Grade, id)
     
     if not grade:
-        flash('Grado no encontrado.', 'error')
-        return redirect(url_for('institution.grades'))
-    
-    if grade.academic_students.count() > 0:
-        flash('No se puede eliminar el grado porque tiene estudiantes asignados.', 'warning')
+        flash('Curso no encontrado.', 'error')
         return redirect(url_for('institution.grades'))
     
     try:
+        # Unlink students from this grade (set grade_id = None)
+        student_count = grade.academic_students.count()
+        if student_count > 0:
+            for student in grade.academic_students.all():
+                student.grade_id = None
+            flash(f'⚠️ {student_count} estudiante(s) fueron desvinculados del curso (siguen en el sistema).', 'info')
+        
         db.session.delete(grade)
         db.session.commit()
-        flash('Grado eliminado exitosamente.', 'success')
+        flash('Curso eliminado exitosamente.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar: {str(e)}', 'error')

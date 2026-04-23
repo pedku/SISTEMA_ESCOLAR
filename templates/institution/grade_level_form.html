@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if level else 'Nuevo' }} Nivel Académico - SIGE{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">
+                <i class="bi bi-layers text-primary me-2"></i>{{ 'Editar' if level else 'Nuevo' }} Nivel Académico
+            </h1>
+            <p class="text-muted mb-0">{{ 'Modifica los datos del nivel' if level else 'Define un nuevo nivel académico (ej: Primero, Sexto, Once)' }}</p>
+        </div>
+        <a href="{{ url_for('institution.grade_levels') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-layers me-2"></i>Datos del Nivel</h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if errors and errors.general is defined %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>{{ errors.general }}
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% set data = form_data if form_data is defined and form_data else {} %}
+
+                        <!-- Campus -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-building text-primary me-1"></i>Sede <span class="text-danger">*</span>
+                            </label>
+                            {% if level %}
+                            <input type="hidden" name="campus_id" value="{{ level.campus_id }}">
+                            <input type="text" class="form-control" value="{{ level.campus.name }}" disabled>
+                            {% else %}
+                            <select name="campus_id" class="form-select {% if errors and errors.campus_id is defined %}is-invalid{% endif %}" required>
+                                <option value="">Seleccione una sede...</option>
+                                {% for campus in campuses %}
+                                <option value="{{ campus.id }}" 
+                                        {% if data.get('campus_id') == campus.id %}selected{% endif %}>
+                                    {{ campus.name }} {% if campus.is_main_campus %}(Principal){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if errors and errors.campus_id is defined %}
+                            <div class="invalid-feedback">{{ errors.campus_id }}</div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-tag text-primary me-1"></i>Nombre del Nivel <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   name="name"
+                                   class="form-control {% if errors and errors.name is defined %}is-invalid{% endif %}"
+                                   value="{{ data.get('name', level.name if level else '') }}"
+                                   placeholder="Ej: Primero, Sexto, Once, Transición"
+                                   required>
+                            {% if errors and errors.name is defined %}
+                            <div class="invalid-feedback">{{ errors.name }}</div>
+                            {% else %}
+                            <div class="form-text">💡 Nombre general del nivel: "Primero", "Sexto", "Once"</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Order -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-sort-numeric-up text-primary me-1"></i>Orden
+                            </label>
+                            <input type="number"
+                                   name="order_num"
+                                   class="form-control"
+                                   value="{{ data.get('order_num', level.order_num if level else 0) }}"
+                                   min="0"
+                                   placeholder="0">
+                            <div class="form-text">💡 Número para ordenar los niveles (0=primero)</div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('institution.grade_levels') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>{{ 'Actualizar' if level else 'Crear' }} Nivel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm animate-in" style="border-radius:15px;">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-info me-2"></i>¿Qué es un Nivel Académico?</h6>
+                    <p class="text-muted small">
+                        Un <strong>nivel académico</strong> representa el grado general de educación, como "Primero", "Sexto" u "Once".
+                    </p>
+                    <p class="text-muted small">
+                        Dentro de cada nivel se crean los <strong>cursos</strong> específicos (ejemplo: "6-01", "6-02"), 
+                        que pueden tener diferentes jornadas (Mañana, Tarde).
+                    </p>
+                    <div class="bg-light rounded p-3 mt-3">
+                        <h6 class="fw-bold small mb-2">📋 Ejemplo de jerarquía:</h6>
+                        <pre class="mb-0 small text-muted">Sede Central
+├── Nivel: Sexto
+│   ├── Curso: 6-01 (Mañana)
+│   └── Curso: 6-02 (Tarde)
+└── Nivel: Once
+    └── Curso: 11-01 (Mañana)</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

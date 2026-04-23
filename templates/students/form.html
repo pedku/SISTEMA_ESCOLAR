@@ -69,7 +69,7 @@
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-8">
                     <label class="form-label fw-semibold">Institución</label>
-                    <select name="institution_id" class="form-select form-select-lg" required>
+                    <select name="institution_id" class="form-select form-select-lg select2" required>
                         <option value="">Seleccionar institución...</option>
                         {% for inst in institutions %}
                         <option value="{{ inst.id }}">{{ inst.name }} {% if inst.nit %}(NIT: {{ inst.nit }}){% endif %}</option>
@@ -214,7 +214,7 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Sede *</label>
-                                <select name="campus_id" class="form-select" required>
+                                <select name="campus_id" class="form-select select2" required>
                                     <option value="">Seleccionar sede...</option>
                                     {% for campus in campuses %}
                                     <option value="{{ campus.id }}" {% if student and student.campus_id == campus.id %}selected{% endif %}>{{ campus.name }}</option>
@@ -223,7 +223,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Grado</label>
-                                <select name="grade_id" class="form-select">
+                                <select name="grade_id" class="form-select select2">
                                     <option value="">Sin asignar</option>
                                     {% for grade in grades %}
                                     <option value="{{ grade.id }}" {% if student and student.grade_id == grade.id %}selected{% endif %}>{{ grade.name }}</option>

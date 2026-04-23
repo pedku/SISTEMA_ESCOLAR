@@ -1,5 +1,5 @@
 """
-Academic models: Grade, Subject, SubjectGrade, AcademicStudent.
+Academic models: GradeLevel, Grade, Subject, SubjectGrade, AcademicStudent.
 Handles the academic structure of the institution.
 """
 
@@ -7,24 +7,62 @@ from datetime import datetime
 from extensions import db
 
 
+class GradeLevel(db.Model):
+    """Academic level (e.g., 'Primero', 'Sexto', 'Once').
+    Groups courses/grades within a campus.
+    Hierarchy: Institution → Campus → GradeLevel → Grade (course).
+    """
+
+    __tablename__ = 'grade_levels'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campus_id = db.Column(db.Integer, db.ForeignKey('campuses.id'), nullable=False, index=True)
+    name = db.Column(db.String(50), nullable=False)  # "Primero", "Sexto", "Once"
+    order_num = db.Column(db.Integer, default=0)  # For sorting levels in order
+
+    # Relationships
+    grades = db.relationship('Grade', backref='level', lazy='dynamic', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('campus_id', 'name', name='uq_gradelevel_campus_name'),
+    )
+
+    def __repr__(self):
+        return f'<GradeLevel {self.name}>'
+
+    def to_dict(self):
+        """Convert grade level to dictionary."""
+        return {
+            'id': self.id,
+            'campus_id': self.campus_id,
+            'name': self.name,
+            'order_num': self.order_num,
+            'course_count': self.grades.count()
+        }
+
+
 class Grade(db.Model):
-    """Grade/Group model (e.g., "6-1", "11°B")."""
+    """Course/Group model (e.g., "6-01", "11°B").
+    Represents a specific group within a GradeLevel.
+    """
     
     __tablename__ = 'grades'
     
     id = db.Column(db.Integer, primary_key=True)
     campus_id = db.Column(db.Integer, db.ForeignKey('campuses.id'), nullable=False, index=True)
+    level_id = db.Column(db.Integer, db.ForeignKey('grade_levels.id', ondelete='SET NULL'), nullable=True, index=True)
     director_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     name = db.Column(db.String(50), nullable=False)
     academic_year = db.Column(db.String(20), nullable=False, index=True)
+    shift = db.Column(db.String(20), default='Mañana', index=True)  # Mañana, Tarde, Nocturna, Única, Sabatina
     max_students = db.Column(db.Integer, default=40)
     
     # Relationships
     subject_grades = db.relationship('SubjectGrade', backref='grade', lazy='dynamic', cascade='all, delete-orphan')
-    academic_students = db.relationship('AcademicStudent', backref='grade', lazy='dynamic', cascade='all, delete-orphan')
+    academic_students = db.relationship('AcademicStudent', backref='grade', lazy='dynamic', cascade='save-update, merge')
     
     __table_args__ = (
-        db.UniqueConstraint('campus_id', 'name', 'academic_year', name='uq_grade_campus_year'),
+        db.UniqueConstraint('campus_id', 'name', 'academic_year', 'shift', name='uq_grade_campus_year_shift'),
     )
     
     def __repr__(self):
@@ -58,7 +96,7 @@ class Subject(db.Model):
     code = db.Column(db.String(20), index=True)
 
     # Relationships
-    institution = db.relationship('Institution', backref='subjects', foreign_keys=[institution_id])
+    institution = db.relationship('Institution', backref=db.backref('subjects', lazy='dynamic', cascade='all, delete-orphan'), foreign_keys=[institution_id])
     subject_grades = db.relationship('SubjectGrade', backref='subject', lazy='dynamic', cascade='all, delete-orphan')
 
     __table_args__ = (
@@ -87,6 +125,7 @@ class SubjectGrade(db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False, index=True)
     grade_id = db.Column(db.Integer, db.ForeignKey('grades.id'), nullable=False, index=True)
     teacher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    hours_per_week = db.Column(db.Integer, default=4)
     
     # Relationships
     grade_records = db.relationship('GradeRecord', backref='subject_grade', lazy='dynamic', cascade='all, delete-orphan')
@@ -125,7 +164,7 @@ class AcademicStudent(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
     institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=False, index=True)
     campus_id = db.Column(db.Integer, db.ForeignKey('campuses.id'), nullable=False, index=True)
-    grade_id = db.Column(db.Integer, db.ForeignKey('grades.id'), index=True)
+    grade_id = db.Column(db.Integer, db.ForeignKey('grades.id', ondelete='SET NULL'), nullable=True, index=True)
     document_type = db.Column(db.String(20), default='TI')
     document_number = db.Column(db.String(30), unique=True, index=True)
     birth_date = db.Column(db.Date)
@@ -143,7 +182,6 @@ class AcademicStudent(db.Model):
     status = db.Column(db.String(20), default='activo', index=True)  # activo, retirado, graduado
     
     # Relationships
-    campus = db.relationship('Campus', lazy=True)
     # grade relationship is provided via backref from Grade.academic_students
     grade_records = db.relationship('GradeRecord', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     final_grades = db.relationship('FinalGrade', backref='student', lazy='dynamic', cascade='all, delete-orphan')
@@ -153,6 +191,8 @@ class AcademicStudent(db.Model):
     report_cards = db.relationship('ReportCard', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     achievements = db.relationship('StudentAchievement', backref='student', lazy='dynamic', cascade='all, delete-orphan')
     parent_students = db.relationship('ParentStudent', backref='student', lazy='dynamic', cascade='all, delete-orphan')
+    alerts = db.relationship('Alert', lazy='dynamic', cascade='all, delete-orphan')
+    enrollments = db.relationship('StudentEnrollment', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<AcademicStudent {self.user.username if self.user else self.id}>'

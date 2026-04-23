@@ -19,14 +19,14 @@ class Config:
     DATABASE_PORT = os.getenv('DATABASE_PORT', '5432')
     DATABASE_NAME = os.getenv('DATABASE_NAME', 'sistema_escolar')
     
-    # Use PostgreSQL by default, but fallback to SQLite for testing
-    USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
+    # Set USE_POSTGRES=True in .env to use PostgreSQL, otherwise uses SQLite
+    USE_POSTGRES = os.getenv('USE_POSTGRES', 'False') == 'True'
     
-    if USE_SQLITE:
+    if USE_POSTGRES:
+        SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+    else:
         basedir = os.path.abspath(os.path.dirname(__file__))
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(basedir, "sistema_escolar.db")}'
-    else:
-        SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

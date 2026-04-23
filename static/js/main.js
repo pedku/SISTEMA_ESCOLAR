@@ -162,6 +162,21 @@ $(document).ready(function() {
         }
     });
 
+    // ============================================
+    // Initialize Select2
+    // ============================================
+    if ($.fn.select2) {
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "No se encontraron resultados";
+                }
+            }
+        });
+    }
+
 });
 
 // ============================================

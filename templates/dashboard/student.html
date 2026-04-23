@@ -93,6 +93,66 @@
             </a>
         </div>
     </div>
++
++    <!-- Weekly Schedule -->
++    <div class="card shadow-sm border-0 animate-in delay-2 mb-4" style="border-radius:15px;">
++        <div class="card-header bg-white border-bottom py-3">
++            <h5 class="mb-0 fw-bold"><i class="bi bi-calendar3 text-primary me-2"></i>Mi Horario de Clases</h5>
++        </div>
++        <div class="card-body p-4">
++            {% if blocks %}
++            <div class="table-responsive">
++                <table class="table table-bordered text-center align-middle">
++                    <thead class="bg-light">
++                        <tr>
++                            <th style="width: 15%;">Hora</th>
++                            {% for day in ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] %}
++                            <th>{{ day }}</th>
++                            {% endfor %}
++                        </tr>
++                    </thead>
++                    <tbody>
++                        {% for block in blocks %}
++                        <tr>
++                            <td class="bg-light fw-bold small">
++                                {{ block.start_time.strftime('%H:%M') }} - {{ block.end_time.strftime('%H:%M') }}
++                                {% if block.is_break %}
++                                <br><span class="badge bg-warning text-dark">Descanso</span>
++                                {% endif %}
++                            </td>
++                            {% for day_idx in range(5) %}
++                            {% set slot = schedule_data.get((day_idx, block.start_time.strftime('%H:%M'))) %}
++                            <td class="{% if block.is_break %}bg-warning bg-opacity-10{% endif %}" style="height: 80px; min-width: 120px;">
++                                {% if slot %}
++                                <div class="p-2 rounded bg-primary bg-opacity-10 h-100 d-flex flex-column justify-content-center">
++                                    <div class="fw-bold text-primary small">{{ slot.subject_grade.subject.name }}</div>
++                                    <div class="text-muted" style="font-size: 0.7rem;">
++                                        <i class="bi bi-person me-1"></i>{{ slot.subject_grade.teacher_user.first_name }}
++                                    </div>
++                                    <div class="text-muted" style="font-size: 0.7rem;">
++                                        <i class="bi bi-geo-alt me-1"></i>{{ slot.classroom.name }}
++                                    </div>
++                                </div>
++                                {% elif block.is_break %}
++                                <span class="text-muted small">--</span>
++                                {% else %}
++                                <span class="text-muted" style="opacity: 0.3;">-</span>
++                                {% endif %}
++                            </td>
++                            {% endfor %}
++                        </tr>
++                        {% endfor %}
++                    </tbody>
++                </table>
++            </div>
++            {% else %}
++            <div class="text-center py-4">
++                <i class="bi bi-calendar-x text-muted fs-1 mb-2"></i>
++                <p class="text-muted">No se ha generado el horario para tu grado todavía.</p>
++            </div>
++            {% endif %}
++        </div>
++    </div>
 
     {% else %}
     <div class="card shadow-sm border-0 animate-in" style="border-radius:15px;">

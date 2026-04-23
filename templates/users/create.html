@@ -266,7 +266,7 @@
                                 <label class="form-label fw-semibold">
                                     <i class="bi bi-building me-1 text-warning"></i>Institución
                                 </label>
-                                <select name="institution_id" class="form-select">
+                                <select name="institution_id" class="form-select select2">
                                     <option value="">Sin institución asignada</option>
                                     {% for inst in institutions %}
                                     <option value="{{ inst.id }}">{{ inst.name }}</option>

@@ -15,6 +15,7 @@ from models.academic import Grade, Subject, SubjectGrade, AcademicStudent
 from models.grading import AcademicPeriod, GradeCriteria, GradeRecord, FinalGrade, AnnualGrade
 from utils.decorators import login_required, role_required
 from utils.institution_resolver import get_current_institution, get_institution_grades, get_institution_subjects
+from services.grade_calculator import GradeCalculatorService
 
 grades_bp = Blueprint('grades', __name__)
 
@@ -275,9 +276,9 @@ def grade_input_form(sg_id, period_id):
         # Calculate and save final grades for each student
         final_count = 0
         for student in students:
-            final_score = _calculate_final_grade(student.id, sg_id, period_id, criteria)
+            final_score = GradeCalculatorService.calculate_final_grade(student.id, sg_id, period_id, criteria)
             if final_score is not None:
-                _save_final_grade(student.id, sg_id, period_id, final_score)
+                GradeCalculatorService.save_final_grade(student.id, sg_id, period_id, final_score)
                 final_count += 1
 
         db.session.commit()
@@ -457,136 +458,19 @@ def grade_upload():
         file_path = os.path.join(excel_folder, file.filename)
         file.save(file_path)
 
-        try:
-            # Read Excel
-            df = pd.read_excel(file_path)
-
-            # Get students in this grade
-            students = AcademicStudent.query.filter_by(
-                grade_id=subject_grade.grade_id,
-                status='activo'
-            ).join(User).all()
-
-            # Build student lookup by document number
-            student_lookup = {}
-            for s in students:
-                student_lookup[s.document_number.strip().lower()] = s
-
-            saved_count = 0
-            error_count = 0
-            errors = []
-
-            # Process each row
-            for index, row in df.iterrows():
-                try:
-                    # Find student by document number
-                    doc_number = str(row.get('documento', '')).strip().lower()
-                    if not doc_number:
-                        # Try by name
-                        first_name = str(row.get('nombre', '')).strip().lower()
-                        last_name = str(row.get('apellido', '')).strip().lower()
-                        if first_name and last_name:
-                            user = User.query.filter(
-                                db.and_(
-                                    db.func.lower(User.first_name) == first_name,
-                                    db.func.lower(User.last_name) == last_name
-                                )
-                            ).first()
-                            if user:
-                                student = AcademicStudent.query.filter_by(user_id=user.id).first()
-                            else:
-                                errors.append(f"Fila {index + 2}: Estudiante no encontrado por nombre")
-                                error_count += 1
-                                continue
-                        else:
-                            errors.append(f"Fila {index + 2}: Documento o nombre requeridos")
-                            error_count += 1
-                            continue
-                    elif doc_number in student_lookup:
-                        student = student_lookup[doc_number]
-                    else:
-                        errors.append(f"Fila {index + 2}: Estudiante con documento {doc_number} no encontrado en el grado")
-                        error_count += 1
-                        continue
-
-                    # Save grades for each criterion
-                    for criterion in criteria:
-                        # Try different column name formats
-                        col_name = criterion.name.lower().strip()
-                        score_str = None
-                        for key in [col_name, col_name.replace(' ', '_'), col_name.replace(' ', ''), criterion.name]:
-                            val = row.get(key)
-                            if val is not None and str(val).strip():
-                                score_str = str(val).strip()
-                                break
-
-                        if score_str:
-                            try:
-                                score = round(float(score_str), 1)
-                                if score < MIN_GRADE or score > MAX_GRADE:
-                                    errors.append(f"Fila {index + 2}: Nota de {criterion.name} fuera de rango ({score})")
-                                    error_count += 1
-                                    continue
-
-                                # Check if record exists and is not locked
-                                existing = GradeRecord.query.filter_by(
-                                    student_id=student.id,
-                                    subject_grade_id=sg_id,
-                                    period_id=period_id,
-                                    criterion_id=criterion.id
-                                ).first()
-
-                                if existing and existing.locked:
-                                    errors.append(f"Fila {index + 2}: Notas bloqueadas para {student.user.get_full_name()}")
-                                    error_count += 1
-                                    continue
-
-                                if existing:
-                                    existing.score = score
-                                else:
-                                    new_record = GradeRecord(
-                                        student_id=student.id,
-                                        subject_grade_id=sg_id,
-                                        period_id=period_id,
-                                        criterion_id=criterion.id,
-                                        score=score,
-                                        created_by=current_user.id,
-                                        locked=False
-                                    )
-                                    db.session.add(new_record)
-
-                                saved_count += 1
-                            except (ValueError, TypeError):
-                                errors.append(f"Fila {index + 2}: Valor invalido para {criterion.name}: '{score_str}'")
-                                error_count += 1
-
-                except Exception as e:
-                    errors.append(f"Fila {index + 2}: Error - {str(e)}")
-                    error_count += 1
-                    db.session.rollback()
-
-            # Calculate final grades
-            final_count = 0
-            for student in students:
-                final_score = _calculate_final_grade(student.id, sg_id, period_id, criteria)
-                if final_score is not None:
-                    _save_final_grade(student.id, sg_id, period_id, final_score)
-                    final_count += 1
-
-            db.session.commit()
-
-            msg = f'{saved_count} notas guardadas desde Excel. {final_count} notas finales calculadas.'
-            if errors:
-                msg += f' {len(errors)} errores.'
+        from services.excel_handler import ExcelHandlerService
+        result = ExcelHandlerService.process_grade_upload(file_path, institution, sg_id, period_id, current_user)
+        
+        if result['success']:
+            msg = f"{result['saved_count']} notas guardadas desde Excel. {result['final_count']} notas finales calculadas."
+            if result.get('errors'):
+                msg += f" {result['error_count']} errores."
                 flash(msg, 'warning')
             else:
                 flash(msg, 'success')
-
             return redirect(url_for('grades.grade_input_form', sg_id=sg_id, period_id=period_id))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al procesar el archivo: {str(e)}', 'error')
+        else:
+            flash(f"Error al procesar el archivo: {result.get('error', 'Desconocido')}", 'error')
 
     return render_template(
         'grades/upload.html',
@@ -746,9 +630,9 @@ def final_grades_view(sg_id, period_id):
         # Recalculate all final grades
         calculated = 0
         for student in students:
-            final_score = _calculate_final_grade(student.id, sg_id, period_id, criteria)
+            final_score = GradeCalculatorService.calculate_final_grade(student.id, sg_id, period_id, criteria)
             if final_score is not None:
-                _save_final_grade(student.id, sg_id, period_id, final_score)
+                GradeCalculatorService.save_final_grade(student.id, sg_id, period_id, final_score)
                 calculated += 1
 
         db.session.commit()
@@ -835,38 +719,7 @@ def annual_grades_view(sg_id):
 
     # Calculate and save annual grades
     for student in students:
-        period_scores = []
-        for period in periods:
-            final = FinalGrade.query.filter_by(
-                student_id=student.id,
-                subject_grade_id=sg_id,
-                period_id=period.id
-            ).first()
-            if final and final.final_score:
-                period_scores.append(final.final_score)
-
-        if period_scores:
-            annual_score = round(sum(period_scores) / len(period_scores), 2)
-            status = 'aprobado' if annual_score >= PASSING_GRADE else 'reprobado'
-
-            existing = AnnualGrade.query.filter_by(
-                student_id=student.id,
-                subject_grade_id=sg_id,
-                academic_year=institution.academic_year
-            ).first()
-
-            if existing:
-                existing.annual_score = annual_score
-                existing.status = status
-            else:
-                new_annual = AnnualGrade(
-                    student_id=student.id,
-                    subject_grade_id=sg_id,
-                    academic_year=institution.academic_year,
-                    annual_score=annual_score,
-                    status=status
-                )
-                db.session.add(new_annual)
+        GradeCalculatorService.calculate_and_save_annual_grades(student.id, sg_id, periods, institution.academic_year)
 
     db.session.commit()
 
@@ -1143,64 +996,3 @@ def grade_summary(sg_id, period_id):
 # ============================================
 # Helper Functions
 # ============================================
-
-def _calculate_final_grade(student_id, sg_id, period_id, criteria):
-    """
-    Calculate final grade for a student in a subject-grade/period.
-    Formula: sum(score * weight/100) for each criterion.
-    Returns the calculated score or None if insufficient data.
-    """
-    total_weight = sum(c.weight for c in criteria)
-    if total_weight == 0:
-        return None
-
-    weighted_sum = 0.0
-    weight_applied = 0.0
-
-    for criterion in criteria:
-        record = GradeRecord.query.filter_by(
-            student_id=student_id,
-            subject_grade_id=sg_id,
-            period_id=period_id,
-            criterion_id=criterion.id
-        ).first()
-
-        if record and record.score is not None:
-            weighted_sum += record.score * (criterion.weight / 100)
-            weight_applied += criterion.weight
-
-    if weight_applied == 0:
-        return None
-
-    # Normalize to 100% if not all criteria have grades
-    final_score = round((weighted_sum / weight_applied) * 100, 2) if weight_applied < total_weight else round(weighted_sum, 2)
-
-    # Clamp to valid range
-    final_score = max(MIN_GRADE, min(MAX_GRADE, final_score))
-
-    return round(final_score, 2)
-
-
-def _save_final_grade(student_id, sg_id, period_id, final_score):
-    """Save or update the final grade for a student."""
-    existing = FinalGrade.query.filter_by(
-        student_id=student_id,
-        subject_grade_id=sg_id,
-        period_id=period_id
-    ).first()
-
-    status = 'ganada' if final_score >= PASSING_GRADE else 'perdida'
-
-    if existing:
-        existing.final_score = final_score
-        existing.status = status
-        existing.calculated_at = datetime.utcnow()
-    else:
-        new_final = FinalGrade(
-            student_id=student_id,
-            subject_grade_id=sg_id,
-            period_id=period_id,
-            final_score=final_score,
-            status=status
-        )
-        db.session.add(new_final)

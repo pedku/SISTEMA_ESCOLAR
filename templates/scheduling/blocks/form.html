@@ -39,6 +39,14 @@
                                value="{{ block.name if block else '' }}"
                                placeholder="Ej: Bloque 1, Recreo, Almuerzo">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Jornada <span class="text-danger">*</span></label>
+                        <select name="shift" class="form-select" required>
+                            {% for s in ['Mañana', 'Tarde', 'Nocturna', 'Única', 'Sabatina'] %}
+                            <option value="{{ s }}" {% if block and block.shift == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Hora Inicio <span class="text-danger">*</span></label>
                         <input type="time" name="start_time" class="form-control" required 

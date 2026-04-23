@@ -27,7 +27,7 @@
                     <!-- Grade Selection -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Grado <span class="text-danger">*</span></label>
-                        <select name="grade_id" class="form-select" required id="gradeSelect">
+                        <select name="grade_id" class="form-select select2" required id="gradeSelect">
                             <option value="">Seleccione un grado</option>
                             {% for grade in grades %}
                             <option value="{{ grade.id }}">{{ grade.name }}</option>
@@ -38,7 +38,7 @@
                     <!-- Students Selection -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Estudiantes <span class="text-danger">*</span></label>
-                        <select name="student_ids" class="form-select" multiple required id="studentsSelect" size="8">
+                        <select name="student_ids" class="form-select select2" multiple required id="studentsSelect" size="8">
                             <!-- Students will be loaded via AJAX -->
                             <option value="">Seleccione un grado primero</option>
                         </select>

@@ -148,6 +148,7 @@ def teacher_dashboard():
     """Dashboard for teachers."""
     from models.institution import Campus
     from models.academic import SubjectGrade
+    from services.teacher_analytics import TeacherAnalyticsService
 
     institution = get_current_institution()
 
@@ -158,18 +159,26 @@ def teacher_dashboard():
             .join(Campus) \
             .filter(Campus.institution_id == institution.id) \
             .all()
+        academic_year = institution.academic_year
     else:
         # Root without active institution sees all
         subject_grades = current_user.subject_grades.all()
+        academic_year = None
 
     # Get student count for teacher's classes filtered by institution
     total_students = 0
     for sg in subject_grades:
         total_students += sg.grade.academic_students.filter_by(status='activo').count()
 
+    # Teacher Analytics
+    stats = TeacherAnalyticsService.get_teacher_stats(current_user.id, academic_year)
+    action_plans = TeacherAnalyticsService.generate_action_plans(stats)
+
     return render_template('dashboard/teacher.html',
                           subject_grades=subject_grades,
-                          total_students=total_students)
+                          total_students=total_students,
+                          stats=stats,
+                          action_plans=action_plans)
 
 
 @dashboard_bp.route('/dashboard/student')
@@ -204,9 +213,34 @@ def student_dashboard():
             FinalGrade.calculated_at.desc()
         ).limit(10).all()
 
+    from models.scheduling import Schedule, ScheduleBlock
+    
+    # Get schedule and blocks
+    blocks = []
+    schedule_data = {}
+    if academic_student.grade_id:
+        grade = db.session.get(Grade, academic_student.grade_id)
+        if grade:
+            blocks = ScheduleBlock.query.filter_by(
+                campus_id=grade.campus_id,
+                shift=grade.shift,
+                academic_year=grade.academic_year
+            ).order_by(ScheduleBlock.order_num).all()
+            
+            schedules = Schedule.query.join(SubjectGrade).filter(
+                SubjectGrade.grade_id == grade.id,
+                Schedule.is_active == True
+            ).all()
+            
+            for s in schedules:
+                key = (s.day_of_week, s.start_time.strftime('%H:%M'))
+                schedule_data[key] = s
+
     return render_template('dashboard/student.html',
                           academic_student=academic_student,
-                          final_grades=final_grades)
+                          final_grades=final_grades,
+                          blocks=blocks,
+                          schedule_data=schedule_data)
 
 
 @dashboard_bp.route('/dashboard/parent')

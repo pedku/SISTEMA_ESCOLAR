@@ -23,138 +23,253 @@
     
     <div class="row">
         <!-- Student Photo & Basic Info -->
-        <div class="col-md-4 mb-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <i class="bi bi-person-circle text-primary" style="font-size: 6rem;"></i>
+        <div class="col-md-3 mb-4">
+            <div class="card text-center shadow-sm border-0 animate-in" style="border-radius: 15px;">
+                <div class="card-body py-4">
+                    <div class="mb-3 position-relative d-inline-block">
+                        <i class="bi bi-person-circle text-primary" style="font-size: 5rem;"></i>
+                        <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success border border-white border-2">
+                            <i class="bi bi-check"></i>
+                        </span>
                     </div>
-                    <h3 class="card-title">{{ student.user.get_full_name() }}</h3>
-                    <p class="text-muted mb-1">
-                        <i class="bi bi-hash"></i> {{ student.document_number }}
+                    <h5 class="fw-bold mb-1">{{ student.user.get_full_name() }}</h5>
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-person-badge me-1"></i>{{ student.document_type }} {{ student.document_number }}
                     </p>
-                    <p class="mb-3">
+                    
+                    <div class="d-grid gap-2">
                         {% if student.status == 'activo' %}
-                        <span class="badge bg-success">Estudiante Activo</span>
+                        <span class="badge bg-success-soft text-success py-2">Activo</span>
                         {% elif student.status == 'retirado' %}
-                        <span class="badge bg-warning">Estudiante Retirado</span>
+                        <span class="badge bg-danger-soft text-danger py-2">Retirado</span>
                         {% else %}
-                        <span class="badge bg-info">Estudiante Graduado</span>
+                        <span class="badge bg-info-soft text-info py-2">Graduado</span>
                         {% endif %}
-                    </p>
+                    </div>
                     
-                    <hr>
+                    <hr class="my-4 opacity-50">
                     
-                    <div class="text-start">
-                        <p class="mb-2"><strong>Usuario:</strong> {{ student.user.username }}</p>
-                        <p class="mb-2"><strong>Email:</strong> {{ student.user.email }}</p>
-                        <p class="mb-2"><strong>Teléfono:</strong> {{ student.user.phone or 'N/A' }}</p>
+                    <div class="text-start small">
+                        <p class="mb-2 text-muted"><i class="bi bi-person me-2"></i><strong>Usuario:</strong><br><span class="text-dark">{{ student.user.username }}</span></p>
+                        <p class="mb-2 text-muted"><i class="bi bi-envelope me-2"></i><strong>Email:</strong><br><span class="text-dark">{{ student.user.email }}</span></p>
+                        <p class="mb-0 text-muted"><i class="bi bi-telephone me-2"></i><strong>Teléfono:</strong><br><span class="text-dark">{{ student.user.phone or 'N/A' }}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm border-0 mt-4 animate-in delay-1" style="border-radius: 15px;">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3 small text-uppercase text-muted">Acciones</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('observations.quick_observation', student_id=student.id) }}" class="btn btn-sm btn-outline-info text-start">
+                            <i class="bi bi-chat-left-text me-2"></i>Observación
+                        </a>
+                        <a href="{{ url_for('attendance.student_attendance_history', student_id=student.id) }}" class="btn btn-sm btn-outline-success text-start">
+                            <i class="bi bi-calendar-check me-2"></i>Asistencia
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-primary text-start">
+                            <i class="bi bi-file-earmark-text me-2"></i>Boletines
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Academic Information -->
-        <div class="col-md-8 mb-4">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-mortarboard"></i> Información Académica</h5>
+        <!-- Main Content (Tabs) -->
+        <div class="col-md-9 mb-4">
+            <div class="card shadow-sm border-0 animate-in delay-2" style="border-radius: 15px;">
+                <div class="card-header bg-white border-0 pt-3 px-4">
+                    <ul class="nav nav-pills card-header-pills" id="studentTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+                                <i class="bi bi-info-circle me-1"></i>Información
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">
+                                <i class="bi bi-calendar-week me-1"></i>Horario
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="guardians-tab" data-bs-toggle="tab" data-bs-target="#guardians" type="button" role="tab">
+                                <i class="bi bi-people me-1"></i>Acudientes
+                            </button>
+                        </li>
+                    </ul>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <strong>Sede:</strong><br>
-                            {{ student.campus.name if student.campus else 'N/A' }}
+                <div class="card-body p-4">
+                    <div class="tab-content" id="studentTabContent">
+                        <!-- Info Tab -->
+                        <div class="tab-pane fade show active" id="info" role="tabpanel">
+                            <h6 class="fw-bold mb-4 border-bottom pb-2">Información Académica</h6>
+                            <div class="row g-4 mb-5">
+                                <div class="col-md-6">
+                                    <label class="text-muted small d-block mb-1">Sede</label>
+                                    <div class="fw-semibold text-dark">
+                                        <i class="bi bi-building me-2 text-primary"></i>{{ student.campus.name if student.campus else 'N/A' }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small d-block mb-1">Curso / Grado</label>
+                                    <div class="fw-semibold text-dark">
+                                        <i class="bi bi-journal-bookmark me-2 text-success"></i>
+                                        {% if student.grade %}
+                                        <span class="badge bg-primary-soft text-primary">{{ student.grade.name }}</span>
+                                        {% else %}
+                                        <span class="text-muted">Sin curso asignado</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Fecha de Nacimiento</label>
+                                    <div class="text-dark">{{ student.birth_date.strftime('%d/%m/%Y') if student.birth_date else 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Género</label>
+                                    <div class="text-dark">{{ student.gender or 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Tipo de Sangre</label>
+                                    <div class="badge bg-danger bg-opacity-10 text-danger border-danger border-opacity-25 border">{{ student.blood_type or 'N/A' }}</div>
+                                </div>
+                            </div>
+
+                            <h6 class="fw-bold mb-4 border-bottom pb-2">Información de Contacto y Salud</h6>
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <label class="text-muted small d-block mb-1">Dirección de Residencia</label>
+                                    <div class="text-dark">{{ student.address or 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Barrio / Sector</label>
+                                    <div class="text-dark">{{ student.neighborhood or 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Estrato</label>
+                                    <div class="text-dark">{{ student.stratum or 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="text-muted small d-block mb-1">EPS</label>
+                                    <div class="text-dark"><i class="bi bi-hospital me-2 text-info"></i>{{ student.eps or 'N/A' }}</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Grado:</strong><br>
+                        
+                        <!-- Schedule Tab -->
+                        <div class="tab-pane fade" id="schedule" role="tabpanel">
                             {% if student.grade %}
-                            <span class="badge bg-primary">{{ student.grade.name }}</span>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="fw-bold mb-0">Horario Semanal: {{ student.grade.name }}</h6>
+                                    <a href="{{ url_for('scheduling.schedule_list', grade_id=student.grade_id) }}" class="btn btn-sm btn-link text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver en pantalla completa
+                                    </a>
+                                </div>
+                                
+                                {% if schedules %}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm schedule-preview-table">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th style="width: 80px;" class="small text-center py-2">Hora</th>
+                                                {% for day in days %}
+                                                <th class="small text-center py-2">{{ day }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% set time_slots = schedules | map(attribute='start_time') | unique | sort %}
+                                            {% for time in time_slots %}
+                                            <tr>
+                                                <td class="small fw-bold text-center bg-light align-middle">
+                                                    {{ time.strftime('%H:%M') }}
+                                                </td>
+                                                {% for day_idx in range(5) %}
+                                                <td class="p-1" style="min-width: 120px; height: 60px; vertical-align: top;">
+                                                    {% if day_idx in schedule_grid and time.strftime('%H:%M') in schedule_grid[day_idx] %}
+                                                        {% set sch = schedule_grid[day_idx][time.strftime('%H:%M')] %}
+                                                        <div class="h-100 p-2 rounded shadow-xs border-start border-3 border-primary bg-primary bg-opacity-10">
+                                                            <div class="fw-bold small text-truncate" title="{{ sch.subject_grade.subject.name }}">
+                                                                {{ sch.subject_grade.subject.name }}
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.7rem;">
+                                                                <i class="bi bi-person me-1"></i>{{ sch.subject_grade.teacher_user.last_name if sch.subject_grade.teacher_user else 'Profe' }}
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.7rem;">
+                                                                <i class="bi bi-door-open me-1"></i>{{ sch.classroom.name if sch.classroom else 'Aula' }}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-5 bg-light rounded" style="border: 2px dashed #dee2e6;">
+                                    <i class="bi bi-calendar-x display-4 text-muted"></i>
+                                    <p class="text-muted mt-3 mb-0">No hay un horario generado para este curso todavía.</p>
+                                    <small class="text-muted">Contacta con coordinación académica.</small>
+                                </div>
+                                {% endif %}
                             {% else %}
-                            <span class="text-muted">Sin asignar</span>
+                            <div class="text-center py-5 bg-light rounded" style="border: 2px dashed #dee2e6;">
+                                <i class="bi bi-journal-x display-4 text-muted"></i>
+                                <p class="text-muted mt-3 mb-0">El estudiante no está asignado a ningún curso.</p>
+                                <p class="small text-muted">Asigne un curso en la pestaña de edición para ver el horario.</p>
+                            </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <strong>Fecha de Nacimiento:</strong><br>
-                            {{ student.birth_date.strftime('%d/%m/%Y') if student.birth_date else 'N/A' }}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <strong>Género:</strong><br>
-                            {{ student.gender or 'N/A' }}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <strong>Tipo de Sangre:</strong><br>
-                            {{ student.blood_type or 'N/A' }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Dirección:</strong><br>
-                            {{ student.address or 'N/A' }}
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <strong>Barrio:</strong><br>
-                            {{ student.neighborhood or 'N/A' }}
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <strong>Estrato:</strong><br>
-                            {{ student.stratum or 'N/A' }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>EPS:</strong><br>
-                            {{ student.eps or 'N/A' }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Guardian Information -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-people"></i> Información del Acudiente</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <strong>Nombre:</strong><br>
-                            {{ student.guardian_name or 'N/A' }}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <strong>Teléfono:</strong><br>
-                            {{ student.guardian_phone or 'N/A' }}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <strong>Email:</strong><br>
-                            {{ student.guardian_email or 'N/A' }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Quick Actions -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-2">
-                            <a href="#" class="btn btn-outline-primary w-100">
-                                <i class="bi bi-pencil-square"></i> Ver Notas
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <a href="{{ url_for('attendance.student_attendance_history', student_id=student.id) }}" class="btn btn-outline-success w-100">
-                                <i class="bi bi-calendar-check"></i> Ver Asistencia
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <a href="{{ url_for('observations.student_observations', student_id=student.id) }}" class="btn btn-outline-info w-100">
-                                <i class="bi bi-chat-left-text"></i> Observaciones
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <a href="#" class="btn btn-outline-warning w-100">
-                                <i class="bi bi-file-earmark-text"></i> Boletines
-                            </a>
+                        
+                        <!-- Guardians Tab -->
+                        <div class="tab-pane fade" id="guardians" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold mb-0">Información de Acudientes</h6>
+                                {% if user_has_any_role('root', 'admin') %}
+                                <a href="{{ url_for('students.assign_parent', id=student.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-person-plus me-1"></i>Gestionar
+                                </a>
+                                {% endif %}
+                            </div>
+
+                            <div class="row g-4">
+                                <!-- Main Guardian Card -->
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light p-3 h-100">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="bi bi-person-heart text-info"></i>
+                                            </div>
+                                            <h6 class="mb-0 fw-bold">Acudiente Principal</h6>
+                                        </div>
+                                        <p class="mb-2"><strong>Nombre:</strong> {{ student.guardian_name or 'N/A' }}</p>
+                                        <p class="mb-2"><strong>Teléfono:</strong> {{ student.guardian_phone or 'N/A' }}</p>
+                                        <p class="mb-0 text-truncate"><strong>Email:</strong> {{ student.guardian_email or 'N/A' }}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Linked Users Cards -->
+                                {% for ps in student.parent_students %}
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-white shadow-xs border-start border-4 border-info p-3 h-100">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="bi bi-person-check text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold">{{ ps.parent_user.get_full_name() }}</h6>
+                                                <span class="badge bg-info-soft text-info small">{{ ps.relationship }}</span>
+                                            </div>
+                                        </div>
+                                        <p class="mb-2 small"><strong>Usuario:</strong> {{ ps.parent_user.username }}</p>
+                                        <p class="mb-2 small"><strong>Teléfono:</strong> {{ ps.parent_user.phone or 'N/A' }}</p>
+                                        <p class="mb-0 small text-truncate"><strong>Email:</strong> {{ ps.parent_user.email }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>

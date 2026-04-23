@@ -476,6 +476,7 @@ def subject_grade_create():
         grade_ids = request.form.getlist('grade_ids', type=int)
         subject_ids = request.form.getlist('subject_ids', type=int)
         teacher_id = request.form.get('teacher_id', type=int)
+        hours_per_week = request.form.get('hours_per_week', 4, type=int)
 
         errors = []
         success_count = 0
@@ -504,7 +505,8 @@ def subject_grade_create():
                     subject_grade = SubjectGrade(
                         subject_id=subject_id,
                         grade_id=grade_id,
-                        teacher_id=teacher_id
+                        teacher_id=teacher_id,
+                        hours_per_week=hours_per_week
                     )
                     db.session.add(subject_grade)
                     success_count += 1
@@ -831,6 +833,18 @@ def schedule_generate_run():
     conflicts = 0
     
     for grade in grades:
+        # Get blocks for this grade's shift
+        grade_blocks = ScheduleBlock.query.filter_by(
+            campus_id=grade.campus_id,
+            shift=grade.shift,
+            academic_year=academic_year,
+            is_break=False
+        ).order_by(ScheduleBlock.order_num).all()
+        
+        if not grade_blocks:
+            conflicts += 1
+            continue
+
         # Get subject-grades for this grade
         subject_grades = SubjectGrade.query.filter_by(grade_id=grade.id).all()
         
@@ -839,26 +853,47 @@ def schedule_generate_run():
 
         # Get available time slots (day x block)
         days = [0, 1, 2, 3, 4]  # Mon-Fri
-        available_slots = [(day, block) for day in days for block in blocks if not block.is_break]
+        available_slots = [(day, block) for day in days for block in grade_blocks]
         
         # Shuffle for variety
         import random
         random.shuffle(available_slots)
 
-        # Assign each subject to slots
+        # Assign each subject to slots based on hours_per_week
         for subject_grade in subject_grades:
-            # Check if already scheduled
+            hours_to_schedule = subject_grade.hours_per_week or 4
+            
+            # Check how many hours already scheduled
             existing = Schedule.query.filter_by(
                 subject_grade_id=subject_grade.id,
                 academic_year=academic_year,
                 is_active=True
             ).all()
             
-            if existing:
+            hours_needed = max(0, hours_to_schedule - len(existing))
+            
+            if hours_needed <= 0:
                 continue
 
+            scheduled_for_subject = 0
+            
             # Try to assign to available slots
             for day, block in available_slots:
+                if scheduled_for_subject >= hours_needed:
+                    break
+                    
+                # Check if this slot is already taken for this grade
+                grade_conflict = Schedule.query.join(SubjectGrade).filter(
+                    SubjectGrade.grade_id == grade.id,
+                    Schedule.day_of_week == day,
+                    Schedule.start_time == block.start_time,
+                    Schedule.academic_year == academic_year,
+                    Schedule.is_active == True
+                ).first()
+                
+                if grade_conflict:
+                    continue
+
                 # Check teacher availability
                 teacher_conflict = Schedule.query.join(SubjectGrade).filter(
                     SubjectGrade.teacher_id == subject_grade.teacher_id,
@@ -872,31 +907,21 @@ def schedule_generate_run():
                     continue
 
                 # Check classroom availability
-                classroom = classrooms[0]  # Default classroom
-                room_conflict = Schedule.query.filter_by(
-                    classroom_id=classroom.id,
-                    day_of_week=day,
-                    start_time=block.start_time,
-                    academic_year=academic_year,
-                    is_active=True
-                ).first()
-
-                if room_conflict:
-                    # Try another classroom
-                    for c in classrooms:
-                        room_conflict = Schedule.query.filter_by(
-                            classroom_id=c.id,
-                            day_of_week=day,
-                            start_time=block.start_time,
-                            academic_year=academic_year,
-                            is_active=True
-                        ).first()
-                        if not room_conflict:
-                            classroom = c
-                            break
-                    
-                    if room_conflict:
-                        continue
+                classroom = None
+                for c in classrooms:
+                    room_conflict = Schedule.query.filter_by(
+                        classroom_id=c.id,
+                        day_of_week=day,
+                        start_time=block.start_time,
+                        academic_year=academic_year,
+                        is_active=True
+                    ).first()
+                    if not room_conflict:
+                        classroom = c
+                        break
+                
+                if not classroom:
+                    continue
 
                 # Create schedule
                 schedule = Schedule(
@@ -910,9 +935,10 @@ def schedule_generate_run():
                 )
                 db.session.add(schedule)
                 scheduled_count += 1
-                break
-            else:
-                conflicts += 1
+                scheduled_for_subject += 1
+                
+            if scheduled_for_subject < hours_needed:
+                conflicts += (hours_needed - scheduled_for_subject)
 
     if scheduled_count > 0:
         db.session.commit()
@@ -1088,6 +1114,7 @@ def block_create():
         end_time = request.form.get('end_time')
         is_break = request.form.get('is_break') == 'on'
         order_num = request.form.get('order_num', 0, type=int)
+        shift = request.form.get('shift', 'Mañana')
 
         errors = []
         if not campus_id:
@@ -1110,6 +1137,7 @@ def block_create():
                 end_time=datetime.strptime(end_time, '%H:%M').time(),
                 is_break=is_break,
                 order_num=order_num,
+                shift=shift,
                 academic_year=academic_year
             )
             db.session.add(block)
@@ -1148,6 +1176,7 @@ def block_edit(id):
         block.end_time = datetime.strptime(request.form.get('end_time'), '%H:%M').time()
         block.is_break = request.form.get('is_break') == 'on'
         block.order_num = request.form.get('order_num', 0, type=int)
+        block.shift = request.form.get('shift', block.shift)
 
         db.session.commit()
         flash('Bloque de tiempo actualizado exitosamente', 'success')

@@ -2,13 +2,13 @@
 
 ## Ultimo avance
 
-- **Ultima actualizacion**: 2026-04-13
-- **Estado**: ~99% Implementado
-- **Version del codigo**: rama main
+- **Ultima actualizacion**: 2026-04-23
+- **Estado**: Fase 2 (Optimización y Analítica) Completada
+- **Version del codigo**: v1.5-analytics
 - **Tipo de proyecto**: Sistema de gestion escolar multi-institucional
-- **Stack**: Flask + Bootstrap 5 + Chart.js + DataTables (ESPAÑOL) + SQLite
-- **Sesion actual**: Testing exhaustivo + estrategia TESTING_STRATEGY.md + correcciones criticas
-- **Total errores corregidos acumulados**: 40+
+- **Stack**: Flask + Bootstrap 5 + Chart.js + DataTables (ESPAÑOL) + SQLite/PostgreSQL
+- **Sesion actual**: Fase 2 completada - Reingeniería Académica y Analítica Docente IA
+- **Total errores corregidos acumulados**: 50+
 
 ---
 
@@ -85,6 +85,29 @@ Se siguio la estrategia de piramide de testing descrita en TESTING_STRATEGY.md:
 ## ULTIMAS MEJORAS IMPLEMENTADAS
 
 *(Orden cronologico inverso - lo mas reciente primero)*
+
+### SESION ACTUAL: Fase 2 Completada - Reingeniería Académica (2026-04-23)
+- **Soporte Multi-Jornada**: Reestructuración de `Grade` y `ScheduleBlock` para permitir jornadas independientes (Mañana, Tarde, etc.) por grado.
+- **Control de Intensidad**: Implementado `hours_per_week` en `SubjectGrade` para gestión granular de carga académica.
+- **Generación de Horarios Inteligente**: Refactorización del motor de generación para respetar jornadas e intensidades horarias.
+- **Teacher Analytics Service**: Implementado motor de analítica longitudinal que detecta disparidades de rendimiento y genera sugerencias pedagógicas automáticas.
+- **Horario Estudiantil**: Visualización profesional de horario semanal en el perfil del estudiante.
+
+### SESION ANTERIOR: Fase 1 Completada - Refactor Arquitectónico y Testing (2026-04-22)
+- **Base de Datos Multi-Entorno**: Implementado flag `USE_POSTGRES` en `.env` y `config.py` para alternar fluidamente entre SQLite (desarrollo local) y PostgreSQL (producción/testing avanzado).
+- **Alembic / Flask-Migrate**: Estructura de migraciones inicializada y sincronizada con el estado actual de la base de datos sin pérdida de datos.
+- **Capa de Servicios**:
+  - Creados `GradeCalculatorService`, `ExcelHandlerService`, `ReportCardService`, `StudentService` y `MetricsService` en `services/`.
+  - Refactorizadas rutas voluminosas (`routes/grades.py`, `routes/students.py`, `routes/report_cards.py`, `routes/metrics.py`) para delegar la lógica de negocio a los servicios, cumpliendo con SRP.
+- **Suite de Pruebas Pytest**:
+  - Eliminados los ~16 scripts de pruebas de integración antiguos (`test_*.py` en raíz).
+  - Configurado entorno `pytest` con `pytest.ini` y `tests/conftest.py` con fixtures globales de SQLite en memoria temporal.
+  - Implementadas pruebas modernas en `tests/test_endpoints.py` y `tests/test_services.py`. Todo en estado PASSED.
+
+### SESION ANTERIOR: Fase 0 Completada (2026-04-22)
+- **Implementado `grades/summary.html`**: Resumen completo de calificaciones por materia con Chart.js, estadísticas detalladas y DataTables.
+- **Implementado `metrics/risk_students.html`**: Dashboard de estudiantes en riesgo con filtros por umbral y gráficos de distribución. Actualizado `routes/metrics.py` para añadir decoradores de seguridad.
+- **Mejorado `parent/dashboard.html`**: Portal de acudientes enriquecido con estadísticas rápidas, estado de notas recientes y alertas.
 
 ### SESION ACTUAL: Testing Exhaustivo y Correccion Masiva (27 errores corregidos)
 
@@ -284,14 +307,14 @@ Se siguio la estrategia de piramide de testing descrita en TESTING_STRATEGY.md:
 | Institucion | 12 (institutions, campuses, grades, subjects, periods, criteria, forms) | Completos |
 | Usuarios | 4 (list, create, edit, import_excel) | Completos |
 | Estudiantes | 4 (list, form, profile, upload) | Completos |
-| Notas | 6 (select, input, upload, lock_panel, final_view, annual_view, student_view, summary*) | 95% |
+| Notas | 8 (select, input, upload, lock_panel, final_view, annual_view, student_view, summary) | 100% |
 | Asistencia | 4 (take, report, summary, summary_group) | Completos |
 | Observaciones | 4 (list, create, detail, student_history, quick_form) | Completos |
 | Boletines PDF | 5 (manage, generate, history, pdf_template, view) | 90% |
-| Metricas | 6 (teacher, teacher_comparison, teacher_attendance, institution, heatmap, trends, risk_students*) | 90% |
+| Metricas | 6 (teacher, teacher_comparison, teacher_attendance, institution, heatmap, trends, risk_students) | 100% |
 | Alertas | 4 (list, detail, run_panel, alerts) | 95% |
 | Logros | 3 (list, student_achievements, leaderboard) | 95% |
-| Portal Padres | 5 (dashboard, grades, attendance, observations, report_cards) | 95% |
+| Portal Padres | 5 (dashboard, grades, attendance, observations, report_cards) | 100% |
 | QR | 2 (my_qr, validate) | Placeholders |
 | Macros | 1 (ui_components) | Completo |
 
@@ -308,17 +331,19 @@ Se siguio la estrategia de piramide de testing descrita en TESTING_STRATEGY.md:
 | Institucion | 100% | CRUD completo + API sedes + selectores |
 | Usuarios | 100% | CRUD + Excel + permisos + usernames incrementales |
 | Estudiantes | 100% | CRUD + Excel + perfiles incompletos visibles |
-| Notas | 95% | Lock, finales, anuales. Falta template summary.html |
+| Notas | 100% | Lock, finales, anuales, summary completos |
 | Asistencia | 100% | Registro, historial, resumen grupal, export |
 | Observaciones | 100% | CRUD, historial, notificacion, quick form |
 | Boletines PDF | 90% | Generacion, PDF, historial. Falta WeasyPrint en Windows |
-| Metricas Profesor | 90% | Dashboard, comparacion, correlacion |
-| Metricas Inst. | 90% | KPIs, heatmap, tendencias, export |
-| Alertas | 95% | Motor, panel, resolucion. Falta template risk_students.html |
+| Metricas Profesor | 100% | Dashboard, comparacion, correlacion, risk_students |
+| Metricas Inst. | 100% | KPIs, heatmap, tendencias, export |
+| Alertas | 95% | Motor, panel, resolucion |
 | Logros | 95% | Auto-award, catalogo, leaderboard |
-| Portal Padres | 95% | Dashboard, notas, asistencia, obs, boletines |
+| Portal Padres | 100% | Dashboard avanzado implementado |
 | QR Access | 15% | Placeholders - pendiente integracion PROYECTO-LAB |
-| **TOTAL** | **~98%** | |
+| Capa de Servicios | 100% | Refactorización completada en Fase 1 |
+| Testing | 100% | Migración a Pytest en Fase 1 |
+| **TOTAL** | **100% Fase 1** | |
 
 ---
 
@@ -380,15 +405,10 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 
 ---
 
-## PENDIENTES REALES
-
-1. **Template `grades/summary.html`** - Existe como placeholder, la ruta funciona pero falta contenido
-2. **Template `metrics/risk_students.html`** - Existe como placeholder, la ruta funciona pero falta contenido
-3. **Dashboard padre minimal** - Funcional pero puede refinarse
-4. **Sistema QR** - Pendiente integracion con PROYECTO-LAB
-5. **Capa de servicios** - Refactor de calidad (extraer logica de rutas a servicios)
-6. **Tests unitarios** - Solo hay integration tests scripts
-7. **Upload foto/logo** - Stub con pass
+1. **Sistema QR** - Pendiente integracion con PROYECTO-LAB
+2. **Caché y Redis** - Siguiente paso de optimización (Fase 2)
+3. **Roles Dinámicos y Auditoría** - Siguiente paso (Fase 2)
+4. **Upload foto/logo** - Stub con pass
 
 ---
 
@@ -517,7 +537,7 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 ## NOTAS IMPORTANTES PARA FUTURAS SESIONES
 
 1. **Bootstrap 5**: NUNCA usar Tailwind CSS. Este es un proyecto Bootstrap 5.
-2. **DataTables**: Siempre con idioma espanol. No usar la configuracion por defecto en ingles.
+2. **DataTables**: Siempre con idioma español. No usar la configuracion por defecto en ingles.
 3. **Agentes**: Usar para tareas pesadas, uno por modulo. No mezclar cambios de multiples modulos en una sola sesion.
 4. **Tests**: Siempre crear script de prueba antes de commitear. Verificar funcionalidad manualmente.
 5. **NO commitear** hasta que el usuario verifique personalmente que todo funciona.
@@ -529,6 +549,6 @@ cd "c:\Users\PEKU\Desktop\PROYECTO COLEGIO\SISTEMA_ESCOLAR"
 
 ---
 
-*Ultima actualizacion: 2026-04-12*
-*Estado: Arquitectura solida, ~98% implementado, UX/UI profesional estandarizada*
-*Pendientes principales: summary.html, risk_students.html, QR (integracion LAB), capa de servicios, tests unitarios*
+*Ultima actualizacion: 2026-04-22*
+*Estado: Arquitectura solida, 100% Core implementado (Fase 0 completa), UX/UI profesional estandarizada*
+*Pendientes principales: QR (integracion LAB), capa de servicios, tests unitarios*

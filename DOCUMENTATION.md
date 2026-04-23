@@ -2,9 +2,9 @@
 
 ## Sistema Integral de Gestión Escolar
 
-> **Versión**: ~99% implementado | **Rama**: main | **Última actualización**: 2026-04-13
+> **Versión**: 1.5 - Soporte Multi-jornada y Analíticas | **Rama**: main | **Última actualización**: 2026-04-23
 > **Stack**: Python 3 + Flask + Bootstrap 5 + Chart.js + DataTables + SQLite
-> **Total errores corregidos**: 40+ | **Testing**: Pirámide de 4 fases validada
+> **Total errores corregidos**: 50+ | **Testing**: Pirámide de 4 fases validada + Pytest
 
 ---
 
@@ -59,6 +59,14 @@ sistema_escolar/
 │   ├── parent.py                   # Portal de acudientes
 │   ├── qr.py                       # Acceso QR (placeholder)
 │   └── scheduling.py               # Matrícula, asignación de profesores, generación de horarios
+│
+├── services/                       # Capa de servicios (SRP)
+│   ├── grade_calculator.py         # Cálculos de notas
+│   ├── excel_handler.py            # Manejo de Excel
+│   ├── report_card_service.py      # Generación de boletines
+│   ├── student_service.py          # CRUD estudiantes
+│   ├── metrics_service.py          # Estadísticas institucionales
+│   └── teacher_analytics.py        # Analítica avanzada y sugerencias IA
 │
 ├── utils/                          # 12 utilidades
 │   ├── decorators.py               # @role_required, @login_required
@@ -118,14 +126,14 @@ sistema_escolar/
 | Modelo | Tabla | Campos Clave |
 |--------|-------|-------------|
 | **Institution** | `institutions` | name, nit, address, municipality, department, academic_year |
-| **Campus** | `campuses` | institution_id, name, code, jornada, is_main_campus, active |
+| **Campus** | `campuses` | institution_id, name, code, is_main_campus, active |
 
 ### Estructura Académica
 | Modelo | Tabla | Campos Clave |
 |--------|-------|-------------|
-| **Grade** | `grades` | campus_id, director_id, name, academic_year, max_students |
+| **Grade** | `grades` | campus_id, director_id, name, academic_year, max_students, shift |
 | **Subject** | `subjects` | institution_id, name, code |
-| **SubjectGrade** | `subject_grades` | subject_id, grade_id, teacher_id (unique triple) |
+| **SubjectGrade** | `subject_grades` | subject_id, grade_id, teacher_id, hours_per_week (default 4) |
 | **AcademicStudent** | `academic_students` | user_id (unique), institution_id, campus_id, grade_id, document_number, status |
 | **ParentStudent** | `parent_students` | parent_id, student_id, relationship (unique pair) |
 
@@ -156,7 +164,7 @@ sistema_escolar/
 | **StudentEnrollment** | `student_enrollments` | student_id, subject_grade_id, academic_year, status, enrollment_date |
 | **TeacherSubjectAssignment** | `teacher_subject_assignments` | subject_grade_id, teacher_id, academic_year, status, assignment_date |
 | **Schedule** | `schedules` | subject_grade_id, classroom_id, day_of_week, start_time, end_time, academic_year |
-| **ScheduleBlock** | `schedule_blocks` | campus_id, name, start_time, end_time, is_break, order_num, academic_year |
+| **ScheduleBlock** | `schedule_blocks` | campus_id, name, start_time, end_time, is_break, order_num, shift (Mañana/Tarde/...), academic_year |
 
 ---
 
@@ -563,16 +571,13 @@ print(f"\nResultados: {passed} passed, {failed} failed, {passed+failed} total")
 ### Pendientes de Baja Prioridad
 | # | Tarea | Esfuerzo | Notas |
 |---|-------|----------|-------|
-| 1 | Template `grades/summary.html` | 30 min | Ruta funciona, solo falta contenido completo |
-| 2 | Template `metrics/risk_students.html` | 30 min | Ruta funciona, solo falta contenido completo |
-| 3 | Dashboard padre más completo | 1 hora | Funcional pero minimal |
-| 4 | Sistema QR | Variable | Requiere integración con PROYECTO-LAB |
-| 5 | Capa de servicios | Refactor | Extraer lógica de rutas a services/ |
-| 6 | Tests con pytest | Variable | Framework de testing con cobertura |
-| 7 | Upload foto/logo | 30 min | Implementar stubs con `pass` |
-| 8 | Habilitar CSRF globalmente | 1h | Descomentar `csrf.init_app(app)` en app.py |
-| 9 | AJAX CSRF en institutions_list.html | 30 min | Agregar header X-CSRFToken en $.ajax |
-| 10 | Migraciones Alembic | 4h | Reemplazar scripts one-off por cadena de migraciones |
+| 1 | Sistema QR | Variable | Requiere integración con PROYECTO-LAB |
+| 2 | Capa de servicios | Refactor | Extraer lógica de rutas a services/ |
+| 3 | Tests con pytest | Variable | Framework de testing con cobertura |
+| 4 | Upload foto/logo | 30 min | Implementar stubs con `pass` |
+| 5 | Habilitar CSRF globalmente | 1h | Descomentar `csrf.init_app(app)` en app.py |
+| 6 | AJAX CSRF en institutions_list.html | 30 min | Agregar header X-CSRFToken en $.ajax |
+| 7 | Migraciones Alembic | 4h | Reemplazar scripts one-off por cadena de migraciones |
 
 ### Correcciones de Seguridad Aplicadas (Sesión 2026-04-13)
 - 44 formularios POST recibieron `{{ csrf_token() }}` (login, password, users, institution, grades, observations, alerts, achievements)
@@ -631,3 +636,4 @@ print(f"\nResultados: {passed} passed, {failed} failed, {passed+failed} total")
 ---
 
 **Generado**: 2026-04-12 | **Mantener actualizado en cada sesión**
+**Última actualización**: 2026-04-22 (Fase 0 completada: summary, risk_students y parent dashboard implementados)

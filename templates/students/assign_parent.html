@@ -45,7 +45,7 @@
                         
                         <div class="mb-3">
                             <label class="form-label">Seleccionar Acudiente</label>
-                            <select name="parent_id" class="form-select" required>
+                            <select name="parent_id" class="form-select select2" required>
                                 <option value="">-- Seleccione un acudiente --</option>
                                 {% for parent in parents %}
                                     {% set already_assigned = parent.id in assigned_parents|map(attribute='parent_id')|list %}
@@ -59,7 +59,7 @@
                             {% if parents|length == 0 %}
                             <div class="form-text text-danger">
                                 <i class="bi bi-exclamation-triangle"></i> No hay acudientes creados en la institución.
-                                <a href="{{ url_for('users.new') }}" class="text-decoration-none">Crear acudiente primero</a>
+                                <a href="{{ url_for('users.user_create', role='parent') }}" class="text-decoration-none">Crear acudiente primero</a>
                             </div>
                             {% endif %}
                         </div>
