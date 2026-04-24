@@ -2,9 +2,9 @@
 
 ## Ultimo avance
 
-- **Ultima actualizacion**: 2026-04-23
-- **Estado**: Fase 2 (Optimización y Analítica) Completada
-- **Version del codigo**: v1.5-analytics
+- **Ultima actualizacion**: 2026-04-24
+- **Estado**: Fase 2 (Optimización y Analítica) Completada - Fase 3 en curso
+- **Version del codigo**: v1.6-multi-jornada
 - **Tipo de proyecto**: Sistema de gestion escolar multi-institucional
 - **Stack**: Flask + Bootstrap 5 + Chart.js + DataTables (ESPAÑOL) + SQLite/PostgreSQL
 - **Sesion actual**: Fase 2 completada - Reingeniería Académica y Analítica Docente IA
@@ -86,12 +86,24 @@ Se siguio la estrategia de piramide de testing descrita en TESTING_STRATEGY.md:
 
 *(Orden cronologico inverso - lo mas reciente primero)*
 
-### SESION ACTUAL: Fase 2 Completada - Reingeniería Académica (2026-04-23)
+### SESION ACTUAL: Fase 3 Completada - Integración QR (2026-04-24)
+- **Sistema de Identidad**: Generación y gestión de tokens QR únicos para usuarios.
+- **Protocolo de Validación**: Endpoint compatible con PROYECTO-LAB (`POST /qr/validate`).
+- **Lógica de Acceso**: Validación dinámica cruzada con `Schedules` y `Classrooms`.
+- **Panel de Monitoreo**: Registro de auditoría centralizado para administradores.
+- **Herramientas**: Simulador de escaneo exclusivo para usuario ROOT.
+
+### SESION ANTERIOR: Fase 2 Completada - Reingeniería Académica (2026-04-23)
 - **Soporte Multi-Jornada**: Reestructuración de `Grade` y `ScheduleBlock` para permitir jornadas independientes (Mañana, Tarde, etc.) por grado.
 - **Control de Intensidad**: Implementado `hours_per_week` en `SubjectGrade` para gestión granular de carga académica.
 - **Generación de Horarios Inteligente**: Refactorización del motor de generación para respetar jornadas e intensidades horarias.
 - **Teacher Analytics Service**: Implementado motor de analítica longitudinal que detecta disparidades de rendimiento y genera sugerencias pedagógicas automáticas.
 - **Horario Estudiantil**: Visualización profesional de horario semanal en el perfil del estudiante.
+- **Modernización Académica (Multi-Sede/Multi-Jornada)**: 
+  - Independencia de perfiles de estudiantes (AcademicStudent persiste sin necesidad de curso).
+  - Jerarquía estructurada: Institución → Sede → Grado Nivel → Curso (Grade).
+  - Soporte para jornadas (Shifts) por curso y bloques horarios diferenciados.
+  - Corrección de errores críticos en perfiles vinculados (relación parent_user).
 
 ### SESION ANTERIOR: Fase 1 Completada - Refactor Arquitectónico y Testing (2026-04-22)
 - **Base de Datos Multi-Entorno**: Implementado flag `USE_POSTGRES` en `.env` y `config.py` para alternar fluidamente entre SQLite (desarrollo local) y PostgreSQL (producción/testing avanzado).

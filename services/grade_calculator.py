@@ -22,7 +22,8 @@ class GradeCalculatorService:
         Formula: sum(score * weight/100) for each criterion.
         Returns the calculated score or None if insufficient data.
         """
-        total_weight = sum(c.weight for c in criteria)
+        total_weight = sum(float(c.weight) for c in criteria)
+        print(f"DEBUG: total_weight={total_weight} type={type(total_weight)}")
         if total_weight == 0:
             return None
 
@@ -38,17 +39,20 @@ class GradeCalculatorService:
             ).first()
 
             if record and record.score is not None:
-                weighted_sum += record.score * (criterion.weight / 100)
-                weight_applied += criterion.weight
+                s = float(record.score)
+                w = float(criterion.weight)
+                print(f"DEBUG: student={student_id} criterion={criterion.id} score={s}({type(s)}) weight={w}({type(w)})")
+                weighted_sum += s * (w / 100.0)
+                weight_applied += w
 
         if weight_applied == 0:
             return None
 
         # Normalize to 100% if not all criteria have grades
-        if weight_applied < total_weight:
-            final_score = round((weighted_sum / weight_applied) * 100, 2)
+        if float(weight_applied) < float(total_weight):
+            final_score = round((float(weighted_sum) / float(weight_applied)) * 100.0, 2)
         else:
-            final_score = round(weighted_sum, 2)
+            final_score = round(float(weighted_sum), 2)
 
         # Clamp to valid range
         final_score = max(cls.MIN_GRADE, min(cls.MAX_GRADE, final_score))
@@ -91,7 +95,7 @@ class GradeCalculatorService:
                 period_id=period.id
             ).first()
             if final and final.final_score is not None:
-                period_scores.append(final.final_score)
+                period_scores.append(float(final.final_score))
 
         if period_scores:
             annual_score = round(sum(period_scores) / len(period_scores), 2)

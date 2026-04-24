@@ -165,19 +165,13 @@ class AcademicStudent(db.Model):
     institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=False, index=True)
     campus_id = db.Column(db.Integer, db.ForeignKey('campuses.id'), nullable=False, index=True)
     grade_id = db.Column(db.Integer, db.ForeignKey('grades.id', ondelete='SET NULL'), nullable=True, index=True)
-    document_type = db.Column(db.String(20), default='TI')
-    document_number = db.Column(db.String(30), unique=True, index=True)
-    birth_date = db.Column(db.Date)
-    address = db.Column(db.String(200))
     neighborhood = db.Column(db.String(100))
     stratum = db.Column(db.Integer)
-    gender = db.Column(db.String(10))
     blood_type = db.Column(db.String(5))
     eps = db.Column(db.String(100))
     guardian_name = db.Column(db.String(150))
     guardian_phone = db.Column(db.String(20))
     guardian_email = db.Column(db.String(100))
-    photo = db.Column(db.String(200))
     enrolled_year = db.Column(db.String(20))
     status = db.Column(db.String(20), default='activo', index=True)  # activo, retirado, graduado
     
@@ -211,13 +205,8 @@ class AcademicStudent(db.Model):
             'institution_id': self.institution_id,
             'campus_id': self.campus_id,
             'grade_id': self.grade_id,
-            'document_type': self.document_type,
-            'document_number': self.document_number,
-            'birth_date': self.birth_date.isoformat() if self.birth_date else None,
-            'address': self.address,
             'neighborhood': self.neighborhood,
             'stratum': self.stratum,
-            'gender': self.gender,
             'blood_type': self.blood_type,
             'eps': self.eps,
             'guardian_name': self.guardian_name,

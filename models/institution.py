@@ -29,7 +29,7 @@ class Institution(db.Model):
     campuses = db.relationship('Campus', backref='institution', lazy='dynamic', cascade='all, delete-orphan')
     academic_periods = db.relationship('AcademicPeriod', backref='institution', lazy='dynamic', cascade='all, delete-orphan')
     grade_criteria = db.relationship('GradeCriteria', backref='institution', lazy='dynamic', cascade='all, delete-orphan')
-    academic_students = db.relationship('AcademicStudent', backref='institution', lazy='dynamic', cascade='save-update, merge')
+    academic_students = db.relationship('AcademicStudent', backref='institution', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Institution {self.name}>'
@@ -72,7 +72,7 @@ class Campus(db.Model):
     grade_levels = db.relationship('GradeLevel', backref='campus', lazy='dynamic', cascade='all, delete-orphan')
     classrooms = db.relationship('Classroom', backref='campus', lazy='dynamic', cascade='all, delete-orphan')
     schedule_blocks = db.relationship('ScheduleBlock', backref='campus', lazy='dynamic', cascade='all, delete-orphan')
-    academic_students = db.relationship('AcademicStudent', backref='campus', lazy='dynamic', cascade='save-update, merge')
+    academic_students = db.relationship('AcademicStudent', backref='campus', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Campus {self.name}>'

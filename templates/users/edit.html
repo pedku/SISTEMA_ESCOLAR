@@ -117,6 +117,15 @@
                                        value="{{ user.birth_date.strftime('%Y-%m-%d') if user.birth_date else '' }}" 
                                        class="form-control">
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Género</label>
+                                <select name="gender" class="form-select">
+                                    <option value="" {% if not user.gender %}selected{% endif %}>No especificado</option>
+                                    <option value="M" {% if user.gender == 'M' %}selected{% endif %}>Masculino</option>
+                                    <option value="F" {% if user.gender == 'F' %}selected{% endif %}>Femenino</option>
+                                    <option value="Otro" {% if user.gender == 'Otro' %}selected{% endif %}>Otro</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -133,10 +142,10 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    <i class="bi bi-envelope me-1 text-success"></i>Email <span class="text-danger">*</span>
+                                    <i class="bi bi-envelope me-1 text-success"></i>Email
                                 </label>
-                                <input type="email" name="email" required 
-                                       value="{{ user.email }}" 
+                                <input type="email" name="email"
+                                       value="{{ user.email or '' }}" 
                                        class="form-control">
                             </div>
                             <div class="col-md-6">

@@ -16,12 +16,12 @@ class TeacherAnalyticsService:
         stats = []
         for sg in sgs:
             # Average grade from FinalGrade table
-            avg_grade = db.session.query(func.avg(FinalGrade.value)).filter_by(subject_grade_id=sg.id).scalar() or 0
+            avg_grade = db.session.query(func.avg(FinalGrade.final_score)).filter_by(subject_grade_id=sg.id).scalar() or 0
             
             # Count students failing (grade < 3.0)
             failing_count = db.session.query(func.count(FinalGrade.id)).filter(
                 FinalGrade.subject_grade_id == sg.id, 
-                FinalGrade.value < 3.0
+                FinalGrade.final_score < 3.0
             ).scalar() or 0
             
             # Total students with final grades

@@ -125,25 +125,25 @@ def user_create():
             errors['first_name'] = 'El nombre es obligatorio'
         if not last_name:
             errors['last_name'] = 'El apellido es obligatorio'
-        if not email:
-            errors['email'] = 'El email es obligatorio'
-        elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            errors['email'] = 'El correo electrónico no tiene un formato válido'
+        
+        # Email is optional, but if provided, must be valid
+        if email:
+            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+                errors['email'] = 'El correo electrónico no tiene un formato válido'
+            elif User.query.filter_by(email=email).first():
+                errors['email'] = 'El correo electrónico ya está registrado'
+        # Check role
         if not role:
             errors['role'] = 'El rol es obligatorio'
         
         # Non-root users cannot create root or admin roles
         if not current_user.is_root():
             if role in ['root', 'admin']:
-                errors['role'] = 'Solo el usuario root puede crear administradores. Contacta a root para crear un admin.'
-                # Override the role to prevent bypassing
+                errors['role'] = 'Solo el usuario root puede crear administradores.'
                 role = 'coordinator'
-        if not document_number:
-            errors['document_number'] = 'El número de documento es obligatorio (se usa como contraseña inicial)'
 
-        # Check email uniqueness
-        if email and User.query.filter_by(email=email).first():
-            errors['email'] = 'El correo electrónico ya está registrado'
+        if not document_number:
+            errors['document_number'] = 'El número de documento es obligatorio'
 
         # Check document number uniqueness
         if document_number and User.query.filter_by(document_number=document_number).first():
@@ -182,7 +182,7 @@ def user_create():
         # Create user
         user = User(
             username=username,
-            email=email,
+            email=email or None,
             password_hash=generate_password_hash(default_password),
             first_name=first_name,
             last_name=last_name,
@@ -190,12 +190,14 @@ def user_create():
             institution_id=final_institution_id,
             document_type=document_type,
             document_number=document_number,
+            birth_date=datetime.strptime(request.form.get('birth_date'), '%Y-%m-%d').date() if request.form.get('birth_date') else None,
+            gender=request.form.get('gender'),
             phone=request.form.get('phone', '').strip() or None,
             address=request.form.get('address', '').strip() or None,
             department=request.form.get('department', '').strip() or None,
             municipality=request.form.get('municipality', '').strip() or None,
             country=request.form.get('country', 'Colombia'),
-            must_change_password=True,  # Force password change on first login
+            must_change_password=True,
             is_active=True
         )
         
@@ -279,9 +281,11 @@ def user_edit(id):
     if request.method == 'POST':
         user.first_name = request.form.get('first_name', '').strip()
         user.last_name = request.form.get('last_name', '').strip()
-        user.email = request.form.get('email', '').strip()
+        user.email = request.form.get('email', '').strip() or None
         user.document_type = request.form.get('document_type', 'CC')
         user.document_number = request.form.get('document_number', '').strip() or None
+        user.birth_date = datetime.strptime(request.form.get('birth_date'), '%Y-%m-%d').date() if request.form.get('birth_date') else None
+        user.gender = request.form.get('gender')
         user.phone = request.form.get('phone', '').strip() or None
         user.address = request.form.get('address', '').strip() or None
         

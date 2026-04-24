@@ -9,6 +9,7 @@ from models.observation import Observation
 from models.report import ReportCard, ReportCardObservation
 from models.achievement import Achievement, StudentAchievement
 from models.alert import Alert
+from models.qr_access import QRToken, QRAccessLog
 
 __all__ = [
     'User',
@@ -31,5 +32,7 @@ __all__ = [
     'ReportCardObservation',
     'Achievement',
     'StudentAchievement',
-    'Alert'
+    'Alert',
+    'QRToken',
+    'QRAccessLog'
 ]

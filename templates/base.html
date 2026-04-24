@@ -206,7 +206,15 @@
                     {% endif %}
 
                     <!-- QR Access -->
-                    <li class="{% if is_active_route('/qr') %}active{% endif %}">
+                    {% if user_has_any_role('root', 'admin', 'coordinator') %}
+                    <li class="{% if is_active_route('/qr/validate') %}active{% endif %}">
+                        <a href="{{ url_for('qr.validate_view') }}">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Monitoreo QR</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="{% if is_active_route('/qr/my-qr') %}active{% endif %}">
                         <a href="{{ url_for('qr.my_qr') }}">
                             <i class="bi bi-qr-code"></i>
                             <span>Mi Código QR</span>

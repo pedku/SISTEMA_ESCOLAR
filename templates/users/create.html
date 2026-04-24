@@ -146,6 +146,17 @@
                                        value="{{ form_data.birth_date if form_data else '' }}"
                                        class="form-control">
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-gender-ambiguous me-1 text-primary"></i>Género
+                                </label>
+                                <select name="gender" class="form-select">
+                                    <option value="" {% if not form_data or not form_data.gender %}selected{% endif %}>No especificado</option>
+                                    <option value="M" {% if form_data and form_data.gender == 'M' %}selected{% endif %}>Masculino</option>
+                                    <option value="F" {% if form_data and form_data.gender == 'F' %}selected{% endif %}>Femenino</option>
+                                    <option value="Otro" {% if form_data and form_data.gender == 'Otro' %}selected{% endif %}>Otro</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -162,12 +173,12 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">
-                                    <i class="bi bi-envelope me-1 text-success"></i>Correo Electrónico <span class="text-danger">*</span>
+                                    <i class="bi bi-envelope me-1 text-success"></i>Correo Electrónico
                                 </label>
-                                <input type="email" name="email" required
+                                <input type="email" name="email"
                                        value="{{ form_data.email if form_data else '' }}"
                                        class="form-control {% if errors and errors.email %}is-invalid{% endif %}"
-                                       placeholder="usuario@ejemplo.com">
+                                       placeholder="usuario@ejemplo.com (Opcional)">
                                 {% if errors and errors.email %}
                                 <div class="invalid-feedback">
                                     <i class="bi bi-exclamation-circle me-1"></i>{{ errors.email }}

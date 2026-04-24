@@ -16,25 +16,27 @@ class User(UserMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=True, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     document_type = db.Column(db.String(20), default='CC')  # CC, TI, RC, Pasaporte
     document_number = db.Column(db.String(30), unique=True, index=True)
+    birth_date = db.Column(db.Date)
+    gender = db.Column(db.String(10))
     phone = db.Column(db.String(20))
     address = db.Column(db.String(200))
-    country = db.Column(db.String(50), default='Colombia')
+    country = db.Column(db.String(50))
     department = db.Column(db.String(100))
     municipality = db.Column(db.String(100))
     role = db.Column(db.String(20), nullable=False, index=True)  # root, admin, coordinator, teacher, student, parent, viewer
     institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'), nullable=True, index=True)
     photo = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
-    must_change_password = db.Column(db.Boolean, default=True)
+    must_change_password = db.Column(db.Boolean)
     last_login = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     # Institution relationship
@@ -146,6 +148,8 @@ class User(UserMixin, db.Model):
             'institution_name': self.institution.name if self.institution else None,
             'document_type': self.document_type,
             'document_number': self.document_number,
+            'birth_date': self.birth_date.isoformat() if self.birth_date else None,
+            'gender': self.gender,
             'phone': self.phone,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None

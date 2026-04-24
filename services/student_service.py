@@ -44,15 +44,12 @@ class StudentService:
             ]
         )
         
-        email = form_data.get('email', '').strip()
-        if not email:
-            email = f"{username}@sige.edu.co"
-        else:
+        email = form_data.get('email', '').strip() or None
+        if email:
             if not validate_email(email):
                 return {'success': False, 'error': 'El correo electrónico no es válido.'}
-        
-        if User.query.filter_by(email=email).first():
-            return {'success': False, 'error': 'El correo electrónico ya está en uso.'}
+            if User.query.filter_by(email=email).first():
+                return {'success': False, 'error': 'El correo electrónico ya está en uso.'}
         
         try:
             # Create User
@@ -64,6 +61,8 @@ class StudentService:
                 last_name=last_name,
                 document_type=doc_type,
                 document_number=doc_number,
+                birth_date=datetime.strptime(form_data.get('birth_date'), '%Y-%m-%d').date() if form_data.get('birth_date') else None,
+                gender=form_data.get('gender', ''),
                 phone=form_data.get('phone', '').strip(),
                 address=form_data.get('address', '').strip(),
                 role='student',
@@ -81,13 +80,8 @@ class StudentService:
                 institution_id=institution_id,
                 campus_id=int(form_data.get('campus_id')),
                 grade_id=int(grade_id) if grade_id else None,
-                document_type=doc_type,
-                document_number=doc_number,
-                birth_date=datetime.strptime(form_data.get('birth_date'), '%Y-%m-%d').date() if form_data.get('birth_date') else None,
-                address=form_data.get('student_address', '').strip(),
                 neighborhood=form_data.get('neighborhood', '').strip(),
                 stratum=int(form_data.get('stratum')) if form_data.get('stratum') else None,
-                gender=form_data.get('gender', ''),
                 blood_type=form_data.get('blood_type', '').strip(),
                 eps=form_data.get('eps', '').strip(),
                 guardian_name=form_data.get('guardian_name', '').strip(),
@@ -113,18 +107,23 @@ class StudentService:
             
         grade_id = form_data.get('grade_id')
         
+        # Update existing user birth_date/gender if provided
+        if form_data.get('birth_date'):
+            existing_user.birth_date = datetime.strptime(form_data.get('birth_date'), '%Y-%m-%d').date()
+        if form_data.get('gender'):
+            existing_user.gender = form_data.get('gender')
+        if form_data.get('address'):
+            existing_user.address = form_data.get('address')
+        if form_data.get('phone'):
+            existing_user.phone = form_data.get('phone')
+
         student = AcademicStudent(
             user_id=existing_user.id,
             institution_id=institution_id,
             campus_id=int(campus_id),
             grade_id=int(grade_id) if grade_id else None,
-            document_type=existing_user.document_type,
-            document_number=existing_user.document_number,
-            birth_date=datetime.strptime(form_data.get('birth_date'), '%Y-%m-%d').date() if form_data.get('birth_date') else None,
-            address=form_data.get('student_address', '').strip(),
             neighborhood=form_data.get('neighborhood', '').strip(),
             stratum=int(form_data.get('stratum')) if form_data.get('stratum') else None,
-            gender=form_data.get('gender', ''),
             blood_type=form_data.get('blood_type', '').strip(),
             eps=form_data.get('eps', '').strip(),
             guardian_name=form_data.get('guardian_name', '').strip(),

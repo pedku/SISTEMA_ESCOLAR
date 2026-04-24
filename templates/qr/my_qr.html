@@ -1,1 +1,175 @@
-{% extends "base.html" %}{% block title %}Mi Código QR{% endblock %}{% block content %}<div class="container mt-5"><h1><i class="bi bi-qr-code"></i> Mi Código QR</h1><div class="alert alert-info mt-4"><h5><i class="bi bi-construction"></i> Módulo en desarrollo</h5></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Mi Código QR | SIGE{% endblock %}
+
+{% block extra_css %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    }
+    
+    .qr-container {
+        padding: 2rem;
+        background: white;
+        border-radius: 15px;
+        display: inline-block;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .qr-container:hover {
+        transform: scale(1.02);
+    }
+    
+    .status-dot {
+        height: 10px;
+        width: 10px;
+        background-color: #28a745;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .animate-up {
+        animation: fadeInUp 0.8s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5 animate-up">
+    <div class="row justify-content-center">
+        <!-- QR Display Section -->
+        <div class="col-md-5 mb-4">
+            <div class="glass-card p-4 text-center h-100 d-flex flex-column align-items-center justify-content-center">
+                <h3 class="mb-4 fw-bold">Identidad Digital</h3>
+                
+                <div id="qrcode-container" class="qr-container mb-4">
+                    <!-- QR Code will be injected here -->
+                    <div id="qrcode"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <span class="status-dot"></span>
+                    <span class="text-muted small">Token Activo y Seguro</span>
+                </div>
+                
+                <div class="d-grid gap-2 w-100">
+                    <button id="download-qr" class="btn btn-primary btn-lg rounded-pill">
+                        <i class="bi bi-download me-2"></i> Descargar Carnet
+                    </button>
+                    <form action="{{ url_for('qr.regenerate') }}" method="POST" onsubmit="return confirm('¿Seguro que desea regenerar su QR? El código anterior dejará de funcionar instantáneamente.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger rounded-pill w-100">
+                            <i class="bi bi-arrow-clockwise me-2"></i> Regenerar Código
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- History and Info Section -->
+        <div class="col-md-7">
+            <div class="glass-card p-4 h-100">
+                <h4 class="mb-4 fw-bold"><i class="bi bi-clock-history me-2"></i> Actividad Reciente</h4>
+                
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Ubicación</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ log.classroom.name if log.classroom else 'Desconocido' }}</td>
+                                <td>
+                                    {% if log.status == 'authorized' %}
+                                        <span class="badge rounded-pill bg-success-soft text-success">
+                                            <i class="bi bi-check-circle me-1"></i> Autorizado
+                                        </span>
+                                    {% elif log.status == 'wrong_schedule' %}
+                                        <span class="badge rounded-pill bg-warning-soft text-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i> Fuera de Horario
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-danger-soft text-danger">
+                                            <i class="bi bi-x-circle me-1"></i> Denegado
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-qr-code-scan display-1 text-light mb-3"></i>
+                    <p class="text-muted">Aún no se registran escaneos con su código QR.</p>
+                </div>
+                {% endif %}
+
+                <div class="mt-4 p-3 bg-light rounded-3 border-start border-4 border-primary">
+                    <h6 class="fw-bold mb-2">Instrucciones de Uso:</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Presente este código en el lector ubicado a la entrada de cada salón o laboratorio.</li>
+                        <li>El acceso solo se habilitará durante su horario de clase programado.</li>
+                        <li>No comparta su código QR; cada acceso queda registrado a su nombre.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = "{{ token }}";
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: token,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Download functionality
+        document.getElementById('download-qr').addEventListener('click', function() {
+            const container = document.getElementById('qrcode-container');
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'carnet-digital-sige.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        });
+    });
+</script>
+{% endblock %}

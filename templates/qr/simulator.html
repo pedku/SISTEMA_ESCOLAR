@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Simulador de Escaneo QR | SIGE{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-dark text-white p-4 rounded-top-4">
+                    <h4 class="mb-0"><i class="bi bi-cpu me-2"></i> Simulador de Hardware QR</h4>
+                    <p class="mb-0 text-white-50 small">Herramienta de desarrollo - Solo ROOT</p>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('qr.simulate_scan') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">1. Seleccionar Ubicación (Lector)</label>
+                            <select name="lab_id" class="form-select form-select-lg" required>
+                                <option value="">Seleccione un salón/laboratorio...</option>
+                                {% for classroom in classrooms %}
+                                <option value="{{ classroom.code or classroom.name }}">{{ classroom.name }} ({{ classroom.code or 'Sin código' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">2. Token del Usuario (Simular Escaneo)</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-qr-code-scan"></i></span>
+                                <input type="text" name="qr_token" class="form-control" placeholder="Pegue el UUID del token aquí..." required>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="bi bi-info-circle me-1"></i> Puede encontrar su propio token en la sección "Mi QR".
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold">
+                                <i class="bi bi-play-circle me-2"></i> Simular Pulso de Escaneo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-light p-4 rounded-bottom-4 border-0">
+                    <h6 class="fw-bold mb-3">¿Cómo funciona?</h6>
+                    <ol class="small text-muted mb-0 ps-3">
+                        <li>Esta herramienta emite una señal idéntica a la que enviaría un lector físico.</li>
+                        <li>El sistema valida el token contra el horario actual del servidor.</li>
+                        <li>Se genera un registro en la tabla de logs de acceso.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

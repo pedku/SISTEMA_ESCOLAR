@@ -274,21 +274,20 @@ def edit(id):
         return redirect(url_for('students.list'))
 
     if request.method == 'POST':
-        # Update User
+        # Update User (Identity and Location)
         user = db.session.get(User, student.user_id)
         user.first_name = request.form.get('first_name', '').strip()
         user.last_name = request.form.get('last_name', '').strip()
         user.phone = request.form.get('phone', '').strip()
         user.address = request.form.get('address', '').strip()
+        user.birth_date = datetime.strptime(request.form.get('birth_date'), '%Y-%m-%d').date() if request.form.get('birth_date') else None
+        user.gender = request.form.get('gender', '')
 
-        # Update AcademicStudent
+        # Update AcademicStudent (Academic and Well-being)
         student.campus_id = int(request.form.get('campus_id'))
         student.grade_id = int(request.form.get('grade_id')) if request.form.get('grade_id') else None
-        student.birth_date = datetime.strptime(request.form.get('birth_date'), '%Y-%m-%d').date() if request.form.get('birth_date') else None
-        student.address = request.form.get('student_address', '').strip()
         student.neighborhood = request.form.get('neighborhood', '').strip()
         student.stratum = int(request.form.get('stratum')) if request.form.get('stratum') else None
-        student.gender = request.form.get('gender', '')
         student.blood_type = request.form.get('blood_type', '').strip()
         student.eps = request.form.get('eps', '').strip()
         student.guardian_name = request.form.get('guardian_name', '').strip()
@@ -298,7 +297,7 @@ def edit(id):
 
         try:
             db.session.commit()
-            flash('Estudiante actualizado exitosamente.', 'success')
+            flash('✅ Perfil del estudiante actualizado exitosamente.', 'success')
             return redirect(url_for('students.profile', id=student.id))
         except Exception as e:
             db.session.rollback()

@@ -2,9 +2,9 @@
 
 ## Sistema Integral de Gestión Escolar
 
-> **Versión**: 1.5 - Soporte Multi-jornada y Analíticas | **Rama**: main | **Última actualización**: 2026-04-23
+> **Versión**: 1.6 - Modernización Académica y Multi-jornada | **Rama**: main | **Última actualización**: 2026-04-24
 > **Stack**: Python 3 + Flask + Bootstrap 5 + Chart.js + DataTables + SQLite
-> **Total errores corregidos**: 50+ | **Testing**: Pirámide de 4 fases validada + Pytest
+> **Total errores corregidos**: 60+ | **Testing**: Pirámide de 4 fases validada + Pytest
 
 ---
 

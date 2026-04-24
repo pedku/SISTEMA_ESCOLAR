@@ -176,6 +176,23 @@
                                    value="{{ student.user.phone if student and student.user else '' }}">
                         </div>
 
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Fecha de Nacimiento</label>
+                                <input type="date" name="birth_date" class="form-control"
+                                       value="{{ student.user.birth_date.strftime('%Y-%m-%d') if student and student.user.birth_date else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Género</label>
+                                <select name="gender" class="form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="M" {% if (student and student.user.gender == 'M') %}selected{% endif %}>Masculino</option>
+                                    <option value="F" {% if (student and student.user.gender == 'F') %}selected{% endif %}>Femenino</option>
+                                    <option value="Otro" {% if (student and student.user.gender == 'Otro') %}selected{% endif %}>Otro</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Dirección</label>
                             <input type="text" name="address" class="form-control"
@@ -198,9 +215,11 @@
             <input type="hidden" name="last_name" value="{{ existing_user.last_name }}">
             <input type="hidden" name="document_type" value="{{ existing_user.document_type }}">
             <input type="hidden" name="document_number" value="{{ existing_user.document_number }}">
+            <input type="hidden" name="birth_date" value="{{ existing_user.birth_date.strftime('%Y-%m-%d') if existing_user.birth_date else '' }}">
+            <input type="hidden" name="gender" value="{{ existing_user.gender or '' }}">
             <input type="hidden" name="phone" value="{{ existing_user.phone or '' }}">
             <input type="hidden" name="address" value="{{ existing_user.address or '' }}">
-            {% endif %}
+{% endif %}
 
             <!-- Academic Information -->
             <div class="{% if not existing_user %}col-md-6{% else %}col-12{% endif %}">
@@ -232,35 +251,15 @@
                             </div>
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Fecha de Nacimiento</label>
-                                <input type="date" name="birth_date" class="form-control"
-                                       value="{{ student.birth_date.strftime('%Y-%m-%d') if student and student.birth_date else '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Género</label>
-                                <select name="gender" class="form-select">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="M" {% if student and student.gender == 'M' %}selected{% endif %}>Masculino</option>
-                                    <option value="F" {% if student and student.gender == 'F' %}selected{% endif %}>Femenino</option>
-                                    <option value="Otro" {% if student and student.gender == 'Otro' %}selected{% endif %}>Otro</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Dirección de Residencia</label>
-                                <input type="text" name="student_address" class="form-control"
-                                       value="{{ student.address if student else '' }}">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">Barrio</label>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Barrio / Vereda</label>
                                 <input type="text" name="neighborhood" class="form-control"
-                                       value="{{ student.neighborhood if student else '' }}">
+                                       value="{{ student.neighborhood if student else '' }}"
+                                       placeholder="Ej: El Centro">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">Estrato</label>
                                 <input type="number" name="stratum" class="form-control" min="1" max="6"
                                        value="{{ student.stratum if student else '' }}">
